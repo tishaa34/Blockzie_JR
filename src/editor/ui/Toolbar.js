@@ -29,7 +29,7 @@ export default function Toolbar({
     <nav className="toolbar">
       {/* Logo */}
       <div className="toolbar-logo">
-        <img src="/assets/stembotix-logo.png" alt="stembotix Logo" />
+        <img src="/assets/Logo.png" alt="Stembotix Logo" />
       </div>
 
       {/* First group: Project controls (left-aligned, tight group) */}
