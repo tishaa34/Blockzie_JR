@@ -1,0 +1,61 @@
+.character-gallery-panel {
+background: none;
+padding: 0;
+width: 150px;
+}
+.char-list {
+display: flex;
+flex-direction: column;
+align-items: flex-start;
+}
+.char-tile {
+width: 125px;
+height: 50px;
+background: #ffe59a;
+border: 2px solid orange;
+border-radius: 7px;
+margin-bottom: 10px;
+position: relative;
+cursor: pointer;
+display: flex;
+align-items: center;
+padding: 7px 10px;
+}
+.char-tile.selected {
+border: thick solid #18b2fa;
+}
+.char-tile img {
+width: 38px;
+height: 38px;
+margin-right: 6px;
+}
+.char-label { flex: 1; }
+.brush-btn {
+position: absolute;
+right: 6px;
+top: 6px;
+background: transparent;
+border: none;
+cursor: pointer;
+padding: 2px;
+}
+.add-tile {
+background: #ffffff;
+border: 2px dashed #bbb;
+justify-content: center;
+}
+.plus-sign {
+font-size: 36px;
+color: #2183f9;
+font-weight: bold;
+}
+.character-label {
+text-align: center;
+width: 100%;
+margin-top: 6px;
+color: #fff;
+background: orange;
+border-radius: 7px;
+padding: 2px 0;
+font-size: 18px;
+}

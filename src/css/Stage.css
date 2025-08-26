@@ -1,0 +1,29 @@
+#stage-area {
+  cursor: default;
+  border: none !important;
+  border-radius: 0 !important;
+  box-shadow: none !important;
+}
+
+#stage-area img {
+  cursor: grab;
+}
+
+#stage-area img:active {
+  cursor: grabbing;
+}
+
+.actor {
+  position: absolute;
+  cursor: grab;
+  transition: left 0.25s ease, top 0.25s ease, transform 0.25s ease;
+  z-index: 10;
+  transform: translate(-50%, -50%);
+}
+
+/* Remove all stageContainer styling that adds borders */
+.stageContainer {
+  border: none !important;
+  border-radius: 0 !important;
+  box-shadow: none !important;
+}

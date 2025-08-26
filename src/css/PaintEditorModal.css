@@ -1,0 +1,65 @@
+.paint-modal {
+  position: fixed;
+  inset: 0;
+  z-index: 2000;
+}
+.paint-backdrop {
+  position: fixed;
+  inset: 0;
+  background: rgba(0,0,0,0.13);
+}
+.paint-modal-content {
+  width: 900px;
+  max-width: 98vw;
+  margin: 44px auto;
+  border-radius: 18px;
+  background: #f8f8f8;
+  position: relative;
+  padding: 32px 32px 44px 32px;
+}
+.paint-modal-header {
+  position: absolute;
+  right: 18px;
+  top: 12px;
+  display: flex;
+  gap: 19px;
+}
+.paint-close-btn {
+  background: none;
+  border: none;
+  width: 46px;
+  height: 46px;
+  cursor: pointer;
+}
+.paint-area {
+  display: flex;
+  align-items: flex-start;
+}
+.paint-toolbar {
+  margin-right: 28px;
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+}
+.paint-tool-icon {
+  width: 36px;
+  height: 36px;
+}
+.paint-canvas {
+  background: #fff;
+  border: 1px solid #bbb;
+  border-radius: 13px;
+  width: 530px;
+  height: 390px;
+  position: relative;
+  overflow: hidden;
+}
+.paint-grid-bg {
+  position: absolute;
+  inset: 0;
+  background-image: repeating-linear-gradient(
+    to right, #daddf2 0, #daddf2 1px, transparent 1px, transparent 32px
+  ), repeating-linear-gradient(
+    to bottom, #daddf2 0, #daddf2 1px, transparent 1px, transparent 32px
+  );
+}

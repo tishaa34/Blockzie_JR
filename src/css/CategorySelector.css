@@ -1,0 +1,45 @@
+.catbar-tray {
+  display: flex;
+  align-items: center;
+  gap: 3px;
+  padding: 4px 8px 4px 8px;
+  background: #eee;
+  border-radius: 13px;
+  margin: 0;
+  border: none;
+  padding: 0 10px; /*vertical padding 0 so total height = 82px */ 
+  height: 82px; /*match BlockPalette tile height */
+  box-sizing: border-box;
+  }
+
+  .catblockbtn {
+  background: none;
+  border: none;
+  outline: none;
+  padding: 0;
+  border-radius: 13px;
+  box-shadow: 0 2px 3px #0001;
+  width: 54px;
+  height: 54px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  transition: filter 0.13s, box-shadow 0.14s;
+  margin: 0 2px;
+  position: relative;
+  cursor: pointer;
+  }
+
+.catblockbtn.active,
+.catblockbtn:focus {
+  filter: brightness(1.17);
+  box-shadow: 0 8px 24px #2d77f041;
+}
+.catblockicon {
+  width: 46px;
+  height: 46px;
+  object-fit: contain;
+  display: block;
+  pointer-events: none;
+  border-radius: 10px;
+}

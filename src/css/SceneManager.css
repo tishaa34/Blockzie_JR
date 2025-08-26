@@ -1,0 +1,122 @@
+/* Wrapper that holds the scrollable list */
+.scene-manager-xscroll {
+  width: 200px;
+  max-height: 550px; /* show only 4 scenes, each ~190px tall */
+  overflow-y: auto; /* enable scroll */
+  overflow-x: hidden;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 8px;
+  padding: 8px 0;
+  background: #ece0c5;
+  border: none;
+  scrollbar-width: thin; /* for firefox */
+}
+
+/* Hide scrollbar in Chrome/Edge */
+.scene-manager-xscroll::-webkit-scrollbar {
+  width: 6px;
+}
+.scene-manager-xscroll::-webkit-scrollbar-thumb {
+  background-color: #d1b45a;
+  border-radius: 3px;
+}
+
+/* Each scene wrapper */
+.scene-thumb-h {
+  position: relative;
+  width: 180px;
+  height: 180px;
+  cursor: pointer;
+  background: #fff;
+  border: 3px solid #f7b23d;
+  border-radius: 13px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  transition: border 0.16s, box-shadow 0.18s;
+}
+.scene-thumb-h.selected {
+  border: 4px solid #f7b23d;
+  box-shadow: 0 4px 16px #f3a80f23;
+}
+
+/* Scene preview */
+.scene-thumb-preview {
+  width: 100%;
+  height: 100%;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  border-radius: 10px;
+  overflow: hidden;
+  position: relative;
+}
+
+/* Scene number badge */
+.scene-badge {
+  position: absolute;
+  right: -13px;
+  top: -10px;
+  font-size: 19px;
+  background: #ffd166;
+  color: #9d6e05;
+  width: 23px;
+  height: 23px;
+  line-height: 23px;
+  border-radius: 12px;
+  text-align: center;
+  font-weight: bold;
+  border: 2px solid #fada86;
+  box-shadow: 0 1px 6px #ecb93540;
+  user-select: none;
+}
+
+/* Remove button - hidden until hover */
+.scene-remove-btn {
+  position: absolute;
+  top: 10px;  /* Adjust this to match the oval's vertical center */
+  left: 10px; /* Adjust this to match the oval's horizontal center */
+  width: 22px;
+  height: 22px;
+  font-size: 18px;
+  color: #d14545;
+  background: #fff;
+  border-radius: 50%;
+  border: 1px solid #ccc;
+  cursor: pointer;
+  opacity: 0;
+  pointer-events: none;
+  transition: opacity 0.2s ease;
+  z-index: 5;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+.scene-thumb-h:hover .scene-remove-btn {
+  opacity: 1;
+  pointer-events: all;
+}
+
+/* Add new scene button */
+.scene-plus-h {
+  width: 180px;
+  height: 150px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  cursor: pointer;
+  background: #f5f5f5;
+  border: 2px dashed #aaa;
+  border-radius: 12px;
+  transition: background 0.2s;
+}
+.scene-plus-h:hover {
+  background: #f0f0f0;
+}
+.scene-plus-h img {
+  width: 180px;
+  height: 180px;
+  object-fit: contain;
+}

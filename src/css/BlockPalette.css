@@ -1,0 +1,78 @@
+.block-palette-root {
+  width: 100vw;
+  min-height: 78px;
+  display: flex;
+  flex-direction: row;
+  align-items: flex-end;
+  gap: 3px;
+  padding: 0 15px;
+  border-radius: 0 0 18px 18px;
+  background: #ffe55a; /* fallback for yellow, use dynamic if needed */
+  overflow-x: auto;
+  overflow-y: hidden;
+  box-sizing: border-box;
+  margin: 0 auto;
+  transition: background 0.19s;
+  min-height: 82px; /* matches tile height */
+  height: 82px; /*keep consistent*/
+  border-radius: 18px; /*fully rounded container */
+  }
+
+.block-palette-tile {
+  position: relative;
+  width: 78px;  /* Make block bigger if you want bigger icons */
+  height: 82px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  margin: 0 2px;
+  cursor: pointer;
+  border-radius: 13px;
+  padding: 0;
+  box-sizing: border-box;
+  border-radius: 13px;
+}
+
+.block-bg {
+  width: 100%;
+  height: 100%;
+  display: block;
+  border-radius: 13px;
+  object-fit: contain;
+  pointer-events: none;
+  user-select: none;
+}
+
+.block-icon {
+  position: absolute;
+  left: 50%;
+  top: 50%;
+  width: 46px;    /* BIGGER than before */
+  height: 46px;   /* BIGGER than before */
+  transform: translate(-50%, -50%);
+  object-fit: contain;
+  pointer-events: none;
+  user-select: none;
+  z-index: 2;
+}
+
+/* Optional: keep label style if using number/text below */
+.block-label {
+  position: absolute;
+  bottom: 10px;
+  left: 50%;
+  transform: translateX(-50%);
+  font-size: 15px;
+  font-weight: bold;
+  font-family: Arial, sans-serif;
+  color: #333;
+  background: #fff;
+  border-radius: 7px;
+  width: 28px;
+  height: 18px;
+  text-align: center;
+  line-height: 16px;
+  box-shadow: 0 2px 4px #0001;
+  border: 1.3px solid #bbb;
+  z-index: 4;
+}

@@ -1,0 +1,57 @@
+.bg-shade {
+  position: fixed;
+  inset: 0; z-index: 100;
+  background: rgba(0,0,0,0.18);
+  display: flex; align-items: center; justify-content: center;
+}
+.bg-modal {
+  background: #fffceb;
+  border-radius: 18px;
+  box-shadow: 0 8px 32px #c5b67ad9;
+  padding: 25px 36px 30px 36px;
+  min-width: 380px;
+  min-height: 285px;
+  max-width: 80vw;
+}
+.bg-modal-header {
+  display: flex; align-items: center; justify-content: space-between;
+  font-size: 1.3em; margin-bottom: 18px;
+}
+.bg-modal-close {
+  border: none;
+  background: none;
+  font-size: 2.5em;
+  color: #d8983b;
+  cursor: pointer;
+  line-height: 1;
+}
+.bg-tile-list {
+  display: flex; flex-wrap: wrap; gap: 22px;
+  justify-content: flex-start; align-items: flex-start;
+}
+.bg-tile {
+  width: 76px; height: 76px;
+  border: 3px solid #ffe9b0;
+  border-radius: 14px;
+  cursor: pointer;
+  background-color: #fff;
+  background-repeat: no-repeat;
+  background-position: center;
+  box-shadow: 0 2px 6px #5734092a;
+  position: relative;
+  margin-bottom: 6px;
+  transition: box-shadow .13s, border .13s;
+}
+.bg-tile.selected,
+.bg-tile:hover {
+  border: 3px solid #febc3c;
+  box-shadow: 0 3px 12px #e6b01854;
+}
+.bg-tile-check {
+  position: absolute;
+  right: 5px; bottom: 8px;
+  font-size: 2em;
+  color: #3c74f3;
+  font-weight: bold;
+  pointer-events: none;
+}

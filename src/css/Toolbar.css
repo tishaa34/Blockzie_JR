@@ -1,0 +1,97 @@
+.toolbar {
+  display: flex;
+  align-items: center;
+  background: #f7f4eb;
+  height: 100px;
+  width: 100vw;
+  padding: 0 16px;
+  box-sizing: border-box;
+}
+
+.toolbar-logo {
+  display: flex;
+  align-items: center;
+  flex-shrink: 0;
+  margin-right: 14px;
+}
+.toolbar-logo img {
+  height: 50px;
+}
+
+.toolbar-group {
+  display: flex;
+  align-items: center;
+  gap: 10px; /* buttons within the group tight */
+}
+.tl-btn {
+  background: transparent;
+  border: none;
+  cursor: pointer;
+  border-radius: 12px;
+  width: 52px;
+  height: 52px;
+  display: flex;
+  justify-content: center;
+  align-items: center;
+  transition: background-color 0.2s;
+  padding: 0;
+}
+
+.tl-btn img {
+  width: 40px;
+  height: 40px;
+  object-fit: contain;
+  user-select: none;
+  pointer-events: none;
+}
+.tl-btn:focus,
+.tl-btn:hover {
+  background-color: #ffeeba;
+  outline: none;
+}
+.toolbar-main-strip {
+  position: absolute;
+  /* Use left and right to pin to desired area. Example coordinates: */
+  left: 600px; /* Change to your stage's left pos or use .getBoundingClientRect in JS for dynamic */
+  right: 500px; /* How far from the right side the buttons should end; adjust as needed */
+  top: 0px;
+  height: 76px;              /* As tall as your toolbar */
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  z-index: 99;
+  pointer-events: auto;      /* Ensure clicks */
+  gap: 2px;                /* Space between groups */
+}
+
+.toolbar-group {
+  display: flex;
+  gap: 8px;                /* Space between buttons in group */
+  align-items: center;
+}
+
+.tl-btn {
+  background: transparent;
+  border: none;
+  cursor: pointer;
+  border-radius: 15px;
+  width: 66px;              /* Larger button */
+  height: 66px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  transition: background-color 0.17s;
+  padding: 0;
+}
+.tl-btn img {
+  width: 52px;
+  height: 52px;
+  object-fit: contain;
+  user-select: none;
+  pointer-events: none;
+}
+.tl-btn:focus,
+.tl-btn:hover {
+  background-color: #ffeeba;
+  outline: none;
+}

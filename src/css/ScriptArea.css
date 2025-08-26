@@ -1,0 +1,95 @@
+.scriptarea-root {
+  width: 25vw;
+  max-width: 700px;
+  min-width: 340px;
+  margin: 0 auto;
+  background: #fff;
+  border-radius: 18px;
+  box-shadow: 0 2px 24px #cfcfcf18;
+  padding: 0 6px 14px 6px;
+  display: flex;
+  flex-direction: column;
+  gap: 0;
+  position: relative;
+  align-items: center;
+}
+
+/* Top buttons aligned right */
+.scriptarea-buttons {
+  display: flex;
+  justify-content: flex-end;
+  align-items: center;
+  gap: 12px;  
+  padding: 12px 20px 0 0;
+}
+
+.s-btn {
+  border: none;
+  border-radius: 10px;
+  padding: 10px 20px;
+  background: #10b981;
+  color: #fff;
+  font-size: 16px;
+  font-weight: bold;
+  letter-spacing: 0.4px;
+  cursor: pointer;
+  box-shadow: 0 2px 5px #2a4fb112;
+  transition: background 0.13s;
+}
+.s-btn.clear { background: #ef4444; }
+.s-btn:disabled {
+  opacity: 0.45;
+  cursor: not-allowed;
+}
+
+/* Drop area */
+.scriptarea-noborder {
+  min-height: 200px;
+  width: 90%;
+  padding: 20px 16px;
+  background: #fff;
+  border-radius: 16px;
+  margin: 0 auto;
+  box-shadow: none;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: flex-start;
+}
+
+/* Script blocks stacked vertically */
+.script-chain {
+  display: flex;
+  margin-top: 1rem;
+  flex-direction: row; /* stack in one column */
+  align-items: center;
+  width: 100%;
+  flex-wrap: wrap;
+}
+
+.block-palette-title {
+  font-size: 30px;
+  color: #222;
+  cursor: pointer;
+  position: relative;
+  display: flex;
+  align-items: center;
+  transition: box-shadow 0.1s, border 0.1s;
+  /* padding: 6px 12px; */
+  border-radius: 12px;
+  /* background: #f9fafb; */
+  margin-left: -11px;
+  
+}
+.block-palette-title:hover {
+  background: #e0e7ff;
+  border-color: #4596f1;
+}
+
+.s-hint {
+  text-align: center;
+  color: #94a3b8;
+  font-size: 18px;
+  margin-top: 20px;
+  width: 100%;
+}

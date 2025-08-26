@@ -1,0 +1,353 @@
+/* Reset and base styles */
+* {
+  box-sizing: border-box;
+  margin: 0;
+  padding: 0;
+}
+
+html, body, #root {
+  height: 100%;
+  width: 100%;
+  font-family: Arial, sans-serif;
+  overflow: hidden;
+}
+
+/* Main app container - 3 row grid with taller footer */
+.sjr-root {
+  height: 100vh;
+  width: 100vw;
+  display: grid;
+  grid-template-rows: 70px 1fr 150px; /* navbar | middle | footer (increased from 130px to 150px) */
+  background: #e5e5e5;
+}
+
+/* Top Navbar */
+.top-navbar {
+  background: #f7f4eb;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: 0 20px;
+  
+  
+}
+
+/* Fix navbar color consistency */
+.top-navbar * {
+  background: transparent !important;
+}
+
+/* Override toolbar background to match navbar */
+.toolbar,
+.sjr-header,
+.toolbar-container {
+  background: #f7f4eb !important;
+  
+}
+
+
+/* If there's a specific logo container, override it too */
+.logo-container,
+.stembot-logo {
+  background: transparent !important;
+}
+
+/* Middle Section - 4 columns with wider scene management */
+.middle-section {
+  display: grid;
+  grid-template-columns: 240px 2fr 3fr 280px; /* char(240px) | script(40%) | stage(60%) | scene(280px) */
+  gap: 0;
+  background: #e5e5e5;
+  overflow: hidden;
+}
+
+/* Character Gallery Section - with border */
+.character-gallery-section {
+  background: #fff;
+  display: flex;
+  flex-direction: column;
+  overflow: hidden;
+  position: relative;
+}
+
+/* Straight border between character gallery and script area */
+.character-gallery-section::after {
+  content: "";
+  position: absolute;
+  right: 0;
+  top: 0px;        /* Top margin */
+  bottom: 0px;     /* Bottom margin */
+  width: 2px;
+  background: #000000; /* Solid black border */
+  border-radius: 1px;
+  z-index: 10;
+}
+
+/* Script Area Section */
+.script-area-section {
+  background: #fff;
+  display: flex;
+  flex-direction: column;
+  overflow: hidden;
+  position: relative;
+}
+
+/* Stage Area Section - with border */
+.stage-area-section {
+  background: #fff;
+  display: flex;
+  flex-direction: column;
+  overflow: hidden;
+  position: relative;
+}
+
+/* Vertical line between script and stage */
+.script-area-section::after {
+  content: "";
+  position: absolute;
+  right: 0;
+  top: 0px;
+  bottom: 0px;
+  width: 2px;
+  background: #666;
+  border-radius: 1px;
+  z-index: 10;
+}
+
+/* Straight border between stage and scene management */
+.stage-area-section::before {
+  content: "";
+  position: absolute;
+  right: 0;
+  top: 0px;        /* Top margin */
+  bottom: 0px;     /* Bottom margin */
+  width: 2px;
+  background: #000000; /* Solid black border */
+  border-radius: 1px;
+  z-index: 15; /* Higher than script border */
+}
+
+/* Scene Management Section - wider with left margin */
+.scene-management-section {
+  background: #fff;
+  display: flex;
+  flex-direction: column;
+  overflow: hidden;
+  min-width: 280px;
+  padding-left: 15px; /* Add left margin similar to character gallery */
+}
+
+/* Footer - Blocks with more height */
+.blocks-footer {
+  background: linear-gradient(90deg, #4a90e2 0%, #357abd 100%);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: 15px 20px; /* Increased padding from 10px to 15px */
+  min-height: 150px; /* Ensure minimum height */
+}
+
+.blocks-container {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 20px;
+  width: 100%;
+  max-width: 1200px;
+  flex-wrap: wrap; /* Allow wrapping if needed */
+}
+
+.category-selector-container {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  flex-shrink: 0; /* Prevent shrinking */
+}
+
+.block-palette-container {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  flex: 1;
+  min-width: 0; /* Allow shrinking */
+}
+
+/* Component overrides */
+.stage-wrap {
+  border: none !important;
+  border-radius: 0 !important;
+  box-shadow: none !important;
+  background: transparent !important;
+  width: 100% !important;
+  height: 100% !important;
+  max-width: none !important;
+  aspect-ratio: unset !important;
+  margin: 0 !important;
+}
+
+/* Stage area specific overrides */
+#stage-area {
+  cursor: default;
+  border: none !important;
+  border-radius: 0 !important;
+  box-shadow: none !important;
+}
+
+#stage-area img {
+  cursor: grab;
+}
+
+#stage-area img:active {
+  cursor: grabbing;
+}
+
+/* Scene Manager specific styles for better visibility */
+.scene-manager-root {
+  width: 100%;
+  height: 100%;
+  padding: 15px 15px 15px 0; /* Remove left padding since we added it to the section */
+  overflow-y: auto;
+  overflow-x: hidden;
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+}
+
+/* Character Gallery specific styling to prevent content cutoff */
+.character-gallery {
+  width: 100%;
+  height: 100%;
+  padding: 15px;
+  overflow-y: auto;
+  overflow-x: hidden;
+}
+
+/* Add subtle shadows for depth */
+.character-gallery-section,
+.script-area-section,
+.stage-area-section,
+.scene-management-section {
+  box-shadow: 0 0 10px rgba(0, 0, 0, 0.05);
+}
+
+/* Character items styling to fit properly */
+.character-item,
+.char-thumb {
+  max-width: 100%;
+  margin: 5px auto;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+}
+
+/* Actor styling */
+.actor {
+  position: absolute;
+  cursor: grab;
+  transition: left 0.25s ease, top 0.25s ease, transform 0.25s ease;
+  z-index: 10;
+  transform: translate(-50%, -50%);
+}
+
+/* Scene management items styling */
+.scene-thumb-preview {
+  width: 90%; /* Make sure scene thumbnails fit */
+  max-width: 240px;
+  margin: 5px auto;
+}
+
+/* Remove all stageContainer styling that adds borders */
+.stageContainer {
+  border: none !important;
+  border-radius: 0 !important;
+  box-shadow: none !important;
+}
+
+/* Modal and popup styles */
+.modal {
+  position: fixed;
+  top: 0;
+  left: 0;
+  width: 100%;
+  height: 100%;
+  background: rgba(0, 0, 0, 0.5);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  z-index: 1000;
+}
+
+.modal-content {
+  background: white;
+  padding: 20px;
+  border-radius: 8px;
+  border: 2px solid black;
+  max-width: 90%;
+  max-height: 90%;
+  overflow: auto;
+}
+
+/* Button styles */
+button {
+  cursor: pointer;
+  border: 1px solid #ccc;
+  background: #fff;
+  padding: 8px 12px;
+  border-radius: 4px;
+  font-family: inherit;
+}
+
+button:hover {
+  background: #f0f0f0;
+}
+
+button:active {
+  background: #e0e0e0;
+}
+
+/* Responsive design */
+@media (max-width: 1400px) {
+  .middle-section {
+    grid-template-columns: 220px 2fr 3fr 260px;
+  }
+}
+
+@media (max-width: 1200px) {
+  .middle-section {
+    grid-template-columns: 200px 2fr 3fr 240px;
+  }
+}
+
+@media (max-width: 900px) {
+  .middle-section {
+    grid-template-columns: 160px 2fr 3fr 200px;
+  }
+  
+  .scene-management-section {
+    padding-left: 10px; /* Smaller left margin on mobile */
+  }
+  
+  .character-gallery-section::after,
+  .script-area-section::after,
+  .stage-area-section::before {
+    top: 20px;
+    bottom: 20px;
+  }
+}
+
+@media (max-width: 600px) {
+  .middle-section {
+    grid-template-columns: 1fr;
+    grid-template-rows: auto auto auto auto;
+  }
+  
+  .sjr-root {
+    grid-template-rows: 70px 1fr 120px; /* Smaller footer on mobile */
+  }
+  
+  .character-gallery-section::after,
+  .script-area-section::after,
+  .stage-area-section::before {
+    display: none;
+  }
+}
