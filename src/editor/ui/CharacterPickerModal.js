@@ -5,6 +5,7 @@ import { addActor, pushUndoState } from "../../store/sceneSlice";
 import "../../css/CharacterPickerModal.css";
 
 const DEMO_CHAR_LIST = [
+{src: "/assets/characters/stembot.svg", name: "Stembot" },
 { src: "/assets/characters/Apple.svg", name: "Apple" },
 { src: "/assets/characters/Baby.svg", name: "Baby" },
 { src: "/assets/characters/Bed.svg", name: "Bed" },
@@ -57,7 +58,7 @@ return (
 <img src="/assets/ui/paintbrush.png" alt="Paint" />
 </button>
 <button className="picker-close-btn" onClick={onClose} aria-label="Close">
-<img src="/assets/ui/close.png" alt="Close" />
+<img src="/assets/ui/closeit.svg" alt="Close" />
 </button>
 </div>
     {/* Character grid */}

@@ -363,6 +363,26 @@ const sceneSlice = createSlice({
         sound.name = newName;
       }
     },
+
+      // Add this to your reducers object in sceneSlice.js
+overwrite(state, action) {
+  const newState = action.payload;
+  
+  state.scenes = newState.scenes || [makeDefaultScene()];
+  state.currentSceneIndex = newState.currentSceneIndex || 0;
+  state.sceneUndoStack = newState.sceneUndoStack || [];
+  state.sceneRedoStack = newState.sceneRedoStack || [];
+  state.selectedBlockCategory = newState.selectedBlockCategory || 'motion';
+  state.categoryPanelOpen = newState.categoryPanelOpen || false;
+  state.sounds = newState.sounds || { pop: '/assets/sounds/pop.mp3' };
+  state.backgroundGallery = newState.backgroundGallery || [
+    '/assets/backgrounds/bg1.png',
+    '/assets/backgrounds/bg2.png', 
+    '/assets/backgrounds/bg3.png',
+    '#ffffff', '#87CEEB', '#98FB98', '#FFB6C1', '#F0E68C'
+  ];
+  state.customSounds = newState.customSounds || [];
+},
   },
 });
 
@@ -388,11 +408,11 @@ export const {
   addBlockToScript,
   clearScript,
   updateBlockCount,
-  // Custom Sound Actions - NEW EXPORTS
   addCustomSound,
   removeCustomSound,
   clearAllCustomSounds,
   updateCustomSoundName,
+  overwrite, 
 } = sceneSlice.actions;
 
 export default sceneSlice.reducer;

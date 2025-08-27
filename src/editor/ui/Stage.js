@@ -7,7 +7,7 @@ const GRID_WIDTH = 20;
 const GRID_HEIGHT = 17;
 const CELL_SIZE = 32;
 
-export default function Stage({ selectedActorId, setSelectedActorId, heading, showGrid }) {
+export default function Stage({ selectedActorId, setSelectedActorId, heading, showGrid, forceUpdate }) {
   const dispatch = useDispatch();
   const { scenes, currentIndex } = useSelector(state => ({
     scenes: state.scene.scenes,
@@ -138,7 +138,7 @@ export default function Stage({ selectedActorId, setSelectedActorId, heading, sh
         const isSelected = actor.id === selectedActorId;
         return (
           <img
-            key={actor.id}
+            key={actor.image} // CRITICAL: Forces React to update when blob URL changes
             src={actor.image}
             alt={actor.name}
             draggable={false}

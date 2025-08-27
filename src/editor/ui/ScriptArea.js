@@ -300,7 +300,7 @@ export default function ScriptArea({ selectedActorId }) {
                 
                 {/* Show custom sound indicator */}
                 {b.soundData && (
-                  <div className="custom-sound-script-indicator">🎤</div>
+                  <div className="custom-sound-script-indicator"></div>
                 )}
               </div>
             ))
