@@ -26,7 +26,7 @@ const barColorByCategory = {
 // All blocks per category
 const blocksByCategory = {
   start: [
-    { name: "Start on Green Flag ", icon: "/assets/blockicons/greenFlag.svg" },
+    { name: "Start on Green Flag", icon: "/assets/blockicons/greenFlag.svg" },
     { name: "Start On Tap", icon: "/assets/blockicons/OnTouch.svg" },
     { name: "Start On Bump", icon: "/assets/blockicons/Bump.svg" },
   ],
@@ -250,6 +250,8 @@ export default function BlockPalette() {
   const dispatch = useDispatch();
   const [showVoiceModal, setShowVoiceModal] = useState(false);
 
+  
+
   const selectedBlockCategory = useSelector((s) => s.scene.selectedBlockCategory) || "motion";
   const customSounds = useSelector((s) => s.scene.customSounds) || [];
 
@@ -299,10 +301,11 @@ export default function BlockPalette() {
     event.dataTransfer.setData("application/block", JSON.stringify(data));
   };
 
-  const handleBlockClick = (block) => {
+  const handleBlockClick = async (block) => {
     if (block.name === "Record") {
       setShowVoiceModal(true);
     }
+    
   };
 
   const handleVoiceSave = (customSoundData) => {

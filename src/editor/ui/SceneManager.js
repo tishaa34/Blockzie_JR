@@ -5,14 +5,13 @@ import "../../css/SceneManager.css";
 
 const STAGE_WIDTH = 640;
 const STAGE_HEIGHT = 480;
-const GRID_SIZE = 32;  // real grid size (main stage)
-const ACTOR_SIZE = 350; // <--- Set your desired actor size here
+const GRID_SIZE = 32;  // real grid size (main stage) // <--- Set your desired actor size here
 
 const SCALE = 0.25; // shrink to 25% for preview
 const PREVIEW_WIDTH = STAGE_WIDTH * SCALE;
 const PREVIEW_HEIGHT = STAGE_HEIGHT * SCALE;
 const CELL_SIZE = GRID_SIZE * SCALE;
-const ACTOR_PREVIEW_SIZE = ACTOR_SIZE * SCALE; // This makes the actor size scale with thumbnail
+
 
 export default function SceneManager() {
   const dispatch = useDispatch();
@@ -52,24 +51,29 @@ export default function SceneManager() {
                 boxSizing: "border-box"
               }}
             >
-              {scene.actors?.map(actor => (
-                <img
+              {scene.actors?.map(actor => {
+                if (actor.visible === false) return null;
+                const actorSize = 5 * CELL_SIZE * (actor.size || 1)
+                return(
+                  <img
                   className="scene-thumb-character"
                   key={actor.id}
                   src={actor.image || basePath + "characters/stembot.png"}
                   alt={actor.name}
                   draggable={false}
+                  visible={actor.visible}
                   style={{
                     position: "absolute",
-                    width: ACTOR_PREVIEW_SIZE,
-                    height: ACTOR_PREVIEW_SIZE,
+                    width: actorSize,
+                      height: actorSize,
                     left: actor.x * CELL_SIZE,
                     top: actor.y * CELL_SIZE,
                     transform: `translate(-50%, -50%) rotate(${actor.direction || 0}deg)`,
                     pointerEvents: "none",
                   }}
                 />
-              ))}
+                )
+           })}
             </div>
 
             <span className="scene-badge">{idx + 1}</span>

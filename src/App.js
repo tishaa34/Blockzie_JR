@@ -42,22 +42,14 @@ function ScratchJrShell() {
   }, [actorIdFromScene, currentSceneIndex]);
 
   // Helper function to convert blob to base64 data URL (Electron-compatible)
-const blobToBase64 = (blob, filePath = '') => {
-  return new Promise((resolve, reject) => {
-    const reader = new FileReader();
-    reader.onload = () => {
-      let result = reader.result;
-      if (filePath.endsWith('.svg') && !result.startsWith('data:image/svg+xml')) {
-        result = result.replace(/^data:.*?base64,/, 'data:image/svg+xml;base64,');
-      }
-      resolve(result);
-    };
-    reader.onerror = reject;
-    reader.readAsDataURL(blob);
-  });
-};
-
-
+  const blobToBase64 = (blob) => {
+    return new Promise((resolve, reject) => {
+      const reader = new FileReader();
+      reader.onload = () => resolve(reader.result);
+      reader.onerror = reject;
+      reader.readAsDataURL(blob);
+    });
+  };
 
   // Asset management functions
   const generateAssetId = (url) => {
@@ -131,11 +123,10 @@ const blobToBase64 = (blob, filePath = '') => {
         const extension = getFileExtension(assetUrl);
         const assetId = generateAssetId(assetUrl);
         const savedFilename = await addAssetToZip(zip, assetUrl, assetId, extension);
-          if (savedFilename) {
-            assetMap.set(assetUrl, savedFilename);   // forward (url → filename)
-            assetMap.set(savedFilename, assetUrl);   // reverse (filename → original url)
-          }
-
+        
+        if (savedFilename) {
+          assetMap.set(assetUrl, savedFilename);
+        }
       }
       
       const completeProjectData = {
@@ -195,184 +186,174 @@ const blobToBase64 = (blob, filePath = '') => {
       document.body.removeChild(a);
       URL.revokeObjectURL(url);
       
-      alert('Project saved successfully!');
+      // alert('Project saved successfully!');
       
     } catch (error) {
       console.error('❌ Save error:', error);
-      alert('Error saving project: ' + error.message);
+      // alert('Error saving project: ' + error.message);
+
     } finally {
       setIsLoading(false);
     }
   };
 
-// helper function: normalize filename
-function normalizeKey(key = "") {
-  return key.split('/').pop(); // keep only filename
-}
+  const handleLoad = async (file) => {
+    if (!file) {
+      const input = document.createElement('input');
+      input.type = 'file';
+      input.accept = '.sb3,.json';
+      input.onchange = (e) => {
+        const selectedFile = e.target.files[0];
+        if (selectedFile) {
+          handleLoad(selectedFile);
+        }
+      };
+      input.click();
+      return;
+    }
 
-const handleLoad = async (file) => {
-  if (!file) {
-    const input = document.createElement('input');
-    input.type = 'file';
-    input.accept = '.sb3,.json';
-    input.onchange = (e) => {
-      const selectedFile = e.target.files[0];
-      if (selectedFile) {
-        handleLoad(selectedFile);
-      }
-    };
-    input.click();
-    return;
-  }
+    try {
+      setIsLoading(true);
 
-  try {
-    setIsLoading(true);
-
-    if (file.name.endsWith('.sb3')) {
-      const zip = new JSZip();
-      const contents = await zip.loadAsync(file);
-
-      const zipFiles = Object.keys(contents.files);
-      const projectJsonFile = contents.file('project.json');
-
-      if (!projectJsonFile) {
-        throw new Error('Invalid SB3 file: project.json not found');
-      }
-
-      const projectJsonText = await projectJsonFile.async('text');
-      const projectData = JSON.parse(projectJsonText);
-
-      const markerFile = contents.file('scratchjr.marker');
-      const isScratchJrFormat = (
-        markerFile ||
-        projectData.projectMetadata?.fileType === 'scratchjr-sb3' ||
-        projectData.fileType === 'scratchjr-sb3' ||
-        (projectData.scenes && Array.isArray(projectData.scenes))
-      );
-
-      if (isScratchJrFormat) {
-        console.log('🎯 Loading ScratchJr project with Electron-compatible images...');
-
-        // Convert all assets to base64 data URLs
-        const assetDataMap = new Map();
-        let assetsLoaded = 0;
-
-        for (const filePath of zipFiles) {
-          if (filePath.match(/\.(svg|png|jpg|jpeg|gif|bmp|webp)$/i) && !filePath.startsWith('sounds/')) {
-            const assetFile = contents.file(filePath);
-            if (assetFile) {
-              try {
-                const blob = await assetFile.async('blob');
-                const base64DataUrl = await blobToBase64(blob, filePath);
-                const key = normalizeKey(filePath);
-                assetDataMap.set(key, base64DataUrl); // store by filename only
-                assetsLoaded++;
-                console.log(`✅ Image converted to base64: ${filePath}`);
-              } catch (error) {
-                console.warn('Image conversion failed:', filePath, error);
+      if (file.name.endsWith('.sb3')) {
+        const zip = new JSZip();
+        const contents = await zip.loadAsync(file);
+        
+        const zipFiles = Object.keys(contents.files);
+        const projectJsonFile = contents.file('project.json');
+        
+        if (!projectJsonFile) {
+          throw new Error('Invalid SB3 file: project.json not found');
+        }
+        
+        const projectJsonText = await projectJsonFile.async('text');
+        const projectData = JSON.parse(projectJsonText);
+        
+        const markerFile = contents.file('scratchjr.marker');
+        const isScratchJrFormat = (
+          markerFile || 
+          projectData.projectMetadata?.fileType === 'scratchjr-sb3' ||
+          projectData.fileType === 'scratchjr-sb3' ||
+          (projectData.scenes && Array.isArray(projectData.scenes))
+        );
+        
+        if (isScratchJrFormat) {
+          console.log('🎯 Loading ScratchJr project with Electron-compatible images...');
+          
+          // Convert all assets to base64 data URLs (works reliably in Electron)
+          const assetDataMap = new Map();
+          let assetsLoaded = 0;
+          
+          for (const filePath of zipFiles) {
+            if (filePath.match(/\.(svg|png|jpg|jpeg|gif|bmp|webp)$/i) && !filePath.startsWith('sounds/')) {
+              const assetFile = contents.file(filePath);
+              if (assetFile) {
+                try {
+                  const blob = await assetFile.async('blob');
+                  const base64DataUrl = await blobToBase64(blob);
+                  assetDataMap.set(filePath, base64DataUrl);
+                  assetsLoaded++;
+                  console.log(`✅ Image converted to base64: ${filePath}`);
+                } catch (error) {
+                  console.warn('Image conversion failed:', filePath, error);
+                }
               }
             }
           }
-        }
-
-        // Load custom sounds
-        const customSounds = [];
-        const soundFiles = zipFiles.filter(name => name.startsWith('sounds/'));
-        for (const soundPath of soundFiles) {
-          const soundFile = contents.file(soundPath);
-          if (soundFile) {
-            try {
-              const blob = await soundFile.async('blob');
-              const base64DataUrl = await blobToBase64(blob);
-              const soundId = soundPath.replace('sounds/', '').replace('.wav', '');
-              customSounds.push({
-                id: soundId,
-                name: `Custom Sound ${soundId.slice(-4)}`,
-                audioURL: base64DataUrl,
-                audioBlob: blob,
-                type: 'custom'
-              });
-            } catch (error) {
-              console.warn('Sound conversion failed:', soundPath);
+          
+          // Load custom sounds
+          const customSounds = [];
+          const soundFiles = zipFiles.filter(name => name.startsWith('sounds/'));
+          for (const soundPath of soundFiles) {
+            const soundFile = contents.file(soundPath);
+            if (soundFile) {
+              try {
+                const blob = await soundFile.async('blob');
+                const base64DataUrl = await blobToBase64(blob);
+                const soundId = soundPath.replace('sounds/', '').replace('.wav', '');
+                customSounds.push({
+                  id: soundId,
+                  name: `Custom Sound ${soundId.slice(-4)}`,
+                  audioURL: base64DataUrl,
+                  audioBlob: blob,
+                  type: 'custom'
+                });
+              } catch (error) {
+                console.warn('Sound conversion failed:', soundPath);
+              }
             }
           }
-        }
-
-        // Create restored project with resolved base64 images
-        const restoredProject = {
-          scenes: projectData.scenes?.map(scene => ({
-            ...scene,
-            actors: scene.actors?.map(actor => {
-              const key = normalizeKey(actor.image);
-              const resolvedImage = assetDataMap.get(key) || actor.image;
-              return {
+          
+          // Create restored project with base64 data URLs
+          const restoredProject = {
+            scenes: projectData.scenes?.map(scene => ({
+              ...scene,
+              actors: scene.actors?.map(actor => ({
                 ...actor,
-                image: resolvedImage,
+                image: assetDataMap.get(actor.image) || actor.image,
                 scripts: actor.scripts || []
-              };
-            })
-          })) || [],
-          currentSceneIndex: projectData.currentSceneIndex || 0,
-          sceneUndoStack: projectData.sceneUndoStack || [],
-          sceneRedoStack: projectData.sceneRedoStack || [],
-          selectedBlockCategory: projectData.selectedBlockCategory || 'motion',
-          categoryPanelOpen: projectData.categoryPanelOpen || false,
-          sounds: projectData.sounds ? Object.fromEntries(
-            Object.entries(projectData.sounds).map(([key, value]) => [
-              key, assetDataMap.get(normalizeKey(value)) || value
-            ])
-          ) : { pop: '/assets/sounds/pop.mp3' },
-          backgroundGallery: projectData.backgroundGallery?.map(bg =>
-            assetDataMap.get(normalizeKey(bg)) || bg
-          ) || [],
-          customSounds: [...(projectData.customSounds || []), ...customSounds]
-        };
-
-        console.log('📊 Assets loaded:', assetsLoaded);
-        console.log('🖼️ Sample image type:', restoredProject.scenes[0]?.actors?.[0]?.image?.substring(0, 30));
-
-        // Dispatch to Redux and force multiple updates
-        dispatch({ type: 'scene/overwrite', payload: restoredProject });
-
-        // Multiple state updates to ensure rendering
-        setTimeout(() => {
-          const firstActor = restoredProject.scenes[restoredProject.currentSceneIndex]?.actors?.[0];
-          if (firstActor) {
-            setSelectedActorId(null);
-            setTimeout(() => {
-              setSelectedActorId(firstActor.id);
-              console.log('🎭 Actor selected with base64 image');
-            }, 100);
-          }
-        }, 200);
-
-        alert(`✅ Project loaded with ${assetsLoaded} images!\nImages are now Electron-compatible.`);
-
-      } else {
-        alert('Standard Scratch file detected. Converting...');
+              }))
+            })) || [],
+            currentSceneIndex: projectData.currentSceneIndex || 0,
+            sceneUndoStack: projectData.sceneUndoStack || [],
+            sceneRedoStack: projectData.sceneRedoStack || [],
+            selectedBlockCategory: projectData.selectedBlockCategory || 'motion',
+            categoryPanelOpen: projectData.categoryPanelOpen || false,
+            sounds: projectData.sounds ? Object.fromEntries(
+              Object.entries(projectData.sounds).map(([key, value]) => [
+                key, assetDataMap.get(value) || value
+              ])
+            ) : { pop: '/assets/sounds/pop.mp3' },
+            backgroundGallery: projectData.backgroundGallery?.map(bg => 
+              assetDataMap.get(bg) || bg
+            ) || [],
+            customSounds: [...(projectData.customSounds || []), ...customSounds]
+          };
+          
+          console.log('📊 Assets loaded:', assetsLoaded);
+          console.log('🖼️ Sample image type:', restoredProject.scenes[0]?.actors?.[0]?.image?.substring(0, 30));
+          
+          // Dispatch to Redux and force multiple updates
+          dispatch({ type: 'scene/overwrite', payload: restoredProject });
+          
+          // Multiple state updates to ensure rendering
+          setTimeout(() => {
+            const firstActor = restoredProject.scenes[restoredProject.currentSceneIndex]?.actors?.[0];
+            if (firstActor) {
+              setSelectedActorId(null);
+              setTimeout(() => {
+                setSelectedActorId(firstActor.id);
+                console.log('🎭 Actor selected with base64 image');
+              }, 100);
+            }
+          }, 200);
+          
+          // alert(`✅ Project loaded with ${assetsLoaded} images!\nImages are now Electron-compatible.`);
+          
+        } else {
+          // alert('Standard Scratch file detected. Converting...');
+        }
+        
+      } else if (file.name.endsWith('.json')) {
+        const text = await file.text();
+        const data = JSON.parse(text);
+        dispatch({ type: 'scene/overwrite', payload: data });
+        
+        const firstActor = data.scenes?.[data.currentSceneIndex || 0]?.actors?.[0];
+        if (firstActor) {
+          setSelectedActorId(firstActor.id);
+        }
+        
+        // alert('JSON project loaded successfully!');
       }
-
-    } else if (file.name.endsWith('.json')) {
-      const text = await file.text();
-      const data = JSON.parse(text);
-      dispatch({ type: 'scene/overwrite', payload: data });
-
-      const firstActor = data.scenes?.[data.currentSceneIndex || 0]?.actors?.[0];
-      if (firstActor) {
-        setSelectedActorId(firstActor.id);
-      }
-
-      alert('JSON project loaded successfully!');
+      
+    } catch (error) {
+      console.error('❌ Load error:', error);
+      // alert(`Error loading project: ${error.message}`);
+    } finally {
+      setIsLoading(false);
     }
-
-  } catch (error) {
-    console.error('❌ Load error:', error);
-    alert(`Error loading project: ${error.message}`);
-  } finally {
-    setIsLoading(false);
-  }
-};
-
+  };
 
   const handleFullscreen = () => {
     if (!document.fullscreenElement) {
@@ -417,11 +398,11 @@ const handleLoad = async (file) => {
   };
 
   const handleBrush = (actor) => {
-    alert(`Paint editor for ${actor.name} to be implemented`);
+    // alert(`Paint editor for ${actor.name} to be implemented`);
   };
 
   const handleAddCharacter = () => {
-    alert("Add new character action to be implemented");
+    // alert("Add new character action to be implemented");
   };
 
   return (
@@ -467,6 +448,7 @@ const handleLoad = async (file) => {
 
       <header className="top-navbar">
         <Toolbar
+          selectedActorId={selectedActorId}
           onSave={handleSave}
           onLoad={handleLoad}
           onFullScreen={handleFullscreen}
@@ -520,7 +502,7 @@ const handleLoad = async (file) => {
             <CategorySelector />
           </div>
           <div className="block-palette-container">
-            <BlockPalette />
+            <BlockPalette  />
           </div>
         </div>
       </footer>

@@ -17,6 +17,8 @@ const makeDefaultstem = () => ({
   direction: 0,
   height: 5,
   scripts: [],
+  size:1,
+  visible: true,
 });
 
 // Default scene
@@ -180,6 +182,7 @@ const sceneSlice = createSlice({
         width,
         height,
         scripts: scripts ?? [],
+        visible:true
       };
 
       scene.actors.push(actor);
@@ -229,6 +232,60 @@ const sceneSlice = createSlice({
       if (newDir < 0) newDir += 360;
       actor.direction = newDir;
     },
+
+    scaleActor: (state, action) => {
+      const { actorId, scale, fromScript } = action.payload;
+      const scene = state.scenes[state.currentSceneIndex];
+      if (!scene) return; // ✅ prevent undefined scene
+      const actor = scene.actors.find(a => a.id === actorId);
+      if (!actor) return; // ✅ prevent crash if actor not found
+
+      if (!fromScript) {
+        scene.undoStack.push(deepClone(scene));
+        scene.redoStack = [];
+      }
+
+      // default size = 1
+      const newSize = (actor.size || 1) * scale;
+
+      // ✅ clamp size between 0.5x and 3x
+      const minSize = 0.5;
+      const maxSize = 4.0;
+      actor.size = Math.min(Math.max(newSize, minSize), maxSize);
+    },
+
+    resetActorSize: (state, action) => {
+      const { actorId, fromScript } = action.payload;
+      const scene = state.scenes[state.currentSceneIndex];
+      if (!scene) return;
+      const actor = scene.actors.find(a => a.id === actorId);
+      if (!actor) return;
+
+      if (!fromScript) {
+        scene.undoStack.push(deepClone(scene));
+        scene.redoStack = [];
+      }
+
+      actor.size = 1; // ✅ reset to default size
+    },
+    disappearActor: (state, action) => {
+      const scene = state.scenes[state.currentSceneIndex];
+      if (!scene) return;
+      const actor = scene.actors.find((a) => a.id === action.payload.actorId);
+      if (actor) {
+        actor.visible = false;  // ✅ hide actor
+      }
+    },
+
+    reappearActor: (state, action) => {
+      const scene = state.scenes[state.currentSceneIndex];
+      if (!scene) return;
+      const actor = scene.actors.find((a) => a.id === action.payload.actorId);
+      if (actor) {
+        actor.visible = true;   // ✅ show actor again
+      }
+    },
+
 
     // Background
     setBackground(state, action) {
@@ -397,9 +454,13 @@ export const {
   pushSceneUndoState,
   addScene,
   removeScene,
+  scaleActor,
+  resetActorSize,
   switchScene,
   addActor,
   removeActor,
+  disappearActor,
+  reappearActor, 
   moveActor,
   rotateActor,
   setBackground,

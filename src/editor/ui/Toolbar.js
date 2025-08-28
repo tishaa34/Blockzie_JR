@@ -1,6 +1,7 @@
 import React, { useRef } from "react";
+import { useSelector, useDispatch } from "react-redux";
 import "../../css/Toolbar.css";
-
+import { run } from "../../utils/runScript";
 export default function Toolbar({
   onSave,
   onLoad,
@@ -10,9 +11,14 @@ export default function Toolbar({
   onHeading,
   onRefresh,
   onGreenFlag,
+  selectedActorId 
+
 }) {
   const fileInputRef = useRef();
-
+  const dispatch = useDispatch();
+  const { scenes, currentSceneIndex } = useSelector((s) => s.scene);
+  const scene = scenes[currentSceneIndex];
+  const actor = scene?.actors.find((a) => a.id === selectedActorId);
   const handleLoadClick = () => {
     if (fileInputRef.current) {
       fileInputRef.current.value = "";
@@ -24,6 +30,8 @@ export default function Toolbar({
       onLoad(e.target.files[0]);
     }
   };
+
+  
 
   return (
     <nav className="toolbar">
@@ -75,7 +83,7 @@ export default function Toolbar({
         <button className="tl-btn" onClick={onRefresh} title="Refresh">
           <img src="/assets/ui/resetAll.svg" alt="Refresh" />
         </button>
-        <button className="tl-btn" onClick={onGreenFlag} title="Green Flag">
+        <button className="tl-btn" onClick={() => run(actor, dispatch, scene?.sounds, actor.id)} title="Green Flag">
           <img src="/assets/ui/go.svg" alt="Green Flag" />
         </button>
       </div>
