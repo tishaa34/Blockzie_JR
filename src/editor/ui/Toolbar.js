@@ -47,7 +47,7 @@ export default function Toolbar({
           <img src="/assets/ui/save.png" alt="Save" />
         </button>
         <button className="tl-btn" title="Coding Cards">
-          <img src="/assets/coding-cards-icon.png" alt="Coding Cards" />
+          <img src="/assets/ui/coding-cards.png" alt="Coding Cards" />
         </button>
       </div>
 
@@ -55,28 +55,28 @@ export default function Toolbar({
     <div className="toolbar-main-strip">
       <div className="toolbar-group">
         <button className="tl-btn" onClick={onFullScreen} title="Fullscreen">
-          <img src="/assets/fullscreen-icon.png" alt="Fullscreen" />
+          <img src="/assets/ui/Fulloff.svg" alt="Fullscreen" />
         </button>
         <button className="tl-btn" onClick={onGridToggle} title="Grid Toggle">
-          <img src="/assets/grid-icon.png" alt="Grid" />
+          <img src="/assets/ui/gridOn.svg" alt="Grid" />
         </button>
       </div>
 
       <div className="toolbar-group">
         <button className="tl-btn" onClick={onBgGallery} title="Background Gallery">
-          <img src="/assets/bg-gallery-icon.png" alt="Backgrounds" />
+          <img src="/assets/ui/scene1.svg" alt="Backgrounds" />
         </button>
         <button className="tl-btn" onClick={onHeading} title="Add Heading">
-          <img src="/assets/abc-icon.png" alt="Add Heading" />
+          <img src="/assets/ui/addText.svg" alt="Add Heading" />
         </button>
       </div>
 
       <div className="toolbar-group">
         <button className="tl-btn" onClick={onRefresh} title="Refresh">
-          <img src="/assets/refresh-icon.png" alt="Refresh" />
+          <img src="/assets/ui/resetAll.svg" alt="Refresh" />
         </button>
         <button className="tl-btn" onClick={onGreenFlag} title="Green Flag">
-          <img src="/assets/green-flag-icon.png" alt="Green Flag" />
+          <img src="/assets/ui/go.svg" alt="Green Flag" />
         </button>
       </div>
     </div>

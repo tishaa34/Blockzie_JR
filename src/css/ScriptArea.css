@@ -44,7 +44,7 @@
 
 /* Drop area */
 .scriptarea-noborder {
-  min-height: 200px;
+  min-height: 50vh;
   width: 90%;
   padding: 20px 16px;
   background: #fff;

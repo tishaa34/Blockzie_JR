@@ -11,6 +11,7 @@ import CategorySelector from './editor/ui/CategorySelector';
 import Toolbar from './editor/ui/Toolbar';
 import BackgroundGallery from './editor/ui/BackgroundGallery';
 import HeadingModal from './editor/ui/HeadingModal';
+import { UndoRedoProvider } from '../editor/UndoRedoContext';
 
 import { clearScript } from './store/sceneSlice'; // Redux action
 
@@ -100,6 +101,17 @@ function ScratchJrShell() {
   const handleAddCharacter = () => {
     alert("Add new character action to be implemented");
   };
+
+  function App() {
+    return (
+        <UndoRedoProvider>
+            <div className="app">
+                {/* Your existing app components */}
+                {/* All your existing JSX content stays the same */}
+            </div>
+        </UndoRedoProvider>
+    );
+}
 
   return (
     <div className="sjr-root">

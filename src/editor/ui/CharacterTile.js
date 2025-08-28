@@ -11,17 +11,7 @@ bgSrc = "/assets/ui/hilight.png",
 return (
 <div className="character-tile-main" onClick={onClick}>
 {bgSrc ? <img className="tile-bg-img" src={bgSrc} alt="" aria-hidden="true" /> : null}
-  <img 
-        className="char-tile-img" 
-        src={imageSrc} 
-        alt={name}
-        onError={(e) => {
-          console.warn('Character image failed to load:', imageSrc);
-          if (e.target.src !== '/assets/characters/stembot.svg') {
-            e.target.src = '/assets/characters/stembot.svg';
-          }
-        }}
-      />
+  <img className="char-tile-img" src={imageSrc} alt={name} />
   <div className="char-tile-label" title={name}>{name}</div>
 
   <button

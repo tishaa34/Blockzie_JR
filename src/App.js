@@ -186,11 +186,12 @@ function ScratchJrShell() {
       document.body.removeChild(a);
       URL.revokeObjectURL(url);
       
-      alert('Project saved successfully!');
+      // alert('Project saved successfully!');
       
     } catch (error) {
       console.error('❌ Save error:', error);
-      alert('Error saving project: ' + error.message);
+      // alert('Error saving project: ' + error.message);
+
     } finally {
       setIsLoading(false);
     }
@@ -327,10 +328,10 @@ function ScratchJrShell() {
             }
           }, 200);
           
-          alert(`✅ Project loaded with ${assetsLoaded} images!\nImages are now Electron-compatible.`);
+          // alert(`✅ Project loaded with ${assetsLoaded} images!\nImages are now Electron-compatible.`);
           
         } else {
-          alert('Standard Scratch file detected. Converting...');
+          // alert('Standard Scratch file detected. Converting...');
         }
         
       } else if (file.name.endsWith('.json')) {
@@ -343,12 +344,12 @@ function ScratchJrShell() {
           setSelectedActorId(firstActor.id);
         }
         
-        alert('JSON project loaded successfully!');
+        // alert('JSON project loaded successfully!');
       }
       
     } catch (error) {
       console.error('❌ Load error:', error);
-      alert(`Error loading project: ${error.message}`);
+      // alert(`Error loading project: ${error.message}`);
     } finally {
       setIsLoading(false);
     }
@@ -397,11 +398,11 @@ function ScratchJrShell() {
   };
 
   const handleBrush = (actor) => {
-    alert(`Paint editor for ${actor.name} to be implemented`);
+    // alert(`Paint editor for ${actor.name} to be implemented`);
   };
 
   const handleAddCharacter = () => {
-    alert("Add new character action to be implemented");
+    // alert("Add new character action to be implemented");
   };
 
   return (
