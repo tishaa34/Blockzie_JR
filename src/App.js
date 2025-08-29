@@ -21,7 +21,7 @@ const demoActors = [
   {
     id: 'actor1',
     name: 'Stembot',
-    image: '/assets/characters/stembot.svg',
+    image: './assets/characters/stembot.svg',
   },
 ];
 
@@ -319,7 +319,7 @@ const handleLoad = async (file) => {
             Object.entries(projectData.sounds).map(([key, value]) => [
               key, assetDataMap.get(normalizeKey(value)) || value
             ])
-          ) : { pop: '/assets/sounds/pop.mp3' },
+          ) : { pop: './assets/sounds/pop.mp3' },
           backgroundGallery: projectData.backgroundGallery?.map(bg =>
             assetDataMap.get(normalizeKey(bg)) || bg
           ) || [],

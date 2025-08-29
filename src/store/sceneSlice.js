@@ -11,7 +11,7 @@ const CENTER_Y = Math.floor(GRID_HEIGHT / 2);
 const makeDefaultstem = () => ({
   id: nanoid(),
   name: 'Stembot',
-  image: '/assets/characters/stembot.svg',
+  image: './assets/characters/stembot.svg',
   x: CENTER_X,
   y: CENTER_Y,
   direction: 0,
@@ -43,11 +43,11 @@ const initialState = {
   categoryPanelOpen: false,
 
   // Assets (optional)
-  sounds: { pop: '/assets/sounds/pop.mp3' },
+  sounds: { pop: './assets/sounds/pop.mp3' },
   backgroundGallery: [
-    '/assets/backgrounds/bg1.png',
-    '/assets/backgrounds/bg2.png',
-    '/assets/backgrounds/bg3.png',
+    './assets/backgrounds/bg1.png',
+    './assets/backgrounds/bg2.png',
+    './assets/backgrounds/bg3.png',
     '#ffffff', '#87CEEB', '#98FB98', '#FFB6C1', '#F0E68C',
   ],
   customSounds: [], // Array to store custom recorded sounds
@@ -431,11 +431,11 @@ overwrite(state, action) {
   state.sceneRedoStack = newState.sceneRedoStack || [];
   state.selectedBlockCategory = newState.selectedBlockCategory || 'motion';
   state.categoryPanelOpen = newState.categoryPanelOpen || false;
-  state.sounds = newState.sounds || { pop: '/assets/sounds/pop.mp3' };
+  state.sounds = newState.sounds || { pop: './assets/sounds/pop.mp3' };
   state.backgroundGallery = newState.backgroundGallery || [
-    '/assets/backgrounds/bg1.png',
-    '/assets/backgrounds/bg2.png', 
-    '/assets/backgrounds/bg3.png',
+    './assets/backgrounds/bg1.png',
+    './assets/backgrounds/bg2.png', 
+    './assets/backgrounds/bg3.png',
     '#ffffff', '#87CEEB', '#98FB98', '#FFB6C1', '#F0E68C'
   ];
   state.customSounds = newState.customSounds || [];

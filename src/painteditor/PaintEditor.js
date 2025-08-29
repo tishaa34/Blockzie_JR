@@ -2,23 +2,23 @@ import React, { useRef, useEffect, useState } from "react";
 import "../css/PaintEditor.css";
 
 const TOOLS = [
-  { id: "undo", icon: "/assets/editor/undo.png", action: "undo" },
-  { id: "redo", icon: "/assets/editor/redo.png", action: "redo" },
-  { id: "pen", icon: "/assets/editor/pen.png", action: "pen" },
-  { id: "rect", icon: "/assets/editor/rect.png", action: "rect" },
-  { id: "ellipse", icon: "/assets/editor/ellipse.png", action: "ellipse" },
-  { id: "line", icon: "/assets/editor/line.png", action: "line" },
-  { id: "triangle", icon: "/assets/editor/triangle.png", action: "triangle" },
-  { id: "eraser", icon: "/assets/editor/eraser.png", action: "eraser" }
+  { id: "undo", icon: "./assets/editor/undo.png", action: "undo" },
+  { id: "redo", icon: "./assets/editor/redo.png", action: "redo" },
+  { id: "pen", icon: "./assets/editor/pen.png", action: "pen" },
+  { id: "rect", icon: "./assets/editor/rect.png", action: "rect" },
+  { id: "ellipse", icon: "./assets/editor/ellipse.png", action: "ellipse" },
+  { id: "line", icon: "./assets/editor/line.png", action: "line" },
+  { id: "triangle", icon: "./assets/editor/triangle.png", action: "triangle" },
+  { id: "eraser", icon: "./assets/editor/eraser.png", action: "eraser" }
 ];
 
 const ACTIONS = [
-  { id: "move", icon: "/assets/editor/move.png", action: "move" },
-  { id: "flip", icon: "/assets/editor/flip.png", action: "flip" },
-  { id: "stamp", icon: "/assets/editor/stamp.png", action: "stamp" },
-  { id: "cut", icon: "/assets/editor/cut.png", action: "cut" },
-  { id: "camera", icon: "/assets/editor/camera.png", action: "camera" },
-  { id: "ok", icon: "/assets/editor/ok.png", action: "ok" }
+  { id: "move", icon: "./assets/editor/move.png", action: "move" },
+  { id: "flip", icon: "./assets/editor/flip.png", action: "flip" },
+  { id: "stamp", icon: "./assets/editor/stamp.png", action: "stamp" },
+  { id: "cut", icon: "./assets/editor/cut.png", action: "cut" },
+  { id: "camera", icon: "./assets/editor/camera.png", action: "camera" },
+  { id: "ok", icon: "./assets/editor/ok.png", action: "ok" }
 ];
 
 const COLORS = [
@@ -97,14 +97,14 @@ export default function PaintEditor({ onSave, onClose }) {
         <div className="sjrpaint-tools-col">
           <img
             className="sjrpaint-toolbar-icon"
-            src="/assets/editor/undo.png"
+            src="./assets/editor/undo.png"
             alt="Undo"
             title="Undo"
             style={{ marginBottom: 13 }}
           />
           <img
             className="sjrpaint-toolbar-icon"
-            src="/assets/editor/redo.png"
+            src="./assets/editor/redo.png"
             alt="Redo"
             title="Redo"
             style={{ marginBottom: 17 }}
@@ -112,42 +112,42 @@ export default function PaintEditor({ onSave, onClose }) {
           {/* Drawing tools */}
           <img
             className={"sjrpaint-toolbar-icon" + (currentTool === "pen" ? " active" : "")}
-            src="/assets/editor/pen.png"
+            src="./assets/editor/pen.png"
             alt="Pen"
             title="Pen"
             onClick={() => setCurrentTool("pen")}
           />
           <img
             className={"sjrpaint-toolbar-icon" + (currentTool === "rect" ? " active" : "")}
-            src="/assets/editor/rect.png"
+            src="./assets/editor/rect.png"
             alt="Rectangle"
             title="Rectangle"
             onClick={() => setCurrentTool("rect")}
           />
           <img
             className={"sjrpaint-toolbar-icon" + (currentTool === "ellipse" ? " active" : "")}
-            src="/assets/editor/ellipse.png"
+            src="./assets/editor/ellipse.png"
             alt="Ellipse"
             title="Ellipse"
             onClick={() => setCurrentTool("ellipse")}
           />
           <img
             className={"sjrpaint-toolbar-icon" + (currentTool === "triangle" ? " active" : "")}
-            src="/assets/editor/triangle.png"
+            src="./assets/editor/triangle.png"
             alt="Triangle"
             title="Triangle"
             onClick={() => setCurrentTool("triangle")}
           />
           <img
             className={"sjrpaint-toolbar-icon" + (currentTool === "line" ? " active" : "")}
-            src="/assets/editor/line.png"
+            src="./assets/editor/line.png"
             alt="Line"
             title="Line"
             onClick={() => setCurrentTool("line")}
           />
           <img
             className={"sjrpaint-toolbar-icon" + (currentTool === "eraser" ? " active" : "")}
-            src="/assets/editor/eraser.png"
+            src="./assets/editor/eraser.png"
             alt="Eraser"
             title="Eraser"
             onClick={() => setCurrentTool("eraser")}
@@ -170,37 +170,37 @@ export default function PaintEditor({ onSave, onClose }) {
         <div className="sjrpaint-actions-col">
           <img
             className="sjrpaint-toolbar-icon"
-            src="/assets/editor/move.png"
+            src="./assets/editor/move.png"
             alt="Move"
             title="Move"
           />
           <img
             className="sjrpaint-toolbar-icon"
-            src="/assets/editor/flip.png"
+            src="./assets/editor/flip.png"
             alt="Flip"
             title="Flip"
           />
           <img
             className="sjrpaint-toolbar-icon"
-            src="/assets/editor/stamp.png"
+            src="./assets/editor/stamp.png"
             alt="Stamp"
             title="Stamp"
           />
           <img
             className="sjrpaint-toolbar-icon"
-            src="/assets/editor/cut.png"
+            src="./assets/editor/cut.png"
             alt="Cut"
             title="Cut"
           />
           <img
             className="sjrpaint-toolbar-icon"
-            src="/assets/editor/camera.png"
+            src="./assets/editor/camera.png"
             alt="Camera"
             title="Camera"
           />
           <img
             className="sjrpaint-toolbar-icon"
-            src="/assets/editor/ok.png"
+            src="./assets/editor/ok.png"
             alt="OK"
             title="OK"
             onClick={() => onSave && onSave(canvasRef.current.toDataURL())}
@@ -219,7 +219,7 @@ export default function PaintEditor({ onSave, onClose }) {
         ))}
         <img
           className="sjrpaint-palette-paint"
-          src="/assets/editor/paintspill.png"
+          src="./assets/editor/paintspill.png"
           alt="Paint Tool"
           style={{ marginLeft: 12, width: 35, height: 32, verticalAlign: "middle" }}
         />

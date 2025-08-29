@@ -1,5 +1,6 @@
 {
-  "name": "scratchjr-webapp",
+  "homepage": ".",
+  "name": "scratchwebapp",
   "version": "0.1.0",
   "private": true,
   "dependencies": {
@@ -39,5 +40,8 @@
       "last 1 firefox version",
       "last 1 safari version"
     ]
+  },
+  "devDependencies": {
+    "terser-brunch": "^4.1.0"
   }
 }

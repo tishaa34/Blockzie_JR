@@ -4,12 +4,12 @@ import { setSelectedBlockCategory } from "../../store/sceneSlice";
 import "../../css/CategorySelector.css";
 
 const categories = [
-  { id: "start", imgOff: "/assets/categories/StartOff.svg", imgOn: "/assets/categories/StartOn.svg", alt: "Start" },
-  { id: "motion", imgOff: "/assets/categories/MotionOff.svg", imgOn: "/assets/categories/MotionOn.svg", alt: "Motion" },
-  { id: "looks", imgOff: "/assets/categories/LooksOff.svg", imgOn: "/assets/categories/LooksOn.svg", alt: "Looks" },
-  { id: "sound", imgOff: "/assets/categories/SoundOff.svg", imgOn: "/assets/categories/SoundOn.svg", alt: "Sound" },
-  { id: "control", imgOff: "/assets/categories/FlowOff.svg", imgOn: "/assets/categories/FlowOn.svg", alt: "Control" },
-  { id: "end", imgOff: "/assets/categories/StopOff.svg", imgOn: "/assets/categories/StopOn.svg", alt: "End" },
+  { id: "start", imgOff: "./assets/categories/StartOff.svg", imgOn: "./assets/categories/StartOn.svg", alt: "Start" },
+  { id: "motion", imgOff: "./assets/categories/MotionOff.svg", imgOn: "./assets/categories/MotionOn.svg", alt: "Motion" },
+  { id: "looks", imgOff: "./assets/categories/LooksOff.svg", imgOn: "./assets/categories/LooksOn.svg", alt: "Looks" },
+  { id: "sound", imgOff: "./assets/categories/SoundOff.svg", imgOn: "./assets/categories/SoundOn.svg", alt: "Sound" },
+  { id: "control", imgOff: "./assets/categories/FlowOff.svg", imgOn: "./assets/categories/FlowOn.svg", alt: "Control" },
+  { id: "end", imgOff: "./assets/categories/StopOff.svg", imgOn: "./assets/categories/StopOn.svg", alt: "End" },
 ];
 
 export default function CategorySelector() {

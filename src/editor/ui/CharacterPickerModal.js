@@ -5,11 +5,11 @@ import { addActor, pushUndoState } from "../../store/sceneSlice";
 import "../../css/CharacterPickerModal.css";
 
 const DEMO_CHAR_LIST = [
-{src: "/assets/characters/stembot.svg", name: "Stembot" },
-{ src: "/assets/characters/Apple.svg", name: "Apple" },
-{ src: "/assets/characters/Baby.svg", name: "Baby" },
-{ src: "/assets/characters/Bed.svg", name: "Bed" },
-{ src: "/assets/characters/Basketball.svg", name: "Basketball" },
+{src: "./assets/characters/stembot.svg", name: "Stembot" },
+{ src: "./assets/characters/Apple.svg", name: "Apple" },
+{ src: "./assets/characters/Baby.svg", name: "Baby" },
+{ src: "./assets/characters/Bed.svg", name: "Bed" },
+{ src: "./assets/characters/Basketball.svg", name: "Basketball" },
 // ...more characters
 ];
 export default function CharacterPickerModal({
@@ -55,10 +55,10 @@ return (
 {/* Header with paint + close */}
 <div className="picker-modal-header">
 <button className="picker-brush-btn" onClick={() => onPaint?.()} aria-label="Paint">
-<img src="/assets/ui/paintbrush.png" alt="Paint" />
+<img src="./assets/ui/paintbrush.png" alt="Paint" />
 </button>
 <button className="picker-close-btn" onClick={onClose} aria-label="Close">
-<img src="/assets/ui/closeit.svg" alt="Close" />
+<img src="./assets/ui/closeit.svg" alt="Close" />
 </button>
 </div>
     {/* Character grid */}

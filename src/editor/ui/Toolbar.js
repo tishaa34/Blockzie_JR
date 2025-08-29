@@ -37,13 +37,13 @@ export default function Toolbar({
     <nav className="toolbar">
       {/* Logo */}
       <div className="toolbar-logo">
-        <img src="/assets/Logo.png" alt="Stembotix Logo" />
+        <img src="./assets/Logo.png" alt="Stembotix Logo" />
       </div>
 
       {/* First group: Project controls (left-aligned, tight group) */}
       <div className="toolbar-group left-group">
         <button className="tl-btn" onClick={handleLoadClick} title="Load project">
-          <img src="/assets/ui/load.png" alt="Load" />
+          <img src="./assets/ui/load.png" alt="Load" />
         </button>
         <input
           type="file"
@@ -52,10 +52,10 @@ export default function Toolbar({
           onChange={handleFileChange}
         />
         <button className="tl-btn" onClick={onSave} title="Save project">
-          <img src="/assets/ui/save.png" alt="Save" />
+          <img src="./assets/ui/save.png" alt="Save" />
         </button>
         <button className="tl-btn" title="Coding Cards">
-          <img src="/assets/ui/coding-cards.png" alt="Coding Cards" />
+          <img src="./assets/ui/coding-cards.png" alt="Coding Cards" />
         </button>
       </div>
 
@@ -63,28 +63,28 @@ export default function Toolbar({
     <div className="toolbar-main-strip">
       <div className="toolbar-group">
         <button className="tl-btn" onClick={onFullScreen} title="Fullscreen">
-          <img src="/assets/ui/Fulloff.svg" alt="Fullscreen" />
+          <img src="./assets/ui/Fulloff.svg" alt="Fullscreen" />
         </button>
         <button className="tl-btn" onClick={onGridToggle} title="Grid Toggle">
-          <img src="/assets/ui/gridOn.svg" alt="Grid" />
+          <img src="./assets/ui/gridOn.svg" alt="Grid" />
         </button>
       </div>
 
       <div className="toolbar-group">
         <button className="tl-btn" onClick={onBgGallery} title="Background Gallery">
-          <img src="/assets/ui/scene1.svg" alt="Backgrounds" />
+          <img src="./assets/ui/scene1.svg" alt="Backgrounds" />
         </button>
         <button className="tl-btn" onClick={onHeading} title="Add Heading">
-          <img src="/assets/ui/addText.svg" alt="Add Heading" />
+          <img src="./assets/ui/addText.svg" alt="Add Heading" />
         </button>
       </div>
 
       <div className="toolbar-group">
         <button className="tl-btn" onClick={onRefresh} title="Refresh">
-          <img src="/assets/ui/resetAll.svg" alt="Refresh" />
+          <img src="./assets/ui/resetAll.svg" alt="Refresh" />
         </button>
         <button className="tl-btn" onClick={() => run(actor, dispatch, scene?.sounds, actor.id)} title="Green Flag">
-          <img src="/assets/ui/go.svg" alt="Green Flag" />
+          <img src="./assets/ui/go.svg" alt="Green Flag" />
         </button>
       </div>
     </div>

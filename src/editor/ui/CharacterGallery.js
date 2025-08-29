@@ -5,7 +5,7 @@ import CharacterPlusTile from "./CharacterPlusTile";
 import CharacterPickerModal from "./CharacterPickerModal";
 
 const INITIAL_CHARACTERS = [
-{ name: "Stembot", src: "/assets/characters/stembot.svg" },
+{ name: "Stembot", src: "./assets/characters/stembot.svg" },
 ];
 
 export default function CharacterGallery() {

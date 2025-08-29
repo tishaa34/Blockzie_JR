@@ -6,7 +6,7 @@ name = "Stembot",
 imageSrc,
 onBrush,
 onClick,
-bgSrc = "/assets/ui/hilight.png",
+bgSrc = "./assets/ui/hilight.png",
 }) {
 return (
 <div className="character-tile-main" onClick={onClick}>
@@ -23,7 +23,7 @@ return (
     }}
     aria-label={`Paint ${name}`}
   >
-    <img src="/assets/ui/paintbrush.png" alt="" />
+    <img src="./assets/ui/paintbrush.png" alt="" />
   </button>
 </div>
 );

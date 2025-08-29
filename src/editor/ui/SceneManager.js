@@ -16,7 +16,7 @@ const CELL_SIZE = GRID_SIZE * SCALE;
 export default function SceneManager() {
   const dispatch = useDispatch();
   const { scenes, currentSceneIndex } = useSelector((state) => state.scene);
-  const basePath = "/assets/";
+  const basePath = "./assets/";
 
   return (
     <div className="scene-manager-xscroll">

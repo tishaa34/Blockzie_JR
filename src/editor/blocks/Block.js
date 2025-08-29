@@ -5,12 +5,12 @@ import { addBlockToScript, addCustomSound } from "../../store/sceneSlice";
 
 // Puzzle backgrounds per category
 const puzzleBgByCategory = {
-  start: "/assets/blocks/start.svg",
-  motion: "/assets/blocks/blueCmd.svg",
-  looks: "/assets/blocks/looks.svg",
-  sound: "/assets/blocks/sounds.svg",
-  control: "/assets/blocks/flow.svg",
-  end: "/assets/blocks/endshort.svg",
+  start: "./assets/blocks/start.svg",
+  motion: "./assets/blocks/blueCmd.svg",
+  looks: "./assets/blocks/looks.svg",
+  sound: "./assets/blocks/sounds.svg",
+  control: "./assets/blocks/flow.svg",
+  end: "./assets/blocks/endshort.svg",
 };
 
 // Bar color per category for seamless effect
@@ -26,40 +26,40 @@ const barColorByCategory = {
 // All blocks per category
 const blocksByCategory = {
   start: [
-    { name: "Start on Green Flag", icon: "/assets/blockicons/greenFlag.svg" },
-    { name: "Start On Tap", icon: "/assets/blockicons/OnTouch.svg" },
-    { name: "Start On Bump", icon: "/assets/blockicons/Bump.svg" },
+    { name: "Start on Green Flag", icon: "./assets/blockicons/greenFlag.svg" },
+    { name: "Start On Tap", icon: "./assets/blockicons/OnTouch.svg" },
+    { name: "Start On Bump", icon: "./assets/blockicons/Bump.svg" },
   ],
   motion: [
-    { name: "Move Right", icon: "/assets/blockicons/Foward.svg" },
-    { name: "Move Left", icon: "/assets/blockicons/Back.svg" },
-    { name: "Move Up", icon: "/assets/blockicons/Up.svg" },
-    { name: "Move Down", icon: "/assets/blockicons/Down.svg" },
-    { name: "Rotate Right", icon: "/assets/blockicons/Right.svg" },
-    { name: "Rotate Left", icon: "/assets/blockicons/Left.svg" },
-    { name: "Hop", icon: "/assets/blockicons/Hop.svg" },
-    { name: "Go Home", icon: "/assets/blockicons/Home.svg" },
+    { name: "Move Right", icon: "./assets/blockicons/Foward.svg" },
+    { name: "Move Left", icon: "./assets/blockicons/Back.svg" },
+    { name: "Move Up", icon: "./assets/blockicons/Up.svg" },
+    { name: "Move Down", icon: "./assets/blockicons/Down.svg" },
+    { name: "Rotate Right", icon: "./assets/blockicons/Right.svg" },
+    { name: "Rotate Left", icon: "./assets/blockicons/Left.svg" },
+    { name: "Hop", icon: "./assets/blockicons/Hop.svg" },
+    { name: "Go Home", icon: "./assets/blockicons/Home.svg" },
   ],
   looks: [
-    { name: "Say", icon: "/assets/blockicons/Say.svg" },
-    { name: "Grow Size", icon: "/assets/blockicons/Grow.svg"},
-    { name: "Shrink Size", icon: "/assets/blockicons/Shrink.svg"},
-    { name: "Reset Size", icon: "/assets/blockicons/Reset.svg"},
-    { name: "Appear", icon: "/assets/blockicons/Appear.svg"},
-    { name: "Disappear", icon: "/assets/blockicons/Disappear.svg"},
+    { name: "Say", icon: "./assets/blockicons/Say.svg" },
+    { name: "Grow Size", icon: "./assets/blockicons/Grow.svg"},
+    { name: "Shrink Size", icon: "./assets/blockicons/Shrink.svg"},
+    { name: "Reset Size", icon: "./assets/blockicons/Reset.svg"},
+    { name: "Appear", icon: "./assets/blockicons/Appear.svg"},
+    { name: "Disappear", icon: "./assets/blockicons/Disappear.svg"},
   ],
   sound: [
-    { name: "Pop", icon: "/assets/blockicons/Speaker.svg" },
-    { name: "Record", icon: "/assets/blockicons/microphone.svg" },
+    { name: "Pop", icon: "./assets/blockicons/Speaker.svg" },
+    { name: "Record", icon: "./assets/blockicons/microphone.svg" },
   ],
   control: [
-    { name: "Wait", icon: "/assets/blockicons/Wait.svg" },
-    { name: "Stop", icon: "/assets/blockicons/Stop.svg"},
-    { name: "Speed", icon: "/assets/blockicons/Speed0.svg" },
+    { name: "Wait", icon: "./assets/blockicons/Wait.svg" },
+    { name: "Stop", icon: "./assets/blockicons/Stop.svg"},
+    { name: "Speed", icon: "./assets/blockicons/Speed0.svg" },
   ],
   end: [
     { name: "End", icon: null, label: "" },
-    { name: "Repeat Forever", icon: "/assets/blockicons/Forever.svg" },
+    { name: "Repeat Forever", icon: "./assets/blockicons/Forever.svg" },
   ],
 };
 
@@ -176,7 +176,7 @@ function VoiceRecordModal({ isOpen, onClose, onSave }) {
     <div className="voice-modal-overlay">
       <div className="voice-modal">
         <div className="voice-modal-header">
-          <img src="/assets/lib/mic.svg" alt="Microphone" className="modal-mic-icon" />
+          <img src="./assets/lib/mic.svg" alt="Microphone" className="modal-mic-icon" />
           <button className="modal-close-btn" onClick={handleClose}>×</button>
         </div>
         
@@ -201,7 +201,7 @@ function VoiceRecordModal({ isOpen, onClose, onSave }) {
               title={isRecording ? "Stop Recording" : "Start Recording"}
             >
               <img 
-                src={isRecording ? "/assets/lib/recordon.svg" : "/assets/lib/recordoff.svg"} 
+                src={isRecording ? "./assets/lib/recordon.svg" : "./assets/lib/recordoff.svg"} 
                 alt={isRecording ? "Recording" : "Record"} 
               />
             </button>
@@ -214,7 +214,7 @@ function VoiceRecordModal({ isOpen, onClose, onSave }) {
                 title={isPlaying ? "Stop Playback" : "Play Recording"}
               >
                 <img 
-                  src={isPlaying ? "/assets/lib/playon.svg" : "/assets/lib/playoff.svg"} 
+                  src={isPlaying ? "./assets/lib/playon.svg" : "./assets/lib/playoff.svg"} 
                   alt={isPlaying ? "Playing" : "Play"} 
                 />
               </button>
@@ -228,7 +228,7 @@ function VoiceRecordModal({ isOpen, onClose, onSave }) {
                 title="Stop"
               >
                 <img 
-                  src={isRecording || isPlaying ? "/assets/lib/stopon.svg" : "/assets/lib/stopoff.svg"} 
+                  src={isRecording || isPlaying ? "./assets/lib/stopon.svg" : "./assets/lib/stopoff.svg"} 
                   alt="Stop" 
                 />
               </button>
@@ -262,7 +262,7 @@ export default function BlockPalette() {
     if (selectedBlockCategory === 'sound') {
       const customSoundBlocks = customSounds.map(sound => ({
         name: sound.name,
-        icon: "/assets/lib/mic.svg",
+        icon: "./assets/lib/mic.svg",
         type: 'custom_sound',
         soundData: sound
       }));
@@ -273,7 +273,7 @@ export default function BlockPalette() {
   };
 
   const blocks = getBlocks();
-  const puzzleBg = puzzleBgByCategory[selectedBlockCategory] || "/assets/blocks/blueCmd.svg";
+  const puzzleBg = puzzleBgByCategory[selectedBlockCategory] || "./assets/blocks/blueCmd.svg";
   const barColor = barColorByCategory[selectedBlockCategory] || "#3291d7";
 
   const handleDoubleClick = (block) => {
