@@ -17,12 +17,12 @@ export default function Stage({
 }) {
   const dispatch = useDispatch();
 
-  /* ─────── scene data ─────── */
+  // scene/actor state
   const { scenes, currentSceneIndex } = useSelector((s) => s.scene);
   const scene  = scenes[currentSceneIndex];
   const actors = scene?.actors ?? [];
 
-  /* ─────── refs & state ─────── */
+  // drag refs/state
   const containerRef  = useRef(null);
   const draggingRef   = useRef(false);   // live “am I dragging?”
   const movedRef      = useRef(false);   // remembers if threshold crossed
@@ -32,7 +32,6 @@ export default function Stage({
   const [dragOffset,    setDragOffset]  = useState({ x: 0, y: 0 });
   const [dragPosition,  setDragPos]     = useState({ x: 0, y: 0 });
 
-  /* ─────── helpers ─────── */
   const background = scene?.background || "#ffffff";
   const bgStyle = background.startsWith("#")
     ? { backgroundColor: background }
@@ -62,27 +61,51 @@ export default function Stage({
     return { x: left, y: top };
   }
 
-  /* ─────── drag handlers ─────── */
+  /* -------- Start On Bump logic -------- */
+  function checkForStartOnBump(movedActor) {
+    actors.forEach(other => {
+      if (
+        other.id !== movedActor.id &&
+        other.visible !== false &&
+        movedActor.visible !== false
+      ) {
+        // collision logic (rect overlap)
+        // Actor bounding box: (x, y) is grid center; size = (actor.size || 1) cells
+        const halfSizeA = 2 * (movedActor.size || 1); // (CELL_SIZE * 4 * size = covers 4 grid cells)
+        const halfSizeB = 2 * (other.size || 1);
+        const dx = movedActor.x - other.x;
+        const dy = movedActor.y - other.y;
+        if (Math.abs(dx) < halfSizeA + halfSizeB && Math.abs(dy) < halfSizeA + halfSizeB) {
+          // If the moved actor has a "Start On Bump" script, run it
+          const hasBumpScript = movedActor.scripts?.some(
+            block => block.category === "start" && block.name === "Start On Bump"
+          );
+          if (hasBumpScript) {
+            run(movedActor, dispatch, scene?.sounds, movedActor.id).catch(err => {
+              console.error("Error running Start On Bump script:", err);
+            });
+          }
+        }
+      }
+    });
+  }
+
+  /* -------- drag handlers -------- */
   function onDragStart(e, actor) {
     e.preventDefault();
     if (!containerRef.current) return;
-
     const rect = containerRef.current.getBoundingClientRect();
     const actorLeft = (actor.x + 0.5) * CELL_SIZE;
     const actorTop  = (actor.y + 0.5) * CELL_SIZE;
     const clientX   = e.clientX ?? e.touches[0].clientX;
     const clientY   = e.clientY ?? e.touches[0].clientY;
-
     setDraggedId(actor.id);
     setSelectedActorId(actor.id);
-
     setDragOffset({ x: clientX - rect.left - actorLeft, y: clientY - rect.top - actorTop });
     setDragPos({ x: actorLeft, y: actorTop });
     setDragStart({ x: clientX, y: clientY });
-
     draggingRef.current = false;
     movedRef.current    = false;
-
     window.addEventListener("mousemove", onDragMove);
     window.addEventListener("mouseup",   onDragEnd);
     window.addEventListener("touchmove", onDragMove, { passive: false });
@@ -92,17 +115,14 @@ export default function Stage({
   function onDragMove(e) {
     e.preventDefault();
     if (!draggedId) return;
-
     const clientX = e.clientX ?? e.touches[0].clientX;
     const clientY = e.clientY ?? e.touches[0].clientY;
     const dx = Math.abs(clientX - dragStartPos.x);
     const dy = Math.abs(clientY - dragStartPos.y);
-
     if (!draggingRef.current && (dx > DRAG_THRESHOLD || dy > DRAG_THRESHOLD)) {
       draggingRef.current = true;
       movedRef.current    = true;
     }
-
     if (draggingRef.current) {
       setDragPos(stageCoords(clientX, clientY));
     }
@@ -111,43 +131,39 @@ export default function Stage({
   function onDragEnd(e) {
     e.preventDefault();
     if (!draggedId) return;
-
     if (draggingRef.current) {
       const clientX = e.clientX ?? e.changedTouches?.[0]?.clientX;
       const clientY = e.clientY ?? e.changedTouches?.[0]?.clientY;
       const pos = stageCoords(clientX, clientY);
       const gridX = Math.round(pos.x / CELL_SIZE - 0.5);
       const gridY = Math.round(pos.y / CELL_SIZE - 0.5);
-
       const actor = actors.find((a) => a.id === draggedId);
       if (actor && (gridX !== actor.x || gridY !== actor.y)) {
         dispatch(pushUndoState());
         dispatch(moveActor({ actorId: actor.id, dx: gridX - actor.x, dy: gridY - actor.y }));
+        // Check for Start On Bump after move
+        const bumpedActor = { ...actor, x: gridX, y: gridY }; // simulate new position
+        checkForStartOnBump(bumpedActor);
       }
     }
-
-    /* reset everything */
     draggingRef.current = false;
     setDraggedId(null);
     setDragOffset({ x: 0, y: 0 });
     setDragPos({ x: 0, y: 0 });
-
     window.removeEventListener("mousemove", onDragMove);
     window.removeEventListener("mouseup",   onDragEnd);
     window.removeEventListener("touchmove", onDragMove);
     window.removeEventListener("touchend",  onDragEnd);
   }
 
-  /* ─────── tap handler ─────── */
+  /* -------- tap handler -------- */
   const handleActorTap = (actor, e) => {
     e.stopPropagation();
     if (movedRef.current) {
-      movedRef.current = false;   // reset for next click
-      return;                     // ignore click after a drag
+      movedRef.current = false;
+      return;
     }
-
     setSelectedActorId(actor.id);
-
     const hasTap = actor.scripts?.some(
       (b) => b.category === "start" && b.name === "Start On Tap"
     );
@@ -158,7 +174,7 @@ export default function Stage({
     }
   };
 
-  /* ─────── render ─────── */
+  /* -------- render -------- */
   return (
     <div
       ref={containerRef}
@@ -199,14 +215,12 @@ export default function Stage({
       )}
 
       {actors.map((actor) => {
-        if (actor.visible === false) return null;   // hidden actors
-
+        if (actor.visible === false) return null;
         const isDragged  = draggedId === actor.id && draggingRef.current;
         const left = isDragged ? dragPosition.x : (actor.x + 0.5) * CELL_SIZE;
         const top  = isDragged ? dragPosition.y : (actor.y + 0.5) * CELL_SIZE;
         const size = CELL_SIZE * 4 * (actor.size || 1);
         const isSelected = actor.id === selectedActorId;
-
         return (
           <img
             key={actor.id}
@@ -236,7 +250,6 @@ export default function Stage({
   );
 }
 
-/* ─────── grid overlay ─────── */
 function GridOverlay({ cols, rows, cellSize }) {
   return (
     <svg
