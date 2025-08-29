@@ -53,8 +53,22 @@ const blocksByCategory = {
     { name: "Record", icon: "./assets/blockicons/microphone.svg" },
   ],
   control: [
-    { name: "Wait", icon: "./assets/blockicons/Wait.svg" },
-    { name: "Stop", icon: "./assets/blockicons/Stop.svg"},
+    { 
+      name: "Wait", 
+      icon: "./assets/blockicons/Wait.svg",
+      execute: async (actor, dispatch, sounds, actorId, count = 3) => {
+        return new Promise(resolve => {
+          setTimeout(resolve, count * 1000);
+        });
+      }
+    },
+    { 
+      name: "Stop", 
+      icon: "./assets/blockicons/Stop.svg",
+      execute: () => {
+        throw new Error("STOP_EXECUTION");
+      }
+    },
     { name: "Speed", icon: "./assets/blockicons/Speed0.svg" },
   ],
   end: [
@@ -250,8 +264,6 @@ export default function BlockPalette() {
   const dispatch = useDispatch();
   const [showVoiceModal, setShowVoiceModal] = useState(false);
 
-  
-
   const selectedBlockCategory = useSelector((s) => s.scene.selectedBlockCategory) || "motion";
   const customSounds = useSelector((s) => s.scene.customSounds) || [];
 
@@ -305,7 +317,6 @@ export default function BlockPalette() {
     if (block.name === "Record") {
       setShowVoiceModal(true);
     }
-    
   };
 
   const handleVoiceSave = (customSoundData) => {

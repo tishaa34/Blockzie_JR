@@ -93,7 +93,7 @@ export default function ScriptArea({ selectedActorId }) {
   const clickBlock = async (block) => {
     if (block.category === "start" && block.name === "Start on Green Flag") {
       try {
-        await run(actor, dispatch, scene?.sounds, actor.id); // pass dispatch + actor + scene
+        await run(actor, dispatch, scene?.sounds, actor.id);
       } catch (err) {
         console.error("Error while running script:", err);
       }
@@ -101,6 +101,23 @@ export default function ScriptArea({ selectedActorId }) {
     }
 
     if (block.category === "start") return;
+
+    // For Wait block, show the number picker
+    if (block.name === "Wait") {
+      setTapBlock(block);
+      setPickerOpen(true);
+      return;
+    }
+
+    // Stop block doesn't need configuration
+    if (block.name === "Stop") {
+      return;
+    }
+
+    // Speed block doesn't need configuration
+    if (block.name === "Speed") {
+      return;
+    }
 
     setTapBlock(block);
     setPickerOpen(true);
@@ -129,7 +146,6 @@ export default function ScriptArea({ selectedActorId }) {
   return (
     <div className="scriptarea-root">
       <div className="scriptarea-buttons">
-        {/* ✅ Run button uses external run */}
         <button
           className="s-btn run"
           onClick={() => run(actor, dispatch, scene?.sounds, actor.id)}
@@ -160,7 +176,15 @@ export default function ScriptArea({ selectedActorId }) {
                 key={b.id}
                 className={`block-palette-title ${draggedBlock?.index === i ? 'dragging' : ''}`}
                 onClick={() => clickBlock(b)}
-                title="Click to set count, drag out to remove"
+                title={
+                  b.name === "Wait" 
+                    ? `Wait ${b.count || 3} seconds - Click to change duration, drag out to remove`
+                    : b.name === "Stop"
+                    ? "Stop execution - Drag out to remove"
+                    : b.name === "Speed"
+                    ? "Increase speed by 1.5x - Drag out to remove"
+                    : "Click to set count, drag out to remove"
+                }
                 draggable
                 onDragStart={(e) => handleBlockDragStart(e, b, i)}
                 onDragEnd={handleBlockDragEnd}
@@ -181,7 +205,7 @@ export default function ScriptArea({ selectedActorId }) {
         isOpen={pickerOpen}
         onClose={() => setPickerOpen(false)}
         onSelect={setCount}
-        currentValue={tapBlock?.count || 1}
+        currentValue={tapBlock?.count || (tapBlock?.name === "Wait" ? 3 : 1)}
         blockType={tapBlock?.type}
       />
     </div>

@@ -24,7 +24,7 @@ export default function Stage({
 
   // drag refs/state
   const containerRef  = useRef(null);
-  const draggingRef   = useRef(false);   // live “am I dragging?”
+  const draggingRef   = useRef(false);   // live "am I dragging?"
   const movedRef      = useRef(false);   // remembers if threshold crossed
 
   const [draggedId,     setDraggedId]   = useState(null);

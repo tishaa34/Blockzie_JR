@@ -7,8 +7,11 @@ import {
   reappearActor 
 } from "../store/sceneSlice";
 
-// helper for delays
-const delay = (ms) => new Promise((res) => setTimeout(res, ms));
+// helper for delays with speed multiplier
+const delay = (ms, speedMultiplier = 1) => {
+  const adjustedTime = Math.max(50, ms / speedMultiplier); // Minimum 50ms delay
+  return new Promise((res) => setTimeout(res, adjustedTime));
+};
 
 // helper for sounds
 async function playCustomSound(block) {
@@ -18,6 +21,39 @@ async function playCustomSound(block) {
   } catch (err) {
     console.error("Error playing sound:", err);
   }
+}
+
+// Helper function to check if a block is a Stop block
+function isStopBlock(block) {
+  return (
+    block?.name === 'Stop' || 
+    block?.type === 'Stop' ||
+    (block?.category === 'control' && (block?.name === 'Stop' || block?.type === 'Stop')) ||
+    block?.name?.toLowerCase().includes('stop') ||
+    block?.type?.toLowerCase().includes('stop')
+  );
+}
+
+// Helper function to check if a block is a Wait block
+function isWaitBlock(block) {
+  return (
+    block?.name === 'Wait' || 
+    block?.type === 'Wait' ||
+    (block?.category === 'control' && (block?.name === 'Wait' || block?.type === 'Wait')) ||
+    block?.name?.toLowerCase().includes('wait') ||
+    block?.type?.toLowerCase().includes('wait')
+  );
+}
+
+// Helper function to check if a block is a Speed block
+function isSpeedBlock(block) {
+  return (
+    block?.name === 'Speed' || 
+    block?.type === 'Speed' ||
+    (block?.category === 'control' && (block?.name === 'Speed' || block?.type === 'Speed')) ||
+    block?.name?.toLowerCase().includes('speed') ||
+    block?.type?.toLowerCase().includes('speed')
+  );
 }
 
 // exported async run function
@@ -33,138 +69,183 @@ export async function run(actor, dispatch, sounds, selectedActorId) {
 
   const loops = [];
   const targetActorId = selectedActorId || actor.id;
+  let currentSpeedMultiplier = 1; // Default speed
 
-  for (let i = 0; i < actor.scripts.length;) {
-    const b = actor.scripts[i];
-    const c = Math.max(1, Math.min(99, b?.count || 1));
-    console.log("Executing:", b?.type, "count:", c);
+  console.log("🚀 Starting script execution with", actor.scripts.length, "blocks");
 
-    switch (b?.type) {
-      case 'Move Right':
-        for (let k = 0; k < c; k++) {
-          dispatch(moveActor({ actorId: actor.id, dx: 1, dy: 0, fromScript: true }));
-          await delay(180);
-        }
-        break;
-
-      case 'Move Left':
-        for (let k = 0; k < c; k++) {
-          dispatch(moveActor({ actorId: actor.id, dx: -1, dy: 0, fromScript: true }));
-          await delay(180);
-        }
-        break;
-
-      case 'Move Up':
-        for (let k = 0; k < c; k++) {
-          dispatch(moveActor({ actorId: actor.id, dx: 0, dy: -1, fromScript: true }));
-          await delay(120);
-          dispatch(moveActor({ actorId: actor.id, dx: 0, dy: 2, fromScript: true }));
-          await delay(120);
-        }
-        break;
-
-      case 'Move Down':
-        for (let k = 0; k < c; k++) {
-          dispatch(moveActor({ actorId: actor.id, dx: 0, dy: 1, fromScript: true }));
-          await delay(180);
-        }
-        break;
-
-      case 'Rotate Left':
-        for (let k = 0; k < c; k++) {
-          dispatch(rotateActor({ actorId: actor.id, degrees: -90, fromScript: true }));
-          await delay(140);
-        }
-        break;
-
-      case 'Rotate Right':
-        for (let k = 0; k < c; k++) {
-          dispatch(rotateActor({ actorId: actor.id, degrees: 90, fromScript: true }));
-          await delay(140);
-        }
-        break;
-
-      case 'Wait':
-        await delay(1000 * c);
-        break;
-
-      case 'Pop':
-        if (sounds?.pop) {
-          try {
-            await new Audio(sounds.pop).play();
-          } catch {}
-        }
-        await delay(120);
-        break;
-
-      case 'Record':
-        // reserved for future use
-        break;
-
-      case 'loop':
-        loops.push({ start: i + 1, left: c });
-        break;
-
-      case 'end':
-      case 'endLoop':
-        if (loops.length) {
-          const L = loops[loops.length - 1];
-          L.left -= 1;
-          if (L.left > 0) {
-            i = L.start - 1;
-            continue;
-          } else {
-            loops.pop();
-          }
-        }
-        break;
-
-      case 'Grow Size':
-        for (let k = 0; k < c; k++) {
-          dispatch(scaleActor({ actorId: actor.id, scale: 1.2, fromScript: true }));
-          await delay(200);
-        }
-        break;
-
-      case 'Shrink Size':
-        for (let k = 0; k < c; k++) {
-          dispatch(scaleActor({ actorId: actor.id, scale: 0.8, fromScript: true }));
-          await delay(200);
-        }
-        break;
-
-      case 'Reset Size':
-        dispatch(resetActorSize({ actorId: targetActorId, fromScript: true }));
-        break;
-
-      case 'Disappear':
-        dispatch(disappearActor({ actorId: targetActorId }));
-        break;
-
-      case 'Appear':
-        dispatch(reappearActor({ actorId: targetActorId }));
-        break;
-
-      default:
-        if (b?.type && b.soundData?.audioURL) {
-          console.log('Playing custom sound:', b.type);
-          for (let k = 0; k < c; k++) {
-            await playCustomSound(b);
-            if (k < c - 1) await delay(200);
-          }
-          await delay(120);
-        } else if (b?.audioURL) {
-          console.log('Playing custom sound via audioURL:', b.type);
-          for (let k = 0; k < c; k++) {
-            await playCustomSound(b);
-            if (k < c - 1) await delay(200);
-          }
-          await delay(120);
-        }
-        break;
+  // First pass: check for Stop blocks and find where to actually stop
+  let stopIndex = -1;
+  for (let i = 0; i < actor.scripts.length; i++) {
+    const block = actor.scripts[i];
+    console.log(`Block ${i}:`, JSON.stringify(block, null, 2));
+    
+    if (isStopBlock(block)) {
+      stopIndex = i;
+      console.log(`🛑 STOP BLOCK FOUND at index ${i} - will stop execution here`);
+      break;
     }
+  }
 
-    i++;
-    await delay(80);
+  try {
+    for (let i = 0; i < actor.scripts.length; i++) {
+      const b = actor.scripts[i];
+      
+      // If we've reached the stop index, terminate execution
+      if (stopIndex !== -1 && i === stopIndex) {
+        console.log(`🛑 EXECUTION STOPPED at block ${i} due to Stop block`);
+        return;
+      }
+
+      const c = Math.max(1, Math.min(99, b?.count || 1));
+      
+      // Handle Speed block
+      if (isSpeedBlock(b)) {
+        currentSpeedMultiplier = b?.speedMultiplier || 1.5;
+        console.log(`⚡ SPEED CHANGED to ${currentSpeedMultiplier}x`);
+        continue;
+      }
+      
+      // Handle Wait block
+      if (isWaitBlock(b)) {
+        const waitTime = (b?.count || 3) * 1000;
+        console.log(`⏱️ WAITING for ${waitTime}ms (speed: ${currentSpeedMultiplier}x)`);
+        await delay(waitTime, currentSpeedMultiplier);
+        console.log("⏱️ Wait completed");
+        continue;
+      }
+
+      // Get the block identifier
+      const blockIdentifier = b?.name || b?.type;
+      console.log(`▶️ Executing: ${blockIdentifier} (count: ${c}, speed: ${currentSpeedMultiplier}x)`);
+
+      switch (blockIdentifier) {
+        case 'Move Right':
+          for (let k = 0; k < c; k++) {
+            dispatch(moveActor({ actorId: actor.id, dx: 1, dy: 0, fromScript: true }));
+            await delay(180, currentSpeedMultiplier);
+          }
+          break;
+
+        case 'Move Left':
+          for (let k = 0; k < c; k++) {
+            dispatch(moveActor({ actorId: actor.id, dx: -1, dy: 0, fromScript: true }));
+            await delay(180, currentSpeedMultiplier);
+          }
+          break;
+
+        case 'Move Up':
+          for (let k = 0; k < c; k++) {
+            dispatch(moveActor({ actorId: actor.id, dx: 0, dy: -1, fromScript: true }));
+            await delay(120, currentSpeedMultiplier);
+            dispatch(moveActor({ actorId: actor.id, dx: 0, dy: 2, fromScript: true }));
+            await delay(120, currentSpeedMultiplier);
+          }
+          break;
+
+        case 'Move Down':
+          for (let k = 0; k < c; k++) {
+            dispatch(moveActor({ actorId: actor.id, dx: 0, dy: 1, fromScript: true }));
+            await delay(180, currentSpeedMultiplier);
+          }
+          break;
+
+        case 'Rotate Left':
+          for (let k = 0; k < c; k++) {
+            dispatch(rotateActor({ actorId: actor.id, degrees: -90, fromScript: true }));
+            await delay(140, currentSpeedMultiplier);
+          }
+          break;
+
+        case 'Rotate Right':
+          for (let k = 0; k < c; k++) {
+            dispatch(rotateActor({ actorId: actor.id, degrees: 90, fromScript: true }));
+            await delay(140, currentSpeedMultiplier);
+          }
+          break;
+
+        case 'Pop':
+          if (sounds?.pop) {
+            try {
+              await new Audio(sounds.pop).play();
+            } catch {}
+          }
+          await delay(120, currentSpeedMultiplier);
+          break;
+
+        case 'Record':
+          // reserved for future use
+          break;
+
+        case 'loop':
+          loops.push({ start: i + 1, left: c });
+          break;
+
+        case 'end':
+        case 'endLoop':
+          if (loops.length) {
+            const L = loops[loops.length - 1];
+            L.left -= 1;
+            if (L.left > 0) {
+              i = L.start - 1;
+              continue;
+            } else {
+              loops.pop();
+            }
+          }
+          break;
+
+        case 'Grow Size':
+          for (let k = 0; k < c; k++) {
+            dispatch(scaleActor({ actorId: actor.id, scale: 1.2, fromScript: true }));
+            await delay(200, currentSpeedMultiplier);
+          }
+          break;
+
+        case 'Shrink Size':
+          for (let k = 0; k < c; k++) {
+            dispatch(scaleActor({ actorId: actor.id, scale: 0.8, fromScript: true }));
+            await delay(200, currentSpeedMultiplier);
+          }
+          break;
+
+        case 'Reset Size':
+          dispatch(resetActorSize({ actorId: targetActorId, fromScript: true }));
+          break;
+
+        case 'Disappear':
+          dispatch(disappearActor({ actorId: targetActorId }));
+          break;
+
+        case 'Appear':
+          dispatch(reappearActor({ actorId: targetActorId }));
+          break;
+
+        default:
+          if (b?.type && b.soundData?.audioURL) {
+            console.log('Playing custom sound:', b.type);
+            for (let k = 0; k < c; k++) {
+              await playCustomSound(b);
+              if (k < c - 1) await delay(200, currentSpeedMultiplier);
+            }
+            await delay(120, currentSpeedMultiplier);
+          } else if (b?.audioURL) {
+            console.log('Playing custom sound via audioURL:', b.type);
+            for (let k = 0; k < c; k++) {
+              await playCustomSound(b);
+              if (k < c - 1) await delay(200, currentSpeedMultiplier);
+            }
+            await delay(120, currentSpeedMultiplier);
+          }
+          break;
+      }
+
+      await delay(80, currentSpeedMultiplier);
+    }
+    
+    console.log("✅ Script execution completed normally");
+    
+  } catch (error) {
+    console.error("Script execution error:", error);
+    throw error;
   }
 }
