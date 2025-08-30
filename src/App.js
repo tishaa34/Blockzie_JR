@@ -344,10 +344,11 @@ const handleLoad = async (file) => {
           }
         }, 200);
 
-        alert(`✅ Project loaded with ${assetsLoaded} images!\nImages are now Electron-compatible.`);
+        // alert(`✅ Project loaded with ${assetsLoaded} images!\nImages are now Electron-compatible.`);
 
       } else {
-        alert('Standard Scratch file detected. Converting...');
+        // alert('Standard Scratch file detected. Converting...');
+
       }
 
     } else if (file.name.endsWith('.json')) {
@@ -360,12 +361,12 @@ const handleLoad = async (file) => {
         setSelectedActorId(firstActor.id);
       }
 
-      alert('JSON project loaded successfully!');
+      // alert('JSON project loaded successfully!');
     }
 
   } catch (error) {
     console.error('❌ Load error:', error);
-    alert(`Error loading project: ${error.message}`);
+    // alert(`Error loading project: ${error.message}`);
   } finally {
     setIsLoading(false);
   }
