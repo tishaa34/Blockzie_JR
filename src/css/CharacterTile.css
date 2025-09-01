@@ -1,119 +1,154 @@
+/* Character Gallery - Horizontal scrolling layout */
 .character-gallery-panel {
-width: 248px;
-max-height: 550px; 
-overflow-y: auto; 
-display: flex;
-flex-direction: column;
-align-items: flex-start;
-gap: 12px;
-padding: 8px 4px 8px 0; /* small right padding for scrollbar */
-background: transparent;
-border: none;
-/* Firefox scrollbar */
-scrollbar-width: thin;
-scrollbar-color: #d1b45a transparent;
+  width: 100%;
+  height: 100%;
+  overflow-x: auto; /* Horizontal scrolling */
+  overflow-y: hidden;
+  display: flex;
+  flex-direction: row; /* Row layout for horizontal scroll */
+  align-items: center;
+  gap: 5px;
+  padding: 5px;
+  background: transparent;
+  border: none;
+  scrollbar-width: thin;
+  scrollbar-color: #d1b45a transparent;
+  box-sizing: border-box;
+  white-space: nowrap;
 }
 
-/* One tile (matches first screenshot proportions) */
+/* Hide scrollbar but keep functionality */
+.character-gallery-panel::-webkit-scrollbar {
+  height: 6px;
+}
+
+.character-gallery-panel::-webkit-scrollbar-thumb {
+  background-color: #d1b45a;
+  border-radius: 3px;
+}
+
+.character-gallery-panel::-webkit-scrollbar-track {
+  background: transparent;
+}
+
+/* Character tile - horizontal layout */
 .character-tile-main {
-position: relative;
-width: 230px;
-height: 78px;
-display: flex;
-align-items: center;
-justify-content: flex-start;
-margin: 0;
-background: transparent;
-box-shadow: none;
-cursor: pointer;
+  position: relative;
+  width: 140px; /* Fixed width for horizontal scroll */
+  height: calc(100% - 10px); /* Full height minus padding */
+  min-height: 70px;
+  display: flex;
+  align-items: center;
+  justify-content: flex-start;
+  margin: 0;
+  background: transparent;
+  box-shadow: none;
+  cursor: pointer;
+  flex-shrink: 0; /* Prevent shrinking */
 }
 
 .tile-bg-img {
-position: absolute;
-top: 0;
-left: 0;
-width: 230px;
-height: 78px;
-z-index: 0;
-object-fit: contain; /* show full highlight */
-pointer-events: none;
-user-select: none;
+  position: absolute;
+  top: 0;
+  left: 0;
+  width: 140px;
+  height: 100%;
+  z-index: 0;
+  object-fit: cover;
+  pointer-events: none;
+  user-select: none;
+  border-radius: 6px;
 }
 
 .char-tile-img {
-height: 60px;
-width: 46px;
-margin: 3px 12px;
-object-fit: contain;
-z-index: 2;
-background: none;
+  height: 45px;
+  width: 36px;
+  margin: 3px 8px;
+  object-fit: contain;
+  z-index: 2;
+  background: none;
+  flex-shrink: 0;
 }
 
 .char-tile-label {
-flex: 1;
-text-align: center;
-background: #fff;
-border-radius: 24px;
-min-width: 84px;
-max-width: 130px;
-padding: 8px 16px;
-color: orange;
-font-weight: bold;
-font-size: 22px;
-margin-right: 15px;
-border: none;
-box-shadow: 0 1px 4px #efb04014;
-z-index: 2;
-white-space: nowrap;
-overflow: hidden;
-text-overflow: ellipsis;
+  flex: 1;
+  text-align: center;
+  background: #fff;
+  border-radius: 18px;
+  min-width: 50px;
+  max-width: 80px;
+  padding: 4px 8px;
+  color: orange;
+  font-weight: bold;
+  font-size: 14px;
+  margin-right: 8px;
+  border: none;
+  box-shadow: 0 1px 3px rgba(239, 176, 64, 0.2);
+  z-index: 2;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
 }
 
 .char-tile-brush {
-background: none;
-border: none;
-padding: 0;
-margin: 0 10px 0 0;
-cursor: pointer;
-height: 48px;
-width: 48px;
-display: flex;
-align-items: center;
-justify-content: center;
-z-index: 2;
+  background: none;
+  border: none;
+  padding: 0;
+  margin: 0 5px 0 0;
+  cursor: pointer;
+  height: 30px;
+  width: 30px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  z-index: 2;
+  flex-shrink: 0;
 }
+
 .char-tile-brush img {
-width: 36px;
-height: 36px;
+  width: 24px;
+  height: 24px;
 }
+
 .char-tile-brush:active {
-filter: brightness(93%);
+  filter: brightness(93%);
 }
-
-/* “+” add tile */
+/* Character Plus Tile - matching scene manager style exactly */
 .character-plus-tile {
-width: 160px;
-height: 64px;
-margin: 5px 0 0 5px;
-display: flex;
-align-items: center;
-justify-content: center;
-cursor: pointer;
-background: transparent;
-border: none;
-padding: 0;
-transition: filter 0.12s;
-overflow: visible;
-}
-.character-plus-tile img {
-width: 140px;
-height: 54px;
-object-fit: contain;
-display: block;
-user-select: none;
-pointer-events: none;
-}
-.character-plus-tile:hover {
-filter: brightness(0.97) drop-shadow(0 1px 8px #2db9fc33);
+  position: relative;
+  width: 120px; /* Same as character tiles */
+  height: calc(100% - 10px); /* Same as character tiles */
+  min-height: 80px;
+  cursor: pointer;
+  background: #fff;
+  /* border: 2px solid #f7b23d;  */
+  border-radius: 8px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  transition: border 0.16s, box-shadow 0.18s; /* Same transitions as scene manager */
+  flex-shrink: 0;
+  /* box-sizing: border-box; */
+  margin: 0;
+  padding: 0;
 }
 
+.character-plus-tile:hover {
+  border: 3px solid #f7b23d; /* Thicker border on hover like scene manager */
+  box-shadow: 0 2px 8px #f3a80f23; /* Same shadow as scene manager */
+  background: #fff; /* Keep white background */
+}
+
+.character-plus-tile img {
+  width: 100px; /* Larger icon */
+  height: 100px; /* Larger icon */
+  object-fit: contain;
+  display: block;
+  user-select: none;
+  pointer-events: none;
+  opacity: 0.8;
+}
+
+.character-plus-tile:hover img {
+  opacity: 1;
+}

@@ -12,24 +12,53 @@ html, body, #root {
   overflow: hidden;
 }
 
-/* Main app container - 3 row grid with taller footer */
+/* Main app container - single row toolbar */
 .sjr-root {
   height: 100vh;
   width: 100vw;
   display: grid;
-  grid-template-rows: 70px 1fr 150px; /* navbar | middle | footer (increased from 130px to 150px) */
+  grid-template-rows: 65px 1fr 80px; /* navbar (back to 65px) | middle | footer */
   background: #e5e5e5;
 }
 
-/* Top Navbar */
+/* Top Navbar - single row */
 .top-navbar {
   background: #f7f4eb;
   display: flex;
   align-items: center;
-  justify-content: center;
+  padding: 0;
+}
+
+/* Main toolbar row - compact */
+.toolbar-main {
+  flex: 1;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
   padding: 0 20px;
-  
-  
+  background: #f7f4eb;
+  min-height: 35px;
+}
+
+.toolbar-btn:hover {
+  background: #f0f0f0;
+  border-color: #999;
+}
+
+.toolbar-btn.active {
+  background: #007bff;
+  color: white;
+  border-color: #0056b3;
+}
+
+.toolbar-btn.green-flag {
+  background: #28a745;
+  color: white;
+  border-color: #1e7e34;
+}
+
+.toolbar-btn.green-flag:hover {
+  background: #218838;
 }
 
 /* Fix navbar color consistency */
@@ -39,12 +68,9 @@ html, body, #root {
 
 /* Override toolbar background to match navbar */
 .toolbar,
-.sjr-header,
-.toolbar-container {
+.sjr-header {
   background: #f7f4eb !important;
-  
 }
-
 
 /* If there's a specific logo container, override it too */
 .logo-container,
@@ -52,38 +78,16 @@ html, body, #root {
   background: transparent !important;
 }
 
-/* Middle Section - 4 columns with wider scene management */
+/* Middle Section - equal widths */
 .middle-section {
   display: grid;
-  grid-template-columns: 240px 2fr 3fr 280px; /* char(240px) | script(40%) | stage(60%) | scene(280px) */
+  grid-template-columns: 1fr 1fr 320px; /* script(50%) | stage(50%) | right-panel(320px fixed) */
   gap: 0;
   background: #e5e5e5;
   overflow: hidden;
 }
 
-/* Character Gallery Section - with border */
-.character-gallery-section {
-  background: #fff;
-  display: flex;
-  flex-direction: column;
-  overflow: hidden;
-  position: relative;
-}
-
-/* Straight border between character gallery and script area */
-.character-gallery-section::after {
-  content: "";
-  position: absolute;
-  right: 0;
-  top: 0px;        /* Top margin */
-  bottom: 0px;     /* Bottom margin */
-  width: 2px;
-  background: #000000; /* Solid black border */
-  border-radius: 1px;
-  z-index: 10;
-}
-
-/* Script Area Section */
+/* Script Area Section - remove right border since no character gallery adjacent */
 .script-area-section {
   background: #fff;
   display: flex;
@@ -92,7 +96,7 @@ html, body, #root {
   position: relative;
 }
 
-/* Stage Area Section - with border */
+/* Stage Area Section - keep border only on right */
 .stage-area-section {
   background: #fff;
   display: flex;
@@ -101,7 +105,7 @@ html, body, #root {
   position: relative;
 }
 
-/* Vertical line between script and stage */
+/* Border between script and stage */
 .script-area-section::after {
   content: "";
   position: absolute;
@@ -114,37 +118,133 @@ html, body, #root {
   z-index: 10;
 }
 
-/* Straight border between stage and scene management */
-.stage-area-section::before {
+/* Border between stage and right panel */
+.stage-area-section::after {
   content: "";
   position: absolute;
   right: 0;
-  top: 0px;        /* Top margin */
-  bottom: 0px;     /* Bottom margin */
+  top: 0px;
+  bottom: 0px;
   width: 2px;
-  background: #000000; /* Solid black border */
+  background: #000000;
   border-radius: 1px;
-  z-index: 15; /* Higher than script border */
+  z-index: 15;
 }
 
-/* Scene Management Section - wider with left margin */
-.scene-management-section {
+/* Right Panel Section - 2x2 grid layout */
+.right-panel-section {
   background: #fff;
   display: flex;
   flex-direction: column;
   overflow: hidden;
-  min-width: 280px;
-  padding-left: 15px; /* Add left margin similar to character gallery */
+  min-width: 320px;
+  padding: 5px;
+  width: 320px;
+  box-sizing: border-box;
 }
 
-/* Footer - Blocks with more height */
+/* Controls at the top */
+.right-panel-controls {
+  height: 40px;
+  margin-bottom: 5px;
+  flex-shrink: 0;
+}
+
+/* Container for the 2x2 grid */
+.right-panel-content {
+  flex: 1;
+  display: flex;
+  flex-direction: column;
+  gap: 5px;
+  height: calc(100% - 50px);
+}
+
+/* Top row (Scene Manager + Add Scene Button) */
+.top-row {
+  display: flex;
+  flex-direction: row;
+  height: calc(50% - 2.5px);
+  gap: 5px;
+}
+
+/* Bottom row (Character Gallery + Add Character Button) */
+.bottom-row {
+  display: flex;
+  flex-direction: row;
+  height: calc(50% - 2.5px);
+  gap: 5px;
+}
+
+/* Scene Manager Container */
+.scene-manager-container {
+  flex: 1;
+  overflow: hidden;
+  background: #fff;
+  border: 1px solid #ddd;
+  border-radius: 8px;
+}
+
+/* Character Gallery Container */
+.character-gallery-container {
+  flex: 1;
+  overflow: hidden;
+  background: #fff;
+  border: 1px solid #ddd;
+  border-radius: 8px;
+}
+
+/* Add Scene Button */
+.add-scene-button {
+  width: 40px; /* Reduced from 60px */
+  height: 100%;
+  flex-shrink: 0;
+  border: 2px dashed #aaa;
+  border-radius: 8px;
+  background: #f9f9f9;
+  cursor: pointer;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  transition: background 0.2s;
+  font-size: 24px;
+  color: #666;
+}
+
+.add-scene-button:hover {
+  background: #f0f0f0;
+}
+
+/* Add Character Button */
+.add-character-button {
+  width: 40px;
+  height: 100%;
+  background: transparent !important;
+  border: none !important;
+  box-shadow: none !important;
+  padding: 0 !important;
+  margin: 0 !important;
+  cursor: pointer;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  outline: none !important;
+}
+
+.add-character-button:hover {
+  background: #f0f0f0;
+}
+
+/* Footer - Blocks with reduced height to match category selector */
 .blocks-footer {
   background: linear-gradient(90deg, #4a90e2 0%, #357abd 100%);
   display: flex;
   align-items: center;
   justify-content: center;
-  padding: 15px 20px; /* Increased padding from 10px to 15px */
-  min-height: 150px; /* Ensure minimum height */
+  padding: 10px 20px; /* Reduced padding */
+  min-height: 80px; /* Reduced height to match components */
+  height: 80px;
 }
 
 .blocks-container {
@@ -155,6 +255,7 @@ html, body, #root {
   width: 100%;
   max-width: 1200px;
   flex-wrap: wrap; /* Allow wrapping if needed */
+  height: 100%;
 }
 
 .category-selector-container {
@@ -162,6 +263,7 @@ html, body, #root {
   align-items: center;
   gap: 10px;
   flex-shrink: 0; /* Prevent shrinking */
+  height: 60px; /* Match category selector height */
 }
 
 .block-palette-container {
@@ -170,6 +272,7 @@ html, body, #root {
   gap: 10px;
   flex: 1;
   min-width: 0; /* Allow shrinking */
+  height: 60px; /* Match block palette height */
 }
 
 /* Component overrides */
@@ -223,10 +326,9 @@ html, body, #root {
 }
 
 /* Add subtle shadows for depth */
-.character-gallery-section,
 .script-area-section,
 .stage-area-section,
-.scene-management-section {
+.right-panel-section {
   box-shadow: 0 0 10px rgba(0, 0, 0, 0.05);
 }
 
@@ -308,46 +410,33 @@ button:active {
 /* Responsive design */
 @media (max-width: 1400px) {
   .middle-section {
-    grid-template-columns: 220px 2fr 3fr 260px;
+    grid-template-columns: 2fr 3fr 300px;
   }
 }
 
 @media (max-width: 1200px) {
   .middle-section {
-    grid-template-columns: 200px 2fr 3fr 240px;
+    grid-template-columns: 2fr 3fr 280px;
   }
 }
 
 @media (max-width: 900px) {
   .middle-section {
-    grid-template-columns: 160px 2fr 3fr 200px;
+    grid-template-columns: 2fr 3fr 240px;
   }
   
-  .scene-management-section {
+  .right-panel-section {
     padding-left: 10px; /* Smaller left margin on mobile */
-  }
-  
-  .character-gallery-section::after,
-  .script-area-section::after,
-  .stage-area-section::before {
-    top: 20px;
-    bottom: 20px;
   }
 }
 
 @media (max-width: 600px) {
   .middle-section {
     grid-template-columns: 1fr;
-    grid-template-rows: auto auto auto auto;
+    grid-template-rows: auto auto auto;
   }
   
   .sjr-root {
-    grid-template-rows: 70px 1fr 120px; /* Smaller footer on mobile */
-  }
-  
-  .character-gallery-section::after,
-  .script-area-section::after,
-  .stage-area-section::before {
-    display: none;
+    grid-template-rows: 65px 1fr 70px; /* Keep compact sizing on mobile */
   }
 }

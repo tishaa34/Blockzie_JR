@@ -1,86 +1,121 @@
-/* Wrapper that holds the scrollable list */
+/* Scene Manager - Horizontal scrolling layout */
 .scene-manager-xscroll {
-  width: 200px;
-  max-height: 550px; /* show only 4 scenes, each ~190px tall */
-  overflow-y: auto; /* enable scroll */
-  overflow-x: hidden;
+  width: 100%;
+  height: 100%;
+  overflow-x: auto; /* Horizontal scrolling */
+  overflow-y: hidden;
   display: flex;
-  flex-direction: column;
+  flex-direction: row; /* Row layout for horizontal scroll */
   align-items: center;
-  gap: 8px;
-  padding: 8px 0;
-  background: #ece0c5;
+  gap: 5px;
+  padding: 5px;
+  background: #fff;
   border: none;
-  scrollbar-width: thin; /* for firefox */
+  scrollbar-width: thin;
+  box-sizing: border-box;
+  white-space: nowrap;
 }
 
-/* Hide scrollbar in Chrome/Edge */
+/* Hide scrollbar but keep functionality */
 .scene-manager-xscroll::-webkit-scrollbar {
-  width: 6px;
+  height: 6px;
 }
+
 .scene-manager-xscroll::-webkit-scrollbar-thumb {
   background-color: #d1b45a;
   border-radius: 3px;
 }
 
-/* Each scene wrapper */
+.scene-manager-xscroll::-webkit-scrollbar-track {
+  background: transparent;
+}
+
+/* Each scene wrapper - horizontal layout */
 .scene-thumb-h {
   position: relative;
-  width: 180px;
-  height: 180px;
+  width: 120px; /* Fixed width for horizontal scroll */
+  height: calc(100% - 10px); /* Fixed: added calc() */
+  min-height: 80px;
   cursor: pointer;
   background: #fff;
-  border: 3px solid #f7b23d;
-  border-radius: 13px;
+  border: 2px solid #f7b23d; /* Uncommented border */
+  border-radius: 8px;
   display: flex;
   align-items: center;
   justify-content: center;
   transition: border 0.16s, box-shadow 0.18s;
-}
-.scene-thumb-h.selected {
-  border: 4px solid #f7b23d;
-  box-shadow: 0 4px 16px #f3a80f23;
+  flex-shrink: 0; /* Prevent shrinking */
+  box-sizing: border-box;
 }
 
-/* Scene preview */
+.scene-thumb-h.selected {
+  border: 3px solid #f7b23d;
+  box-shadow: 0 2px 8px #f3a80f23;
+}
+
+/* Scene preview - fill the container and center content */
 .scene-thumb-preview {
   width: 100%;
   height: 100%;
   display: flex;
   align-items: center;
   justify-content: center;
-  border-radius: 10px;
+  border-radius: 6px;
   overflow: hidden;
   position: relative;
+  background: #fff;
+  box-sizing: border-box;
 }
 
-/* Scene number badge */
+/* Ensure any characters/actors inside the preview are centered */
+.scene-thumb-preview .actor {
+  position: static; /* Override absolute positioning if any */
+  transform: none; /* Remove any transform positioning */
+  margin: auto; /* Center the actor */
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+
+/* If there's a specific class for characters in scene preview */
+.scene-thumb-preview img {
+  max-width: 80%;
+  max-height: 80%;
+  object-fit: contain;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  margin: auto;
+}
+
+/* Scene number badge - compact for horizontal */
 .scene-badge {
   position: absolute;
-  right: -13px;
-  top: -10px;
-  font-size: 19px;
-  background: #ffd166;
+  right: -6px;
+  top: -4px;
+  font-size: 12px;
+  /* background: #ffd166;  */
   color: #9d6e05;
-  width: 23px;
-  height: 23px;
-  line-height: 23px;
-  border-radius: 12px;
+  width: 16px;
+  height: 16px;
+  line-height: 16px;
+  border-radius: 8px;
   text-align: center;
   font-weight: bold;
-  border: 2px solid #fada86;
-  box-shadow: 0 1px 6px #ecb93540;
+  border: 1px solid #fada86;
+  box-shadow: 0 1px 4px #ecb93540;
   user-select: none;
+  z-index: 10;
 }
 
-/* Remove button - hidden until hover */
+/* Remove button - compact */
 .scene-remove-btn {
   position: absolute;
-  top: 10px;  /* Adjust this to match the oval's vertical center */
-  left: 10px; /* Adjust this to match the oval's horizontal center */
-  width: 22px;
-  height: 22px;
-  font-size: 18px;
+  top: 4px;
+  left: 4px;
+  width: 14px;
+  height: 14px;
+  font-size: 12px;
   color: #d14545;
   background: #fff;
   border-radius: 50%;
@@ -89,34 +124,43 @@
   opacity: 0;
   pointer-events: none;
   transition: opacity 0.2s ease;
-  z-index: 5;
+  z-index: 15;
   display: flex;
   align-items: center;
   justify-content: center;
 }
+
 .scene-thumb-h:hover .scene-remove-btn {
   opacity: 1;
   pointer-events: all;
 }
 
-/* Add new scene button */
+/* Scene plus button styling */
 .scene-plus-h {
-  width: 180px;
-  height: 150px;
+  position: relative;
+  width: 120px;
+  height: calc(100% - 10px);
+  min-height: 80px;
+  cursor: pointer;
+  background: #fff;
+  /* border: 2px solid #f7b23d; */
+  border-radius: 8px;
   display: flex;
   align-items: center;
   justify-content: center;
-  cursor: pointer;
-  background: #f5f5f5;
-  border: 2px dashed #aaa;
-  border-radius: 12px;
-  transition: background 0.2s;
+  transition: border 0.16s, box-shadow 0.18s;
+  flex-shrink: 0;
+  box-sizing: border-box;
 }
+
 .scene-plus-h:hover {
-  background: #f0f0f0;
+  border: 3px solid #f7b23d; 
+  box-shadow: 0 2px 8px #f3a80f23; 
+  background: #fff; 
 }
+
 .scene-plus-h img {
-  width: 180px;
-  height: 180px;
+  width: 100px; /* Fixed: reduced from 120px to fit properly */
+  height: 100px; /* Fixed: reduced from 120px to fit properly */
   object-fit: contain;
 }

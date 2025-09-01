@@ -10,6 +10,7 @@ import ScriptArea from './editor/ui/ScriptArea';
 import CharacterGallery from './editor/ui/CharacterGallery';
 import CategorySelector from './editor/ui/CategorySelector';
 import Toolbar from './editor/ui/Toolbar';
+import RightPanelControls from './editor/ui/RightPanelControls';
 import BackgroundGallery from './editor/ui/BackgroundGallery';
 import HeadingModal from './editor/ui/HeadingModal';
 
@@ -42,20 +43,20 @@ function ScratchJrShell() {
   }, [actorIdFromScene, currentSceneIndex]);
 
   // Helper function to convert blob to base64 data URL (Electron-compatible)
- const blobToBase64 = (blob, filePath = '') => {
-  return new Promise((resolve, reject) => {
-    const reader = new FileReader();
-    reader.onload = () => {
-      let result = reader.result;
-      if (filePath.endsWith('.svg') && !result.startsWith('data:image/svg+xml')) {
-        result = result.replace(/^data:.*?base64,/, 'data:image/svg+xml;base64,');
-      }
-      resolve(result);
-    };
-    reader.onerror = reject;
-    reader.readAsDataURL(blob);
-  });
-};
+  const blobToBase64 = (blob, filePath = '') => {
+    return new Promise((resolve, reject) => {
+      const reader = new FileReader();
+      reader.onload = () => {
+        let result = reader.result;
+        if (filePath.endsWith('.svg') && !result.startsWith('data:image/svg+xml')) {
+          result = result.replace(/^data:.*?base64,/, 'data:image/svg+xml;base64,');
+        }
+        resolve(result);
+      };
+      reader.onerror = reject;
+      reader.readAsDataURL(blob);
+    });
+  };
 
   // Asset management functions
   const generateAssetId = (url) => {
@@ -86,7 +87,7 @@ function ScratchJrShell() {
 
   const collectProjectAssets = (projectData) => {
     const assets = new Set();
-    
+
     projectData.scenes?.forEach(scene => {
       scene.actors?.forEach(actor => {
         if (actor.image && !actor.image.startsWith('data:')) {
@@ -115,26 +116,26 @@ function ScratchJrShell() {
   const handleSave = async () => {
     try {
       setIsLoading(true);
-      
+
       let filename = heading?.text?.trim() ? heading.text.trim() : 'untitled';
       filename = filename.replace(/[\\/:?"<>|]+/g, '').slice(0, 50) || 'untitled';
-      
+
       const currentState = store.getState().scene;
       const zip = new JSZip();
       const assetMap = new Map();
-      
+
       const projectAssets = collectProjectAssets(currentState);
-      
+
       for (const assetUrl of projectAssets) {
         const extension = getFileExtension(assetUrl);
         const assetId = generateAssetId(assetUrl);
         const savedFilename = await addAssetToZip(zip, assetUrl, assetId, extension);
-        
+
         if (savedFilename) {
           assetMap.set(assetUrl, savedFilename);
         }
       }
-      
+
       const completeProjectData = {
         scenes: currentState.scenes?.map(scene => ({
           ...scene,
@@ -154,7 +155,7 @@ function ScratchJrShell() {
             key, assetMap.get(value) || value
           ])
         ) : { pop: 'pop.mp3' },
-        backgroundGallery: currentState.backgroundGallery?.map(bg => 
+        backgroundGallery: currentState.backgroundGallery?.map(bg =>
           assetMap.get(bg) || bg
         ),
         customSounds: currentState.customSounds || [],
@@ -166,14 +167,14 @@ function ScratchJrShell() {
           savedAt: new Date().toISOString()
         }
       };
-      
+
       zip.file('project.json', JSON.stringify(completeProjectData, null, 2));
       zip.file('scratchjr.marker', JSON.stringify({
         type: 'ScratchJr Web Project',
         version: '1.0.0',
         created: new Date().toISOString()
       }, null, 2));
-      
+
       if (currentState.customSounds && currentState.customSounds.length > 0) {
         for (const sound of currentState.customSounds) {
           if (sound.audioBlob) {
@@ -181,7 +182,7 @@ function ScratchJrShell() {
           }
         }
       }
-      
+
       const content = await zip.generateAsync({ type: 'blob' });
       const url = URL.createObjectURL(content);
       const a = document.createElement('a');
@@ -191,186 +192,174 @@ function ScratchJrShell() {
       a.click();
       document.body.removeChild(a);
       URL.revokeObjectURL(url);
-      
-      // alert('Project saved successfully!');
-      
+
     } catch (error) {
       console.error('❌ Save error:', error);
-      // alert('Error saving project: ' + error.message);
-
     } finally {
       setIsLoading(false);
     }
   };
+
   // helper function: normalize filename
-function normalizeKey(key = "") {
-  return key.split('/').pop(); // keep only filename
-}
-
-
-const handleLoad = async (file) => {
-  if (!file) {
-    const input = document.createElement('input');
-    input.type = 'file';
-    input.accept = '.sb3,.json';
-    input.onchange = (e) => {
-      const selectedFile = e.target.files[0];
-      if (selectedFile) {
-        handleLoad(selectedFile);
-      }
-    };
-    input.click();
-    return;
+  function normalizeKey(key = "") {
+    return key.split('/').pop(); // keep only filename
   }
 
-  try {
-    setIsLoading(true);
+  const handleLoad = async (file) => {
+    if (!file) {
+      const input = document.createElement('input');
+      input.type = 'file';
+      input.accept = '.sb3,.json';
+      input.onchange = (e) => {
+        const selectedFile = e.target.files[0];
+        if (selectedFile) {
+          handleLoad(selectedFile);
+        }
+      };
+      input.click();
+      return;
+    }
 
-    if (file.name.endsWith('.sb3')) {
-      const zip = new JSZip();
-      const contents = await zip.loadAsync(file);
+    try {
+      setIsLoading(true);
 
-      const zipFiles = Object.keys(contents.files);
-      const projectJsonFile = contents.file('project.json');
+      if (file.name.endsWith('.sb3')) {
+        const zip = new JSZip();
+        const contents = await zip.loadAsync(file);
 
-      if (!projectJsonFile) {
-        throw new Error('Invalid SB3 file: project.json not found');
-      }
+        const zipFiles = Object.keys(contents.files);
+        const projectJsonFile = contents.file('project.json');
 
-      const projectJsonText = await projectJsonFile.async('text');
-      const projectData = JSON.parse(projectJsonText);
+        if (!projectJsonFile) {
+          throw new Error('Invalid SB3 file: project.json not found');
+        }
 
-      const markerFile = contents.file('scratchjr.marker');
-      const isScratchJrFormat = (
-        markerFile ||
-        projectData.projectMetadata?.fileType === 'scratchjr-sb3' ||
-        projectData.fileType === 'scratchjr-sb3' ||
-        (projectData.scenes && Array.isArray(projectData.scenes))
-      );
+        const projectJsonText = await projectJsonFile.async('text');
+        const projectData = JSON.parse(projectJsonText);
 
-      if (isScratchJrFormat) {
-        console.log('🎯 Loading ScratchJr project with Electron-compatible images...');
+        const markerFile = contents.file('scratchjr.marker');
+        const isScratchJrFormat = (
+          markerFile ||
+          projectData.projectMetadata?.fileType === 'scratchjr-sb3' ||
+          projectData.fileType === 'scratchjr-sb3' ||
+          (projectData.scenes && Array.isArray(projectData.scenes))
+        );
 
-        // Convert all assets to base64 data URLs
-        const assetDataMap = new Map();
-        let assetsLoaded = 0;
+        if (isScratchJrFormat) {
+          console.log('🎯 Loading ScratchJr project with Electron-compatible images...');
 
-        for (const filePath of zipFiles) {
-          if (filePath.match(/\.(svg|png|jpg|jpeg|gif|bmp|webp)$/i) && !filePath.startsWith('sounds/')) {
-            const assetFile = contents.file(filePath);
-            if (assetFile) {
-              try {
-                const blob = await assetFile.async('blob');
-                const base64DataUrl = await blobToBase64(blob, filePath);
-                const key = normalizeKey(filePath);
-                assetDataMap.set(key, base64DataUrl); // store by filename only
-                assetsLoaded++;
-                console.log(`✅ Image converted to base64: ${filePath}`);
-              } catch (error) {
-                console.warn('Image conversion failed:', filePath, error);
+          // Convert all assets to base64 data URLs
+          const assetDataMap = new Map();
+          let assetsLoaded = 0;
+
+          for (const filePath of zipFiles) {
+            if (filePath.match(/\.(svg|png|jpg|jpeg|gif|bmp|webp)$/i) && !filePath.startsWith('sounds/')) {
+              const assetFile = contents.file(filePath);
+              if (assetFile) {
+                try {
+                  const blob = await assetFile.async('blob');
+                  const base64DataUrl = await blobToBase64(blob, filePath);
+                  const key = normalizeKey(filePath);
+                  assetDataMap.set(key, base64DataUrl); // store by filename only
+                  assetsLoaded++;
+                  console.log(`✅ Image converted to base64: ${filePath}`);
+                } catch (error) {
+                  console.warn('Image conversion failed:', filePath, error);
+                }
               }
             }
           }
-        }
 
-        // Load custom sounds
-        const customSounds = [];
-        const soundFiles = zipFiles.filter(name => name.startsWith('sounds/'));
-        for (const soundPath of soundFiles) {
-          const soundFile = contents.file(soundPath);
-          if (soundFile) {
-            try {
-              const blob = await soundFile.async('blob');
-              const base64DataUrl = await blobToBase64(blob);
-              const soundId = soundPath.replace('sounds/', '').replace('.wav', '');
-              customSounds.push({
-                id: soundId,
-                name: `Custom Sound ${soundId.slice(-4)}`,
-                audioURL: base64DataUrl,
-                audioBlob: blob,
-                type: 'custom'
-              });
-            } catch (error) {
-              console.warn('Sound conversion failed:', soundPath);
+          // Load custom sounds
+          const customSounds = [];
+          const soundFiles = zipFiles.filter(name => name.startsWith('sounds/'));
+          for (const soundPath of soundFiles) {
+            const soundFile = contents.file(soundPath);
+            if (soundFile) {
+              try {
+                const blob = await soundFile.async('blob');
+                const base64DataUrl = await blobToBase64(blob);
+                const soundId = soundPath.replace('sounds/', '').replace('.wav', '');
+                customSounds.push({
+                  id: soundId,
+                  name: `Custom Sound ${soundId.slice(-4)}`,
+                  audioURL: base64DataUrl,
+                  audioBlob: blob,
+                  type: 'custom'
+                });
+              } catch (error) {
+                console.warn('Sound conversion failed:', soundPath);
+              }
             }
           }
+
+          // Create restored project with resolved base64 images
+          const restoredProject = {
+            scenes: projectData.scenes?.map(scene => ({
+              ...scene,
+              actors: scene.actors?.map(actor => {
+                const key = normalizeKey(actor.image);
+                const resolvedImage = assetDataMap.get(key) || actor.image;
+                return {
+                  ...actor,
+                  image: resolvedImage,
+                  scripts: actor.scripts || []
+                };
+              })
+            })) || [],
+            currentSceneIndex: projectData.currentSceneIndex || 0,
+            sceneUndoStack: projectData.sceneUndoStack || [],
+            sceneRedoStack: projectData.sceneRedoStack || [],
+            selectedBlockCategory: projectData.selectedBlockCategory || 'motion',
+            categoryPanelOpen: projectData.categoryPanelOpen || false,
+            sounds: projectData.sounds ? Object.fromEntries(
+              Object.entries(projectData.sounds).map(([key, value]) => [
+                key, assetDataMap.get(normalizeKey(value)) || value
+              ])
+            ) : { pop: './assets/sounds/pop.mp3' },
+            backgroundGallery: projectData.backgroundGallery?.map(bg =>
+              assetDataMap.get(normalizeKey(bg)) || bg
+            ) || [],
+            customSounds: [...(projectData.customSounds || []), ...customSounds]
+          };
+
+          console.log('📊 Assets loaded:', assetsLoaded);
+          console.log('🖼️ Sample image type:', restoredProject.scenes[0]?.actors?.[0]?.image?.substring(0, 30));
+
+          // Dispatch to Redux and force multiple updates
+          dispatch({ type: 'scene/overwrite', payload: restoredProject });
+
+          // Multiple state updates to ensure rendering
+          setTimeout(() => {
+            const firstActor = restoredProject.scenes[restoredProject.currentSceneIndex]?.actors?.[0];
+            if (firstActor) {
+              setSelectedActorId(null);
+              setTimeout(() => {
+                setSelectedActorId(firstActor.id);
+                console.log('🎭 Actor selected with base64 image');
+              }, 100);
+            }
+          }, 200);
+
         }
 
-        // Create restored project with resolved base64 images
-        const restoredProject = {
-          scenes: projectData.scenes?.map(scene => ({
-            ...scene,
-            actors: scene.actors?.map(actor => {
-              const key = normalizeKey(actor.image);
-              const resolvedImage = assetDataMap.get(key) || actor.image;
-              return {
-                ...actor,
-                image: resolvedImage,
-                scripts: actor.scripts || []
-              };
-            })
-          })) || [],
-          currentSceneIndex: projectData.currentSceneIndex || 0,
-          sceneUndoStack: projectData.sceneUndoStack || [],
-          sceneRedoStack: projectData.sceneRedoStack || [],
-          selectedBlockCategory: projectData.selectedBlockCategory || 'motion',
-          categoryPanelOpen: projectData.categoryPanelOpen || false,
-          sounds: projectData.sounds ? Object.fromEntries(
-            Object.entries(projectData.sounds).map(([key, value]) => [
-              key, assetDataMap.get(normalizeKey(value)) || value
-            ])
-          ) : { pop: './assets/sounds/pop.mp3' },
-          backgroundGallery: projectData.backgroundGallery?.map(bg =>
-            assetDataMap.get(normalizeKey(bg)) || bg
-          ) || [],
-          customSounds: [...(projectData.customSounds || []), ...customSounds]
-        };
+      } else if (file.name.endsWith('.json')) {
+        const text = await file.text();
+        const data = JSON.parse(text);
+        dispatch({ type: 'scene/overwrite', payload: data });
 
-        console.log('📊 Assets loaded:', assetsLoaded);
-        console.log('🖼️ Sample image type:', restoredProject.scenes[0]?.actors?.[0]?.image?.substring(0, 30));
-
-        // Dispatch to Redux and force multiple updates
-        dispatch({ type: 'scene/overwrite', payload: restoredProject });
-
-        // Multiple state updates to ensure rendering
-        setTimeout(() => {
-          const firstActor = restoredProject.scenes[restoredProject.currentSceneIndex]?.actors?.[0];
-          if (firstActor) {
-            setSelectedActorId(null);
-            setTimeout(() => {
-              setSelectedActorId(firstActor.id);
-              console.log('🎭 Actor selected with base64 image');
-            }, 100);
-          }
-        }, 200);
-
-        // alert(`✅ Project loaded with ${assetsLoaded} images!\nImages are now Electron-compatible.`);
-
-      } else {
-        // alert('Standard Scratch file detected. Converting...');
-
+        const firstActor = data.scenes?.[data.currentSceneIndex || 0]?.actors?.[0];
+        if (firstActor) {
+          setSelectedActorId(firstActor.id);
+        }
       }
 
-    } else if (file.name.endsWith('.json')) {
-      const text = await file.text();
-      const data = JSON.parse(text);
-      dispatch({ type: 'scene/overwrite', payload: data });
-
-      const firstActor = data.scenes?.[data.currentSceneIndex || 0]?.actors?.[0];
-      if (firstActor) {
-        setSelectedActorId(firstActor.id);
-      }
-
-      // alert('JSON project loaded successfully!');
+    } catch (error) {
+      console.error('❌ Load error:', error);
+    } finally {
+      setIsLoading(false);
     }
-
-  } catch (error) {
-    console.error('❌ Load error:', error);
-    // alert(`Error loading project: ${error.message}`);
-  } finally {
-    setIsLoading(false);
-  }
-};
+  };
 
   const handleFullscreen = () => {
     if (!document.fullscreenElement) {
@@ -382,11 +371,6 @@ const handleLoad = async (file) => {
 
   const handleGridToggle = () => {
     setShowGrid(g => !g);
-  };
-
-  const handleRefresh = () => {
-    if (!selectedActorId) return;
-    dispatch(clearScript({ actorId: selectedActorId }));
   };
 
   const handleGreenFlag = () => {
@@ -404,7 +388,7 @@ const handleLoad = async (file) => {
         const audio = new Audio(script.soundData.audioURL);
         audio.play().catch(err => console.error('Sound execution error:', err));
       }
-      
+
       if (script.blocks && script.blocks.length > 0 && script.blocks[0].type === "green_flag") {
         dispatch({
           type: 'script/run',
@@ -415,11 +399,11 @@ const handleLoad = async (file) => {
   };
 
   const handleBrush = (actor) => {
-    // alert(`Paint editor for ${actor.name} to be implemented`);
+    // Paint editor functionality
   };
 
   const handleAddCharacter = () => {
-    // alert("Add new character action to be implemented");
+    // Add character functionality
   };
 
   return (
@@ -463,20 +447,17 @@ const handleLoad = async (file) => {
         </div>
       )}
 
+      {/* Top Navbar with simplified Toolbar */}
       <header className="top-navbar">
         <Toolbar
           selectedActorId={selectedActorId}
           onSave={handleSave}
           onLoad={handleLoad}
-          onFullScreen={handleFullscreen}
-          onGridToggle={handleGridToggle}
-          onRefresh={handleRefresh}
-          onBgGallery={() => setBgModalOpen(true)}
-          onHeading={() => setHeadingModalOpen(true)}
-          onGreenFlag={handleGreenFlag}
+          heading={heading}
         />
       </header>
 
+      {/* Background and Heading Modals */}
       <BackgroundGallery open={bgModalOpen} onClose={() => setBgModalOpen(false)} />
       <HeadingModal
         open={headingModalOpen}
@@ -485,20 +466,14 @@ const handleLoad = async (file) => {
         initial={heading}
       />
 
+      {/* Main Content - 3 Column Layout */}
       <main className="middle-section">
-        <section className="character-gallery-section">
-      <CharacterGallery
-        selectedActorId={selectedActorId}
-        setSelectedActorId={setSelectedActorId}
-        onBrush={handleBrush}
-        onAdd={handleAddCharacter}
-      />
-        </section>
-
+        {/* Script Area Section */}
         <section className="script-area-section">
           <ScriptArea selectedActorId={selectedActorId} />
         </section>
 
+        {/* Stage Area Section */}
         <section className="stage-area-section">
           <Stage
             selectedActorId={selectedActorId}
@@ -508,18 +483,42 @@ const handleLoad = async (file) => {
           />
         </section>
 
-        <section className="scene-management-section">
-          <SceneManager />
+        {/* Right Panel Section - Controls + Scene Manager + Character Gallery */}
+        <section className="right-panel-section">
+          {/* Right Panel Controls - above scene manager */}
+          <RightPanelControls
+            onFullScreen={handleFullscreen}
+            onGridToggle={handleGridToggle}
+            onHeading={() => setHeadingModalOpen(true)}
+            onGreenFlag={handleGreenFlag}
+            selectedActorId={selectedActorId}
+          />
+
+          {/* Scene Manager Container */}
+          <div className="scene-manager-container">
+            <SceneManager />
+          </div>
+
+          {/* Character Gallery Container */}
+          <div className="character-gallery-container">
+            <CharacterGallery
+              selectedActorId={selectedActorId}
+              setSelectedActorId={setSelectedActorId}
+              onBrush={handleBrush}
+              onAdd={handleAddCharacter}
+            />
+          </div>
         </section>
       </main>
 
+      {/* Footer - Block Palette */}
       <footer className="blocks-footer">
         <div className="blocks-container">
           <div className="category-selector-container">
             <CategorySelector />
           </div>
           <div className="block-palette-container">
-            <BlockPalette  />
+            <BlockPalette />
           </div>
         </div>
       </footer>
