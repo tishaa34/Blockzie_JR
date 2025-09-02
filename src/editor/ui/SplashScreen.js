@@ -1,11 +1,12 @@
 import React, { useEffect } from 'react';
 import '../../css/SplashScreen.css';
 
-const SplashScreen = ({ onComplete }) => {
+const SplashScreen = ({ onComplete, message = "Preparing, please wait..." }) => {
   useEffect(() => {
-    // Show splash screen for 3 seconds
     const timer = setTimeout(() => {
-      onComplete();
+      if (onComplete) {
+        onComplete();
+      }
     }, 3000);
 
     return () => clearTimeout(timer);
@@ -22,7 +23,7 @@ const SplashScreen = ({ onComplete }) => {
         <div className="loading-bar">
           <div className="loading-progress"></div>
         </div>
-        <p className="loading-text">Preparing, please wait...</p>
+        <p className="loading-text">{message}</p>
       </div>
     </div>
   );

@@ -27,7 +27,7 @@ const demoActors = [
   },
 ];
 
-function ScratchJrShell() {
+function BlockzieJrShell() {
   const dispatch = useDispatch();
   const { scenes, currentSceneIndex } = useSelector(s => s.scene);
   const actorIdFromScene = scenes[currentSceneIndex]?.actors?.[0]?.id;
@@ -37,14 +37,24 @@ function ScratchJrShell() {
   const [heading, setHeading] = useState({ text: "", color: "#222", size: 38 });
   const [headingModalOpen, setHeadingModalOpen] = useState(false);
   const [showGrid, setShowGrid] = useState(false);
-  const [isLoading, setIsLoading] = useState(false);
 
-  // Add splash screen state
+  // Splash screen state and message
   const [showSplash, setShowSplash] = useState(true);
+  const [splashMessage, setSplashMessage] = useState("Preparing, please wait...");
+
+  useEffect(() => {
+    // Show splash only for 3 seconds on initial load
+    const timer = setTimeout(() => setShowSplash(false), 3000);
+    return () => clearTimeout(timer);
+  }, []);
 
   useEffect(() => {
     if (actorIdFromScene) setSelectedActorId(actorIdFromScene);
   }, [actorIdFromScene, currentSceneIndex]);
+
+  const handleSplashComplete = () => {
+    setShowSplash(false);
+  };
 
   // Helper function to convert blob to base64 data URL (Electron-compatible)
   const blobToBase64 = (blob, filePath = '') => {
@@ -117,144 +127,133 @@ function ScratchJrShell() {
     return Array.from(assets);
   };
 
-  // Enhanced save function with filename dialog
-// Enhanced save function - NO PROMPT, directly opens OS file save dialog
-const handleSave = async () => {
-  try {
-    setIsLoading(true);
+  // Enhanced save function - directly opens OS file save dialog (no popup)
+  const handleSave = async () => {
+    try {
+      // Determine default filename based on heading or use "Blockzie-Jr"
+      let defaultFilename = heading?.text?.trim() ? heading.text.trim() : 'Blockzie-Jr';
+      defaultFilename = defaultFilename.replace(/[\\/:?"<>|]+/g, '').slice(0, 50) || 'Blockzie-Jr';
 
-    // Determine default filename based on heading or use "Blockzie-Jr"
-    let defaultFilename = heading?.text?.trim() ? heading.text.trim() : 'Blockzie-Jr';
-    defaultFilename = defaultFilename.replace(/[\\/:?"<>|]+/g, '').slice(0, 50) || 'Blockzie-Jr';
+      const currentState = store.getState().scene;
+      const zip = new JSZip();
+      const assetMap = new Map();
 
-    const currentState = store.getState().scene;
-    const zip = new JSZip();
-    const assetMap = new Map();
+      const projectAssets = collectProjectAssets(currentState);
 
-    const projectAssets = collectProjectAssets(currentState);
+      for (const assetUrl of projectAssets) {
+        const extension = getFileExtension(assetUrl);
+        const assetId = generateAssetId(assetUrl);
+        const savedFilename = await addAssetToZip(zip, assetUrl, assetId, extension);
 
-    for (const assetUrl of projectAssets) {
-      const extension = getFileExtension(assetUrl);
-      const assetId = generateAssetId(assetUrl);
-      const savedFilename = await addAssetToZip(zip, assetUrl, assetId, extension);
-
-      if (savedFilename) {
-        assetMap.set(assetUrl, savedFilename);
+        if (savedFilename) {
+          assetMap.set(assetUrl, savedFilename);
+        }
       }
-    }
 
-    const completeProjectData = {
-      scenes: currentState.scenes?.map(scene => ({
-        ...scene,
-        actors: scene.actors?.map(actor => ({
-          ...actor,
-          image: assetMap.get(actor.image) || actor.image,
-          scripts: actor.scripts || []
-        }))
-      })),
-      currentSceneIndex: currentState.currentSceneIndex || 0,
-      sceneUndoStack: currentState.sceneUndoStack || [],
-      sceneRedoStack: currentState.sceneRedoStack || [],
-      selectedBlockCategory: currentState.selectedBlockCategory || 'motion',
-      categoryPanelOpen: currentState.categoryPanelOpen || false,
-      sounds: currentState.sounds ? Object.fromEntries(
-        Object.entries(currentState.sounds).map(([key, value]) => [
-          key, assetMap.get(value) || value
-        ])
-      ) : { pop: 'pop.mp3' },
-      backgroundGallery: currentState.backgroundGallery?.map(bg =>
-        assetMap.get(bg) || bg
-      ),
-      customSounds: currentState.customSounds || [],
-      projectMetadata: {
-        fileType: 'blockziejr-sb3',
-        format: 'scratchjr',
+      const completeProjectData = {
+        scenes: currentState.scenes?.map(scene => ({
+          ...scene,
+          actors: scene.actors?.map(actor => ({
+            ...actor,
+            image: assetMap.get(actor.image) || actor.image,
+            scripts: actor.scripts || []
+          }))
+        })),
+        currentSceneIndex: currentState.currentSceneIndex || 0,
+        sceneUndoStack: currentState.sceneUndoStack || [],
+        sceneRedoStack: currentState.sceneRedoStack || [],
+        selectedBlockCategory: currentState.selectedBlockCategory || 'motion',
+        categoryPanelOpen: currentState.categoryPanelOpen || false,
+        sounds: currentState.sounds ? Object.fromEntries(
+          Object.entries(currentState.sounds).map(([key, value]) => [
+            key, assetMap.get(value) || value
+          ])
+        ) : { pop: 'pop.mp3' },
+        backgroundGallery: currentState.backgroundGallery?.map(bg =>
+          assetMap.get(bg) || bg
+        ),
+        customSounds: currentState.customSounds || [],
+        projectMetadata: {
+          fileType: 'blockziejr-sb3',
+          format: 'scratchjr',
+          version: '1.0.0',
+          generator: 'blockzie-jr-web',
+          savedAt: new Date().toISOString(),
+          projectName: defaultFilename
+        }
+      };
+
+      zip.file('project.json', JSON.stringify(completeProjectData, null, 2));
+      zip.file('scratchjr.marker', JSON.stringify({
+        type: 'Blockzie-Jr Web Project',
         version: '1.0.0',
-        generator: 'blockzie-jr-web',
-        savedAt: new Date().toISOString(),
+        created: new Date().toISOString(),
         projectName: defaultFilename
-      }
-    };
+      }, null, 2));
 
-    zip.file('project.json', JSON.stringify(completeProjectData, null, 2));
-    zip.file('scratchjr.marker', JSON.stringify({
-      type: 'Blockzie-Jr Web Project',
-      version: '1.0.0',
-      created: new Date().toISOString(),
-      projectName: defaultFilename
-    }, null, 2));
-
-    if (currentState.customSounds && currentState.customSounds.length > 0) {
-      for (const sound of currentState.customSounds) {
-        if (sound.audioBlob) {
-          zip.file(`sounds/${sound.id}.wav`, sound.audioBlob);
+      if (currentState.customSounds && currentState.customSounds.length > 0) {
+        for (const sound of currentState.customSounds) {
+          if (sound.audioBlob) {
+            zip.file(`sounds/${sound.id}.wav`, sound.audioBlob);
+          }
         }
       }
-    }
 
-    const content = await zip.generateAsync({ type: 'blob' });
-    
-    // **REMOVED THE PROMPT** - Directly open native OS save dialog
-    if ('showSaveFilePicker' in window) {
-      try {
-        const fileHandle = await window.showSaveFilePicker({
-          suggestedName: `${defaultFilename}.sb3`,
-          types: [{
-            // description: 'Blockzie-Jr Project Files (.sb3)',
-            accept: { 'application/zip': ['.sb3'] }
-          }],
-          excludeAcceptAllOption: true
-        });
-        
-        const writable = await fileHandle.createWritable();
-        await writable.write(content);
-        await writable.close();
-        
-        console.log('✅ Project saved successfully!');
-      } catch (err) {
-        if (err.name !== 'AbortError') {
-          console.error('Save picker error:', err);
-          // Fallback to download if save picker fails
-          downloadFile(content, defaultFilename);
+      const content = await zip.generateAsync({ type: 'blob' });
+
+      if ('showSaveFilePicker' in window) {
+        try {
+          const fileHandle = await window.showSaveFilePicker({
+            suggestedName: `${defaultFilename}.sb3`,
+            types: [{
+              accept: { 'application/zip': ['.sb3'] }
+            }],
+            excludeAcceptAllOption: true
+          });
+
+          const writable = await fileHandle.createWritable();
+          await writable.write(content);
+          await writable.close();
+
+          console.log('✅ Project saved successfully!');
+        } catch (err) {
+          if (err.name !== 'AbortError') {
+            console.error('Save picker error:', err);
+            downloadFile(content, defaultFilename);
+          }
         }
-        // If user cancels (AbortError), do nothing
+      } else {
+        downloadFile(content, defaultFilename);
       }
-    } else {
-      // Fallback for browsers that don't support File System Access API
-      downloadFile(content, defaultFilename);
+
+    } catch (error) {
+      console.error('❌ Save error:', error);
+      alert('Error saving project. Please try again.');
+    }
+  };
+
+  // Updated fallback download function
+  const downloadFile = (content, filename) => {
+    if (!filename.endsWith('.sb3')) {
+      filename += '.sb3';
     }
 
-  } catch (error) {
-    console.error('❌ Save error:', error);
-    alert('Error saving project. Please try again.');
-  } finally {
-    setIsLoading(false);
-  }
-};
-
-
-// Updated fallback download function
-const downloadFile = (content, filename) => {
-  // Ensure filename has .sb3 extension
-  if (!filename.endsWith('.sb3')) {
-    filename += '.sb3';
-  }
-  
-  const url = URL.createObjectURL(content);
-  const a = document.createElement('a');
-  a.href = url;
-  a.download = filename;  // Will always be .sb3
-  document.body.appendChild(a);
-  a.click();
-  document.body.removeChild(a);
-  URL.revokeObjectURL(url);
-};
+    const url = URL.createObjectURL(content);
+    const a = document.createElement('a');
+    a.href = url;
+    a.download = filename;
+    document.body.appendChild(a);
+    a.click();
+    document.body.removeChild(a);
+    URL.revokeObjectURL(url);
+  };
 
   // helper function: normalize filename
   function normalizeKey(key = "") {
-    return key.split('/').pop(); // keep only filename
+    return key.split('/').pop();
   }
 
+  // Update handleLoad to show splash with custom message
   const handleLoad = async (file) => {
     if (!file) {
       const input = document.createElement('input');
@@ -271,9 +270,12 @@ const downloadFile = (content, filename) => {
     }
 
     try {
-      setIsLoading(true);
-
       if (file.name.endsWith('.sb3')) {
+        // Show splash with loading message
+        setSplashMessage("Your project is being loaded...");
+        setShowSplash(true);
+
+        setTimeout(handleSplashComplete, 3000);
         const zip = new JSZip();
         const contents = await zip.loadAsync(file);
 
@@ -298,7 +300,6 @@ const downloadFile = (content, filename) => {
         if (isScratchJrFormat) {
           console.log('🎯 Loading Blockzie-Jr project with Electron-compatible images...');
 
-          // Convert all assets to base64 data URLs
           const assetDataMap = new Map();
           let assetsLoaded = 0;
 
@@ -310,7 +311,7 @@ const downloadFile = (content, filename) => {
                   const blob = await assetFile.async('blob');
                   const base64DataUrl = await blobToBase64(blob, filePath);
                   const key = normalizeKey(filePath);
-                  assetDataMap.set(key, base64DataUrl); // store by filename only
+                  assetDataMap.set(key, base64DataUrl);
                   assetsLoaded++;
                   console.log(`✅ Image converted to base64: ${filePath}`);
                 } catch (error) {
@@ -320,7 +321,6 @@ const downloadFile = (content, filename) => {
             }
           }
 
-          // Load custom sounds
           const customSounds = [];
           const soundFiles = zipFiles.filter(name => name.startsWith('sounds/'));
           for (const soundPath of soundFiles) {
@@ -343,7 +343,6 @@ const downloadFile = (content, filename) => {
             }
           }
 
-          // Create restored project with resolved base64 images
           const restoredProject = {
             scenes: projectData.scenes?.map(scene => ({
               ...scene,
@@ -374,12 +373,9 @@ const downloadFile = (content, filename) => {
           };
 
           console.log('📊 Assets loaded:', assetsLoaded);
-          console.log('🖼️ Sample image type:', restoredProject.scenes[0]?.actors?.[0]?.image?.substring(0, 30));
 
-          // Dispatch to Redux and force multiple updates
           dispatch({ type: 'scene/overwrite', payload: restoredProject });
 
-          // Multiple state updates to ensure rendering
           setTimeout(() => {
             const firstActor = restoredProject.scenes[restoredProject.currentSceneIndex]?.actors?.[0];
             if (firstActor) {
@@ -407,8 +403,6 @@ const downloadFile = (content, filename) => {
     } catch (error) {
       console.error('❌ Load error:', error);
       alert('Error loading project. Please check the file format.');
-    } finally {
-      setIsLoading(false);
     }
   };
 
@@ -432,7 +426,7 @@ const downloadFile = (content, filename) => {
     const actor = currentScene.actors.find(a => a.id === selectedActorId);
     if (!actor || !actor.scripts?.length) return;
 
-    actor.scripts.forEach((script, index) => {
+    actor.scripts.forEach((script) => {
       if (script.execute && typeof script.execute === 'function') {
         script.execute();
       } else if (script.soundData && script.soundData.audioURL) {
@@ -457,57 +451,13 @@ const downloadFile = (content, filename) => {
     // Add character functionality
   };
 
-  // Add this function to handle splash completion
-  const handleSplashComplete = () => {
-    setShowSplash(false);
-  };
-
-  // If splash screen is showing, render only the splash screen
   if (showSplash) {
-    return <SplashScreen onComplete={handleSplashComplete} />;
+    return <SplashScreen onComplete={handleSplashComplete} message={splashMessage} />;
   }
+
 
   return (
     <div className="sjr-root">
-      {isLoading && (
-        <div style={{
-          position: 'fixed',
-          top: 0,
-          left: 0,
-          right: 0,
-          bottom: 0,
-          backgroundColor: 'rgba(0,0,0,0.8)',
-          display: 'flex',
-          alignItems: 'center',
-          justifyContent: 'center',
-          zIndex: 10000
-        }}>
-          <div style={{
-            backgroundColor: 'white',
-            padding: '30px',
-            borderRadius: '15px',
-            display: 'flex',
-            flexDirection: 'column',
-            alignItems: 'center',
-            gap: '15px',
-            boxShadow: '0 10px 30px rgba(0,0,0,0.3)',
-            minWidth: '250px'
-          }}>
-            <div style={{
-              width: '50px',
-              height: '50px',
-              border: '5px solid #f3f3f3',
-              borderTop: '5px solid #3498db',
-              borderRadius: '50%',
-              animation: 'spin 1s linear infinite'
-            }}></div>
-            <div style={{ fontSize: '18px', fontWeight: 'bold', textAlign: 'center' }}>
-              Converting images for Electron...
-            </div>
-          </div>
-        </div>
-      )}
-
       {/* Top Navbar with simplified Toolbar */}
       <header className="top-navbar">
         <Toolbar
@@ -529,12 +479,10 @@ const downloadFile = (content, filename) => {
 
       {/* Main Content - 3 Column Layout */}
       <main className="middle-section">
-        {/* Script Area Section */}
         <section className="script-area-section">
           <ScriptArea selectedActorId={selectedActorId} />
         </section>
 
-        {/* Stage Area Section */}
         <section className="stage-area-section">
           <Stage
             selectedActorId={selectedActorId}
@@ -544,9 +492,7 @@ const downloadFile = (content, filename) => {
           />
         </section>
 
-        {/* Right Panel Section - Controls + Scene Manager + Character Gallery */}
         <section className="right-panel-section">
-          {/* Right Panel Controls - above scene manager */}
           <RightPanelControls
             onFullScreen={handleFullscreen}
             onGridToggle={handleGridToggle}
@@ -555,12 +501,10 @@ const downloadFile = (content, filename) => {
             selectedActorId={selectedActorId}
           />
 
-          {/* Scene Manager Container */}
           <div className="scene-manager-container">
             <SceneManager />
           </div>
 
-          {/* Character Gallery Container */}
           <div className="character-gallery-container">
             <CharacterGallery
               selectedActorId={selectedActorId}
@@ -572,7 +516,6 @@ const downloadFile = (content, filename) => {
         </section>
       </main>
 
-      {/* Footer - Block Palette */}
       <footer className="blocks-footer">
         <div className="blocks-container">
           <div className="category-selector-container">
@@ -590,13 +533,7 @@ const downloadFile = (content, filename) => {
 export default function App() {
   return (
     <Provider store={store}>
-      <ScratchJrShell />
-      <style>{`
-        @keyframes spin {
-          0% { transform: rotate(0deg); }
-          100% { transform: rotate(360deg); }
-        }
-      `}</style>
+      <BlockzieJrShell />
     </Provider>
   );
 }
