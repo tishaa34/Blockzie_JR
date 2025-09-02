@@ -88,7 +88,7 @@ export default function BackgroundGallery({ open, onClose, onPaint }) {
       setLoading(true);
       setError(null);
 
-      const backdropUrl = '/backdrops.json';
+      const backdropUrl = './backdrops.json';
       const response = await fetch(backdropUrl);
 
       if (!response.ok) {
@@ -192,10 +192,10 @@ export default function BackgroundGallery({ open, onClose, onPaint }) {
 
             <div className="picker-header-buttons">
               <button className="picker-btn" onClick={() => onPaint?.()} aria-label="Paint" title="Paint">
-                <img src="/assets/ui/paintbrush.png" alt="Paint" />
+                <img src="./assets/ui/paintbrush.png" alt="Paint" />
               </button>
               <button className="picker-btn" onClick={onClose} aria-label="Close" title="Close">
-                <img src="/assets/ui/closeit.svg" alt="Close" />
+                <img src="./assets/ui/closeit.svg" alt="Close" />
               </button>
             </div>
           </div>

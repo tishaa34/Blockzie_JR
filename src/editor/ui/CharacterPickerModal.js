@@ -127,7 +127,7 @@ export default function CharacterPickerModal({
       setLoading(true);
       setError(null);
 
-      const spritesUrl = '/sprites.json';
+      const spritesUrl = './sprites.json';
       const response = await fetch(spritesUrl);
 
       if (!response.ok) {
@@ -151,6 +151,8 @@ export default function CharacterPickerModal({
           name: sprite.name,
           category: characterCategory,
           tags: sprite.tags || [],
+
+
           assetId: assetId,
           md5ext: firstCostume?.md5ext || `${sprite.name.toLowerCase()}.svg`,
           dataFormat: firstCostume?.dataFormat || 'svg',

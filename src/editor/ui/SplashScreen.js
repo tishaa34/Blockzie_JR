@@ -15,7 +15,7 @@ const SplashScreen = ({ onComplete }) => {
     <div className="splash-screen">
       <div className="splash-content">
         <img 
-          src="/assets/ui/splash-screen.png" 
+          src="./assets/characters/stembot.svg" 
           alt="Loading..." 
           className="splash-logo"
         />
