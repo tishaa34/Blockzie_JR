@@ -4,6 +4,20 @@ import { nanoid } from "@reduxjs/toolkit";
 import { addActor, pushUndoState } from "../../store/sceneSlice";
 import "../../css/CharacterPickerModal.css";
 
+const categories = [
+  { id: "all", name: "All" },
+  { id: "animals", name: "Animals" },
+  { id: "people", name: "People" },
+  { id: "fantasy", name: "Fantasy" },
+  { id: "dance", name: "Dance" },
+  { id: "music", name: "Music" },
+  { id: "sports", name: "Sports" },
+  { id: "food", name: "Food" },
+  { id: "fashion", name: "Fashion" },
+  { id: "letters", name: "Letters" },
+  { id: "robot", name: "Robot" }
+];
+
 export default function CharacterPickerModal({
   open,
   onClose,
@@ -16,96 +30,91 @@ export default function CharacterPickerModal({
   const [characters, setCharacters] = useState([]);
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState(null);
+  const [selectedCategory, setSelectedCategory] = useState("all");
+  const [searchTerm, setSearchTerm] = useState("");
 
-  // Add search and category state
-  const [search, setSearch] = useState("");
-  const [category, setCategory] = useState("all");
+  // Enhanced function to categorize characters based on their tags and names
+  const categorizeCharacter = (sprite) => {
+    const tags = sprite.tags || [];
+    const name = sprite.name.toLowerCase();
 
-  const CATEGORY_LIST = [
-    "all", "animals", "people", "fantasy", "dance", "music", "sports", "food", "fashion", "letters", "robot"
-  ];
-
-  // Function to categorize characters based on their tags
-  const categorizeCharacter = (tags) => {
-    if (!tags || tags.length === 0) return 'people'; // default fallback
-    
     // Convert tags to lowercase for easier matching
     const lowerTags = tags.map(tag => tag.toLowerCase());
-    
-    // Check each category against the tags
+
+    // Check for dance characters first (most specific)
+    if (
+      name.includes('dance') ||
+      name.includes('dancer') ||
+      name.includes('dancing') ||
+      name.includes('ballerina') ||
+      name.includes('amon') ||
+      name.includes('anina') ||
+      name.includes('cassy') ||
+      name.includes('champ99') ||
+      name.includes('d-money') ||
+      name.includes('jouvi') ||
+      name.includes('lb dance') ||
+      name.includes('ten80') ||
+      lowerTags.some(tag => tag.includes('dance') || tag.includes('dancer') || tag.includes('dancing') || tag.includes('ballerina'))
+    ) {
+      return 'dance';
+    }
+
+    // Animals
     if (lowerTags.some(tag => ['animals', 'animal', 'cat', 'dog', 'bird', 'fish', 'bear', 'lion', 'tiger', 'elephant', 'monkey', 'rabbit', 'fox', 'wolf', 'deer', 'horse', 'cow', 'pig', 'sheep', 'duck', 'chicken', 'owl', 'frog', 'butterfly', 'dinosaur', 'mammals', 'insect', 'bug'].includes(tag))) {
       return 'animals';
     }
-    
-    if (lowerTags.some(tag => ['people', 'person', 'boy', 'girl', 'kid', 'character', 'man', 'woman', 'child'].includes(tag))) {
-      return 'people';
-    }
-    
+
+    // Fantasy
     if (lowerTags.some(tag => ['fantasy', 'wizard', 'witch', 'fairy', 'dragon', 'unicorn', 'magic', 'spooky', 'halloween', 'monster', 'ghost'].includes(tag))) {
       return 'fantasy';
     }
-    
-    if (lowerTags.some(tag => ['dance', 'dancer', 'dancing', 'amon', 'anina dance', 'ballerina', 'cassy dance', 'champ99', 
-    'd-money dance', 'jouvi dance', 'lb dance', 'ten80 dance'].includes(tag)) || (tags && tags.some(tag => tag.toLowerCase().includes('dance')))) {
-      return 'dance';
-    }
-    
+
+    // Music
     if (lowerTags.some(tag => ['music', 'musician', 'instrument', 'guitar', 'piano', 'drum', 'trumpet', 'saxophone'].includes(tag))) {
       return 'music';
     }
-    
+
+    // Sports
     if (lowerTags.some(tag => ['sports', 'basketball', 'soccer', 'football', 'baseball', 'tennis', 'athlete'].includes(tag))) {
       return 'sports';
     }
-    
+
+    // Food
     if (lowerTags.some(tag => ['food', 'fruit', 'eating', 'drink'].includes(tag))) {
       return 'food';
     }
-    
+
+    // Fashion
     if (lowerTags.some(tag => ['fashion', 'clothing', 'dress', 'shirt', 'hat', 'shoes'].includes(tag))) {
       return 'fashion';
     }
-    
+
+    // Letters
     if (lowerTags.some(tag => ['letters', 'alphabet', 'letter'].includes(tag))) {
       return 'letters';
     }
-    
-    if (lowerTags.some(tag => ['robot', 'stembot'].includes(tag))) {
+
+    // Robot
+    if (name.includes('robot') || name.includes('stembot') || lowerTags.some(tag => ['robot', 'stembot'].includes(tag))) {
       return 'robot';
     }
-    
+
+    // People (default)
+    if (lowerTags.some(tag => ['people', 'person', 'boy', 'girl', 'kid', 'character', 'man', 'woman', 'child'].includes(tag))) {
+      return 'people';
+    }
+
     // Default fallback
     return 'people';
   };
 
   // Filter characters by search and category
   const filteredCharacters = characters.filter(char => {
-    const matchesSearch = char.name.toLowerCase().includes(search.toLowerCase());
-    const matchesCategory = category === "all" || (char.category === category);
+    const matchesSearch = char.name.toLowerCase().includes(searchTerm.toLowerCase());
+    const matchesCategory = selectedCategory === "all" || (char.category === selectedCategory);
     return matchesSearch && matchesCategory;
   });
-
-  const generateCharacterImage = (name) => {
-    const colors = [
-      '#FF6B6B', '#4ECDC4', '#45B7D1', '#96CEB4', '#FECA57', 
-      '#FF9FF3', '#54A0FF', '#5F27CD', '#00D2D3', '#FF9F43'
-    ];
-    
-    let hash = 0;
-    for (let i = 0; i < name.length; i++) {
-      hash = name.charCodeAt(i) + ((hash << 5) - hash);
-    }
-    const color = colors[Math.abs(hash) % colors.length];
-    
-    const svg = `
-      <svg width="100" height="100" xmlns="http://www.w3.org/2000/svg">
-        <rect width="100" height="100" fill="${color}" rx="10"/>
-        <text x="50" y="50" font-family="Arial" font-size="12" fill="white" text-anchor="middle" dy="0.3em">${name.substring(0, 3)}</text>
-      </svg>
-    `;
-    
-    return `data:image/svg+xml;base64,${btoa(svg)}`;
-  };
 
   useEffect(() => {
     if (open && characters.length === 0) {
@@ -117,31 +126,31 @@ export default function CharacterPickerModal({
     try {
       setLoading(true);
       setError(null);
-      
+
       const spritesUrl = '/sprites.json';
       const response = await fetch(spritesUrl);
-      
+
       if (!response.ok) {
         throw new Error(`Failed to fetch: ${response.status}`);
       }
-      
+
       const spritesData = await response.json();
       console.log('Raw sprites data:', spritesData);
-      
+
       const characterList = spritesData.map((sprite, index) => {
         const firstCostume = sprite.costumes && sprite.costumes[0];
-        const assetId = firstCostume?.assetId || 
-                       sprite.id ||
-                       `${sprite.name.toLowerCase().replace(/\s+/g, '-')}-${index + 1}`;
-        
-        // Use the existing tags to categorize
-        const characterCategory = categorizeCharacter(sprite.tags || []);
-        
+        const assetId = firstCostume?.assetId ||
+          sprite.id ||
+          `${sprite.name.toLowerCase().replace(/\s+/g, '-')}-${index + 1}`;
+
+        // Use the enhanced categorization function
+        const characterCategory = categorizeCharacter(sprite);
+
         return {
           src: `https://raw.githubusercontent.com/devstembotix9892/Blockzie-assets/refs/heads/main/assets/${sprite.costumes[0]?.md5ext}`,
           name: sprite.name,
           category: characterCategory,
-          tags: sprite.tags || [], // Keep original tags for reference
+          tags: sprite.tags || [],
           assetId: assetId,
           md5ext: firstCostume?.md5ext || `${sprite.name.toLowerCase()}.svg`,
           dataFormat: firstCostume?.dataFormat || 'svg',
@@ -150,16 +159,20 @@ export default function CharacterPickerModal({
           rotationCenterY: firstCostume?.rotationCenterY || 50
         };
       });
-      
+
       setCharacters(characterList);
-      
+
       // LOG CATEGORY DISTRIBUTION
       const categoryCount = {};
       characterList.forEach(char => {
         categoryCount[char.category] = (categoryCount[char.category] || 0) + 1;
       });
       console.log('Category distribution:', categoryCount);
-      
+
+      // Log dance characters specifically
+      const danceChars = characterList.filter(char => char.category === 'dance');
+      console.log('Dance characters found:', danceChars.map(char => ({ name: char.name, tags: char.tags })));
+
     } catch (err) {
       console.error('Error fetching characters:', err);
       setError('Failed to load characters.');
@@ -168,14 +181,12 @@ export default function CharacterPickerModal({
     }
   };
 
-  if (!open) return null;
-
-  const handlePick = (char) => {
-    console.log('=== Character Clicked ===');
-    console.log('Asset ID:', char.assetId);
-    console.log('Character Name:', char.name);
-    console.log('Category:', char.category);
-    console.log('Original Tags:', char.tags);
+  const handleCharacterSelect = (character) => {
+    console.log('=== Character Selected ===');
+    console.log('Asset ID:', character.assetId);
+    console.log('Character Name:', character.name);
+    console.log('Category:', character.category);
+    console.log('Original Tags:', character.tags);
     console.log('========================');
 
     const newId = nanoid();
@@ -183,16 +194,16 @@ export default function CharacterPickerModal({
     dispatch(
       addActor({
         id: newId,
-        name: char.name,
-        image: char.src,
-        assetId: char.assetId,
-        category: char.category,
-        tags: char.tags
+        name: character.name,
+        image: character.src,
+        assetId: character.assetId,
+        category: character.category,
+        tags: character.tags
       })
     );
 
     setSelectedActorId?.(newId);
-    onSelect?.(char);
+    onSelect?.(character);
     onClose?.();
   };
 
@@ -201,56 +212,43 @@ export default function CharacterPickerModal({
     fetchCharacters();
   };
 
-  const handleBack = () => {
-    onBack?.();
-  };
-
   const handleCategoryClick = (selectedCategory) => {
-    setCategory(selectedCategory);
+    setSelectedCategory(selectedCategory);
     console.log(`Filtering by category: ${selectedCategory}`);
-    
+
     // Log how many characters match this category
-    const matchingChars = characters.filter(char => 
+    const matchingChars = characters.filter(char =>
       selectedCategory === "all" || char.category === selectedCategory
     );
     console.log(`Found ${matchingChars.length} characters in ${selectedCategory} category`);
   };
 
+  if (!open) return null;
+
   return (
     <div className="character-picker-modal" role="dialog" aria-modal="true">
       <div className="picker-backdrop" onClick={onClose} />
+
       <div className="picker-modal-content">
+        {/* Header */}
         <div className="picker-modal-header">
-          <button 
-            className="picker-back-btn" 
-            onClick={handleBack} 
-            aria-label="Go back to main page"
-          >
-            <svg viewBox="0 0 24 24">
-              <path d="M20 11H7.83l5.59-5.59L12 4l-8 8 8 8 1.41-1.41L7.83 13H20v-2z"/>
+          <button className="picker-back-btn" onClick={onClose} title="Back">
+            <svg viewBox="0 0 24 24" fill="currentColor">
+              <path d="M20 11H7.83l5.59-5.59L12 4l-8 8 8 8 1.41-1.41L7.83 13H20v-2z" />
             </svg>
           </button>
 
-          <div className="picker-search-container">
-            <input 
-              type="text" 
-              className="picker-search-input" 
-              placeholder="Search"
-              value={search}
-              onChange={e => setSearch(e.target.value)}
-            />
-          </div>
+          <h2 className="modal-title">Choose a Sprite</h2>
 
-          <div className="picker-categories">
-            {CATEGORY_LIST.map(cat => (
-              <button
-                key={cat}
-                className={`picker-category-btn ${cat} ${category === cat ? "active" : ""}`}
-                onClick={() => handleCategoryClick(cat)}
-              >
-                {cat.charAt(0).toUpperCase() + cat.slice(1)}
-              </button>
-            ))}
+
+          <div className="picker-search-container">
+            <input
+              type="text"
+              placeholder="Search"
+              value={searchTerm}
+              onChange={(e) => setSearchTerm(e.target.value)}
+              className="picker-search-input"
+            />
           </div>
 
           <div className="picker-header-actions">
@@ -263,6 +261,20 @@ export default function CharacterPickerModal({
           </div>
         </div>
 
+        {/* Category Navigation */}
+        <div className="picker-categories">
+          {categories.map(category => (
+            <button
+              key={category.id}
+              className={`picker-category-btn ${selectedCategory === category.id ? 'active' : ''}`}
+              onClick={() => handleCategoryClick(category.id)}
+            >
+              {category.name}
+            </button>
+          ))}
+        </div>
+
+        {/* Character Content */}
         <div className="picker-content-area">
           <div className="picker-char-grid">
             {loading && (
@@ -271,36 +283,33 @@ export default function CharacterPickerModal({
                 Loading characters...
               </div>
             )}
-            
+
             {error && (
               <div className="error-message">
                 <p>{error}</p>
                 <button onClick={handleRetry}>Retry</button>
               </div>
             )}
-            
+
             {!loading && !error && filteredCharacters.length === 0 && (
               <div className="picker-empty">
-                <p>No characters found in "{category}" category</p>
-                <p style={{fontSize: '12px', color: '#999', marginTop: '8px'}}>
+                <p>No characters found in "{selectedCategory}" category</p>
+                <p style={{ fontSize: '12px', color: 'rgba(255,255,255,0.7)', marginTop: '8px' }}>
                   Try a different category or search term
                 </p>
               </div>
             )}
-            
-            {!loading && !error && filteredCharacters.map((char, idx) => (
-              <button
+
+            {!loading && !error && filteredCharacters.map((character, idx) => (
+              <div
                 key={idx}
-                type="button"
                 className="picker-char-cell"
-                title={`${char.name} (${char.category}) - Tags: ${char.tags.join(', ')}`}
-                onClick={() => handlePick(char)}
+                title={`${character.name} (${character.category}) - Tags: ${character.tags.join(', ')}`}
+                onClick={() => handleCharacterSelect(character)}
               >
-                <img src={char.src} alt={char.name} />
-                <span className="picker-char-label">
-                  {char.name}
-                </span>
-              </button>
+                <img src={character.src} alt={character.name} />
+                <span className="picker-char-label">{character.name}</span>
+              </div>
             ))}
           </div>
         </div>

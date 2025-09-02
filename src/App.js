@@ -13,6 +13,7 @@ import Toolbar from './editor/ui/Toolbar';
 import RightPanelControls from './editor/ui/RightPanelControls';
 import BackgroundGallery from './editor/ui/BackgroundGallery';
 import HeadingModal from './editor/ui/HeadingModal';
+import SplashScreen from './editor/ui/SplashScreen';
 
 import { clearScript } from './store/sceneSlice';
 
@@ -31,12 +32,15 @@ function ScratchJrShell() {
   const { scenes, currentSceneIndex } = useSelector(s => s.scene);
   const actorIdFromScene = scenes[currentSceneIndex]?.actors?.[0]?.id;
 
-  const [selectedActorId, setSelectedActorId] = useState(actorIdFromScene || demoActors?.id);
+  const [selectedActorId, setSelectedActorId] = useState(actorIdFromScene || demoActors[0]?.id);
   const [bgModalOpen, setBgModalOpen] = useState(false);
   const [heading, setHeading] = useState({ text: "", color: "#222", size: 38 });
   const [headingModalOpen, setHeadingModalOpen] = useState(false);
   const [showGrid, setShowGrid] = useState(false);
   const [isLoading, setIsLoading] = useState(false);
+
+  // Add splash screen state
+  const [showSplash, setShowSplash] = useState(true);
 
   useEffect(() => {
     if (actorIdFromScene) setSelectedActorId(actorIdFromScene);
@@ -113,92 +117,138 @@ function ScratchJrShell() {
     return Array.from(assets);
   };
 
-  const handleSave = async () => {
-    try {
-      setIsLoading(true);
+  // Enhanced save function with filename dialog
+// Enhanced save function - NO PROMPT, directly opens OS file save dialog
+const handleSave = async () => {
+  try {
+    setIsLoading(true);
 
-      let filename = heading?.text?.trim() ? heading.text.trim() : 'untitled';
-      filename = filename.replace(/[\\/:?"<>|]+/g, '').slice(0, 50) || 'untitled';
+    // Determine default filename based on heading or use "Blockzie-Jr"
+    let defaultFilename = heading?.text?.trim() ? heading.text.trim() : 'Blockzie-Jr';
+    defaultFilename = defaultFilename.replace(/[\\/:?"<>|]+/g, '').slice(0, 50) || 'Blockzie-Jr';
 
-      const currentState = store.getState().scene;
-      const zip = new JSZip();
-      const assetMap = new Map();
+    const currentState = store.getState().scene;
+    const zip = new JSZip();
+    const assetMap = new Map();
 
-      const projectAssets = collectProjectAssets(currentState);
+    const projectAssets = collectProjectAssets(currentState);
 
-      for (const assetUrl of projectAssets) {
-        const extension = getFileExtension(assetUrl);
-        const assetId = generateAssetId(assetUrl);
-        const savedFilename = await addAssetToZip(zip, assetUrl, assetId, extension);
+    for (const assetUrl of projectAssets) {
+      const extension = getFileExtension(assetUrl);
+      const assetId = generateAssetId(assetUrl);
+      const savedFilename = await addAssetToZip(zip, assetUrl, assetId, extension);
 
-        if (savedFilename) {
-          assetMap.set(assetUrl, savedFilename);
-        }
+      if (savedFilename) {
+        assetMap.set(assetUrl, savedFilename);
       }
-
-      const completeProjectData = {
-        scenes: currentState.scenes?.map(scene => ({
-          ...scene,
-          actors: scene.actors?.map(actor => ({
-            ...actor,
-            image: assetMap.get(actor.image) || actor.image,
-            scripts: actor.scripts || []
-          }))
-        })),
-        currentSceneIndex: currentState.currentSceneIndex || 0,
-        sceneUndoStack: currentState.sceneUndoStack || [],
-        sceneRedoStack: currentState.sceneRedoStack || [],
-        selectedBlockCategory: currentState.selectedBlockCategory || 'motion',
-        categoryPanelOpen: currentState.categoryPanelOpen || false,
-        sounds: currentState.sounds ? Object.fromEntries(
-          Object.entries(currentState.sounds).map(([key, value]) => [
-            key, assetMap.get(value) || value
-          ])
-        ) : { pop: 'pop.mp3' },
-        backgroundGallery: currentState.backgroundGallery?.map(bg =>
-          assetMap.get(bg) || bg
-        ),
-        customSounds: currentState.customSounds || [],
-        projectMetadata: {
-          fileType: 'scratchjr-sb3',
-          format: 'scratchjr',
-          version: '1.0.0',
-          generator: 'scratchjr-web-clone',
-          savedAt: new Date().toISOString()
-        }
-      };
-
-      zip.file('project.json', JSON.stringify(completeProjectData, null, 2));
-      zip.file('scratchjr.marker', JSON.stringify({
-        type: 'ScratchJr Web Project',
-        version: '1.0.0',
-        created: new Date().toISOString()
-      }, null, 2));
-
-      if (currentState.customSounds && currentState.customSounds.length > 0) {
-        for (const sound of currentState.customSounds) {
-          if (sound.audioBlob) {
-            zip.file(`sounds/${sound.id}.wav`, sound.audioBlob);
-          }
-        }
-      }
-
-      const content = await zip.generateAsync({ type: 'blob' });
-      const url = URL.createObjectURL(content);
-      const a = document.createElement('a');
-      a.href = url;
-      a.download = `${filename}.sb3`;
-      document.body.appendChild(a);
-      a.click();
-      document.body.removeChild(a);
-      URL.revokeObjectURL(url);
-
-    } catch (error) {
-      console.error('❌ Save error:', error);
-    } finally {
-      setIsLoading(false);
     }
-  };
+
+    const completeProjectData = {
+      scenes: currentState.scenes?.map(scene => ({
+        ...scene,
+        actors: scene.actors?.map(actor => ({
+          ...actor,
+          image: assetMap.get(actor.image) || actor.image,
+          scripts: actor.scripts || []
+        }))
+      })),
+      currentSceneIndex: currentState.currentSceneIndex || 0,
+      sceneUndoStack: currentState.sceneUndoStack || [],
+      sceneRedoStack: currentState.sceneRedoStack || [],
+      selectedBlockCategory: currentState.selectedBlockCategory || 'motion',
+      categoryPanelOpen: currentState.categoryPanelOpen || false,
+      sounds: currentState.sounds ? Object.fromEntries(
+        Object.entries(currentState.sounds).map(([key, value]) => [
+          key, assetMap.get(value) || value
+        ])
+      ) : { pop: 'pop.mp3' },
+      backgroundGallery: currentState.backgroundGallery?.map(bg =>
+        assetMap.get(bg) || bg
+      ),
+      customSounds: currentState.customSounds || [],
+      projectMetadata: {
+        fileType: 'blockziejr-sb3',
+        format: 'scratchjr',
+        version: '1.0.0',
+        generator: 'blockzie-jr-web',
+        savedAt: new Date().toISOString(),
+        projectName: defaultFilename
+      }
+    };
+
+    zip.file('project.json', JSON.stringify(completeProjectData, null, 2));
+    zip.file('scratchjr.marker', JSON.stringify({
+      type: 'Blockzie-Jr Web Project',
+      version: '1.0.0',
+      created: new Date().toISOString(),
+      projectName: defaultFilename
+    }, null, 2));
+
+    if (currentState.customSounds && currentState.customSounds.length > 0) {
+      for (const sound of currentState.customSounds) {
+        if (sound.audioBlob) {
+          zip.file(`sounds/${sound.id}.wav`, sound.audioBlob);
+        }
+      }
+    }
+
+    const content = await zip.generateAsync({ type: 'blob' });
+    
+    // **REMOVED THE PROMPT** - Directly open native OS save dialog
+    if ('showSaveFilePicker' in window) {
+      try {
+        const fileHandle = await window.showSaveFilePicker({
+          suggestedName: `${defaultFilename}.sb3`,
+          types: [{
+            // description: 'Blockzie-Jr Project Files (.sb3)',
+            accept: { 'application/zip': ['.sb3'] }
+          }],
+          excludeAcceptAllOption: true
+        });
+        
+        const writable = await fileHandle.createWritable();
+        await writable.write(content);
+        await writable.close();
+        
+        console.log('✅ Project saved successfully!');
+      } catch (err) {
+        if (err.name !== 'AbortError') {
+          console.error('Save picker error:', err);
+          // Fallback to download if save picker fails
+          downloadFile(content, defaultFilename);
+        }
+        // If user cancels (AbortError), do nothing
+      }
+    } else {
+      // Fallback for browsers that don't support File System Access API
+      downloadFile(content, defaultFilename);
+    }
+
+  } catch (error) {
+    console.error('❌ Save error:', error);
+    alert('Error saving project. Please try again.');
+  } finally {
+    setIsLoading(false);
+  }
+};
+
+
+// Updated fallback download function
+const downloadFile = (content, filename) => {
+  // Ensure filename has .sb3 extension
+  if (!filename.endsWith('.sb3')) {
+    filename += '.sb3';
+  }
+  
+  const url = URL.createObjectURL(content);
+  const a = document.createElement('a');
+  a.href = url;
+  a.download = filename;  // Will always be .sb3
+  document.body.appendChild(a);
+  a.click();
+  document.body.removeChild(a);
+  URL.revokeObjectURL(url);
+};
 
   // helper function: normalize filename
   function normalizeKey(key = "") {
@@ -246,7 +296,7 @@ function ScratchJrShell() {
         );
 
         if (isScratchJrFormat) {
-          console.log('🎯 Loading ScratchJr project with Electron-compatible images...');
+          console.log('🎯 Loading Blockzie-Jr project with Electron-compatible images...');
 
           // Convert all assets to base64 data URLs
           const assetDataMap = new Map();
@@ -356,6 +406,7 @@ function ScratchJrShell() {
 
     } catch (error) {
       console.error('❌ Load error:', error);
+      alert('Error loading project. Please check the file format.');
     } finally {
       setIsLoading(false);
     }
@@ -405,6 +456,16 @@ function ScratchJrShell() {
   const handleAddCharacter = () => {
     // Add character functionality
   };
+
+  // Add this function to handle splash completion
+  const handleSplashComplete = () => {
+    setShowSplash(false);
+  };
+
+  // If splash screen is showing, render only the splash screen
+  if (showSplash) {
+    return <SplashScreen onComplete={handleSplashComplete} />;
+  }
 
   return (
     <div className="sjr-root">
