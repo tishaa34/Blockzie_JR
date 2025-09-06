@@ -2,7 +2,7 @@ import React, { useState, useRef } from "react";
 import "../../css/BlockPalette.css";
 import { useSelector, useDispatch } from "react-redux";
 import { addBlockToScript, addCustomSound } from "../../store/sceneSlice";
-
+import ConnectionModal from "../ui/ConnectionModal";
 // Puzzle backgrounds per category
 const puzzleBgByCategory = {
   start: "./assets/blocks/start.svg",
@@ -10,6 +10,7 @@ const puzzleBgByCategory = {
   looks: "./assets/blocks/looks.svg",
   sound: "./assets/blocks/sounds.svg",
   control: "./assets/blocks/flow.svg",
+  device: "./assets/blocks/blueCmd.svg",
   end: "./assets/blocks/endshort.svg",
 };
 
@@ -20,6 +21,7 @@ const barColorByCategory = {
   looks: "#eb7dfa",
   sound: "#59de80",
   control: "#ffc862",
+  device: "#68acfc",
   end: "#e84141",
 };
 
@@ -70,6 +72,19 @@ const blocksByCategory = {
       }
     },
     { name: "Speed", icon: "./assets/blockicons/Speed0.svg" },
+  ],
+  device: [
+    { 
+      name: "Otto-Bot", 
+      icon: "./assets/blockicons/OttoBot.svg",
+      requiresConnection: true
+    },
+    { 
+      name: "RC-Car", 
+      icon: "./assets/blockicons/RCCar.svg",
+      requiresConnection: true
+    },
+    // ...other device blocks if any...
   ],
   end: [
     { name: "End", icon: null, label: "" },
@@ -264,6 +279,10 @@ export default function BlockPalette() {
   const dispatch = useDispatch();
   const [showVoiceModal, setShowVoiceModal] = useState(false);
 
+  // Add state for connection modal
+  const [showConnectionModal, setShowConnectionModal] = useState(false);
+  const [selectedDevice, setSelectedDevice] = useState("");
+
   const selectedBlockCategory = useSelector((s) => s.scene.selectedBlockCategory) || "motion";
   const customSounds = useSelector((s) => s.scene.customSounds) || [];
 
@@ -313,10 +332,32 @@ export default function BlockPalette() {
     event.dataTransfer.setData("application/block", JSON.stringify(data));
   };
 
-  const handleBlockClick = async (block) => {
-    if (block.name === "Record") {
-      setShowVoiceModal(true);
+  const handleBlockClick = (block) => {
+    if (block.requiresConnection) {
+      setSelectedDevice(block.name);
+      setShowConnectionModal(true);
+    } else {
+      if (block.name === "Record") {
+        setShowVoiceModal(true);
+      }
+      // Optionally, handle other block clicks here if needed
     }
+  };
+
+  const handleDeviceConnection = (deviceName, connectionInfo) => {
+    console.log(`Connecting to ${deviceName}:`, connectionInfo);
+
+    // Add the connected device block to script
+    dispatch(addBlockToScript({
+      name: deviceName,
+      icon: blocksByCategory.device.find(b => b.name === deviceName)?.icon,
+      category: selectedBlockCategory,
+      connectionInfo: connectionInfo
+    }));
+
+    setShowConnectionModal(false);
+    setSelectedDevice("");
+    // Add actual connection logic here if needed
   };
 
   const handleVoiceSave = (customSoundData) => {
@@ -366,6 +407,14 @@ export default function BlockPalette() {
           </div>
         ))}
       </div>
+
+      {/* Add the ConnectionModal */}
+      <ConnectionModal
+        isOpen={showConnectionModal}
+        onClose={() => setShowConnectionModal(false)}
+        deviceName={selectedDevice}
+        onConnect={handleDeviceConnection}
+      />
 
       <VoiceRecordModal
         isOpen={showVoiceModal}

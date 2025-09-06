@@ -69,7 +69,7 @@
 
 /* Ensure any characters/actors inside the preview are centered */
 .scene-thumb-preview .actor {
-  position: static; /* Override absolute positioning if any */
+  position: relative; /* Override absolute positioning if any */
   transform: none; /* Remove any transform positioning */
   margin: auto; /* Center the actor */
   display: flex;

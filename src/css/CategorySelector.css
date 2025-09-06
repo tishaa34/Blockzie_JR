@@ -1,43 +1,50 @@
 .catbar-tray {
   display: flex;
   align-items: center;
-  gap: 3px;
-  padding: 4px 8px 4px 8px;
+  justify-content: center; /* Center all buttons */
+  gap: 8px; /* Consistent gap between all buttons */
+  padding: 14px 16px; /* Equal padding on all sides */
   background: #eee;
   border-radius: 13px;
   margin: 0;
   border: none;
-  padding: 0 10px; /*vertical padding 0 so total height = 82px */ 
-  height: 82px; /*match BlockPalette tile height */
+  height: 82px;
   box-sizing: border-box;
-  }
+  width: 100%; /* Ensure full width usage */
+}
 
-  .catblockbtn {
+.catblockbtn {
   background: none;
   border: none;
   outline: none;
   padding: 0;
   border-radius: 13px;
   box-shadow: 0 2px 3px #0001;
-  width: 54px;
-  height: 54px;
+  width: 54px; /* Fixed width */
+  height: 54px; /* Fixed height */
+  min-width: 54px; /* Prevent shrinking */
+  min-height: 54px; /* Prevent shrinking */
   display: flex;
   align-items: center;
   justify-content: center;
   transition: filter 0.13s, box-shadow 0.14s;
-  margin: 0 2px;
+  margin: 0; /* Remove individual margins since we're using gap */
   position: relative;
   cursor: pointer;
-  }
+  flex-shrink: 0; /* Prevent buttons from shrinking */
+}
 
 .catblockbtn.active,
 .catblockbtn:focus {
   filter: brightness(1.17);
   box-shadow: 0 8px 24px #2d77f041;
 }
+
 .catblockicon {
   width: 46px;
   height: 46px;
+  min-width: 46px; /* Prevent icon shrinking */
+  min-height: 46px; /* Prevent icon shrinking */
   object-fit: contain;
   display: block;
   pointer-events: none;
