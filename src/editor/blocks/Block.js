@@ -2,7 +2,7 @@ import React, { useState, useRef } from "react";
 import "../../css/BlockPalette.css";
 import { useSelector, useDispatch } from "react-redux";
 import { addBlockToScript, addCustomSound } from "../../store/sceneSlice";
-import ConnectionModal from "../ui/ConnectionModal";
+import ConnectionModal from "../ui/ConnectionModal"; // Update import path if needed
 // Puzzle backgrounds per category
 const puzzleBgByCategory = {
   start: "./assets/blocks/start.svg",
@@ -80,10 +80,11 @@ const blocksByCategory = {
       requiresConnection: true
     },
     { 
-      name: "RC-Car", 
+      name: "Light RC", 
       icon: "./assets/blockicons/RCCar.svg",
       requiresConnection: true
     },
+
     // ...other device blocks if any...
   ],
   end: [

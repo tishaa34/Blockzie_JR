@@ -2,6 +2,7 @@ import React, { useRef } from "react";
 import { useSelector, useDispatch } from "react-redux";
 import "../../css/Toolbar.css";
 import { run } from "../../utils/runScript";
+import HumanDetectionIcon from '../ui/HumanDetection.js';
 
 export default function Toolbar({
   onSave,
@@ -47,6 +48,11 @@ export default function Toolbar({
         <button className="tl-btn" title="Coding Cards">
           <img src="./assets/ui/coding-cards.png" alt="Coding Cards" />
         </button>
+      </div>
+
+      {/* Right side buttons - Human Detection at rightmost */}
+      <div className="toolbar-right">
+        <HumanDetectionIcon />
       </div>
     </nav>
   );

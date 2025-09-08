@@ -53,4 +53,59 @@
   outline: none;
 }
 
-/* Remove all .stage-overlay-controls and related styles */
+.toolbar-container {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  background: #f5e6d3; /* Beige background */
+  padding: 8px 16px;
+  border-radius: 13px;
+  margin-bottom: 8px;
+}
+
+.toolbar-left {
+  display: flex;
+  gap: 8px;
+  align-items: center;
+}
+
+.toolbar-right {
+  display: flex;
+  align-items: center;
+  margin-left: auto;
+  padding-right: 0;
+}
+.toolbar-right .human-detection-btn {
+  margin: 0; /* Remove all margins for edge positioning */
+}
+.toolbar-right > * {
+  flex-shrink: 0;
+
+}
+
+/* Style for existing Load/Save buttons to match */
+.load-btn, .save-btn {
+  background: none;
+  border: none;
+  cursor: pointer;
+  padding: 4px;
+  margin: 0 4px;
+  border-radius: 6px;
+  width: 32px;
+  height: 32px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  transition: all 0.2s ease;
+}
+
+.load-btn:hover, .save-btn:hover {
+  background-color: rgba(0, 0, 0, 0.1);
+  transform: scale(1.05);
+}
+
+.load-btn img, .save-btn img {
+  width: 24px;
+  height: 24px;
+  filter: brightness(0.7);
+}
