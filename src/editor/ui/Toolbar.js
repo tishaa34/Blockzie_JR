@@ -1,13 +1,14 @@
-import React, { useRef } from "react";
+import React, { useRef, useState } from "react";
 import { useSelector, useDispatch } from "react-redux";
 import "../../css/Toolbar.css";
 import { run } from "../../utils/runScript";
-import HumanDetectionIcon from '../ui/HumanDetection.js';
 
 export default function Toolbar({
   onSave,
   onLoad,
-  selectedActorId 
+  selectedActorId,
+  heading,
+  onOpenHumanDetection // Add this new prop
 }) {
   const fileInputRef = useRef();
 
@@ -25,35 +26,41 @@ export default function Toolbar({
   };
 
   return (
-    <nav className="toolbar">
-      {/* Logo */}
-      <div className="toolbar-logo">
-        <img src="./assets/Logo.png" alt="Stembotix Logo" />
+    <nav className="toolbar" style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', width: '100%' }}>
+      <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
+        {/* Logo */}
+        <div className="toolbar-logo">
+          <img src="./assets/Logo.png" alt="Stembotix Logo" />
+        </div>
+
+        {/* Left buttons */}
+        <div className="toolbar-group left-group">
+          <button className="tl-btn" onClick={handleLoadClick} title="Load project">
+            <img src="./assets/ui/load.png" alt="Load" />
+          </button>
+          <input
+            type="file"
+            style={{ display: "none" }}
+            ref={fileInputRef}
+            onChange={handleFileChange}
+          />
+          <button className="tl-btn" onClick={onSave} title="Save project">
+            <img src="./assets/ui/save.png" alt="Save" />
+          </button>
+          <button className="tl-btn" title="Coding Cards">
+            <img src="./assets/ui/coding-cards.png" alt="Coding Cards" />
+          </button>
+        </div>
       </div>
 
-      {/* Project controls only */}
-      <div className="toolbar-group left-group">
-        <button className="tl-btn" onClick={handleLoadClick} title="Load project">
-          <img src="./assets/ui/load.png" alt="Load" />
-        </button>
-        <input
-          type="file"
-          style={{ display: "none" }}
-          ref={fileInputRef}
-          onChange={handleFileChange}
-        />
-        <button className="tl-btn" onClick={onSave} title="Save project">
-          <img src="./assets/ui/save.png" alt="Save" />
-        </button>
-        <button className="tl-btn" title="Coding Cards">
-          <img src="./assets/ui/coding-cards.png" alt="Coding Cards" />
-        </button>
-      </div>
-
-      {/* Right side buttons - Human Detection at rightmost */}
-      <div className="toolbar-right">
-        <HumanDetectionIcon />
-      </div>
+      {/* Human Detection button - rightmost position */}
+      <button 
+        className="tl-btn" 
+        onClick={onOpenHumanDetection}
+        title="Human Detection"
+      >
+        <img src="./assets/ui/HumanDetection.png" alt="Human Detection" />
+      </button>
     </nav>
   );
 }

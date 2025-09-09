@@ -14,6 +14,7 @@ import RightPanelControls from './editor/ui/RightPanelControls';
 import BackgroundGallery from './editor/ui/BackgroundGallery';
 import HeadingModal from './editor/ui/HeadingModal';
 import SplashScreen from './editor/ui/SplashScreen';
+import HumanDetectionFullStage from './editor/ui/HumanDetectionFullStage';
 
 import { clearScript } from './store/sceneSlice';
 
@@ -41,6 +42,9 @@ function BlockzieJrShell() {
   // Splash screen state and message
   const [showSplash, setShowSplash] = useState(true);
   const [splashMessage, setSplashMessage] = useState("Preparing, please wait...");
+
+  // Human Detection modal state
+  const [showHumanDetection, setShowHumanDetection] = useState(false);
 
   useEffect(() => {
     // Show splash only for 3 seconds on initial load
@@ -465,8 +469,15 @@ function BlockzieJrShell() {
           onSave={handleSave}
           onLoad={handleLoad}
           heading={heading}
+          onOpenHumanDetection={() => setShowHumanDetection(true)}
         />
       </header>
+
+      {/* Human Detection Full Stage Modal */}
+      <HumanDetectionFullStage
+        isOpen={showHumanDetection}
+        onClose={() => setShowHumanDetection(false)}
+      />
 
       {/* Background and Heading Modals */}
       <BackgroundGallery open={bgModalOpen} onClose={() => setBgModalOpen(false)} />
