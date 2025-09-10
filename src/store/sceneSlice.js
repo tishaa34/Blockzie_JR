@@ -51,6 +51,8 @@ const initialState = {
     '#ffffff', '#87CEEB', '#98FB98', '#FFB6C1', '#F0E68C',
   ],
   customSounds: [], // Array to store custom recorded sounds
+  showHumanDetection: false, // <-- Add this line
+  globalCameraState: 'off',  // <-- Add this line
 };
 
 // Safe deep clone for undo
@@ -366,6 +368,22 @@ const sceneSlice = createSlice({
       }
     },
 
+    // Add this to your reducers object in sceneSlice.js
+    updateCameraState: (state, action) => {
+      const { actorId, blockId, cameraState } = action.payload;
+      const scene = state.scenes[state.currentSceneIndex];
+      const actor = scene.actors.find(a => a.id === actorId);
+      if (actor) {
+        const block = actor.scripts.find(b => b.id === blockId);
+        if (block) {
+          block.cameraState = cameraState;
+        }
+      }
+    },
+     setCameraState: (state, action) => {
+      state.globalCameraState = action.payload;
+    },
+
     // Custom Sound Management - NEW REDUCERS
     addCustomSound(state, action) {
       const customSound = {
@@ -421,6 +439,10 @@ const sceneSlice = createSlice({
       }
     },
 
+    setShowHumanDetection: (state, action) => {
+      state.showHumanDetection = action.payload;
+    },
+
       // Add this to your reducers object in sceneSlice.js
 overwrite(state, action) {
   const newState = action.payload;
@@ -441,6 +463,7 @@ overwrite(state, action) {
   state.customSounds = newState.customSounds || [];
 },
   },
+  
 });
 
 export const {
@@ -473,7 +496,9 @@ export const {
   removeCustomSound,
   clearAllCustomSounds,
   updateCustomSoundName,
+  setShowHumanDetection, // <-- Add this line
   overwrite, 
+   setCameraState,
 } = sceneSlice.actions;
 
 export default sceneSlice.reducer;

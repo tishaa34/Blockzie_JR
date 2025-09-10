@@ -8,12 +8,14 @@ import {
 } from "../../store/sceneSlice";
 import NumberPicker from "./NumberPicker";
 import "../../css/ScriptArea.css";
+import { setCameraState } from "../../store/sceneSlice";
 
 import { run } from "../../utils/runScript";
 
 export default function ScriptArea({ selectedActorId }) {
   const dispatch = useDispatch();
   const { scenes, currentSceneIndex } = useSelector((s) => s.scene);
+  const globalCameraState = useSelector((s) => s.scene.globalCameraState); // Add this line
   const scene = scenes[currentSceneIndex];
   const actor = scene?.actors.find((a) => a.id === selectedActorId);
 
@@ -28,6 +30,12 @@ export default function ScriptArea({ selectedActorId }) {
     const raw = e.dataTransfer.getData("application/block");
     if (!raw || !actor) return;
     const block = JSON.parse(raw);
+
+    // Preserve camera state if it exists
+    if (block.type === 'camera_control' && block.cameraState) {
+      block.cameraState = block.cameraState;
+    }
+
     dispatch(pushUndoState());
 
     if (block.category === "start") {
@@ -161,7 +169,7 @@ export default function ScriptArea({ selectedActorId }) {
           🗑 Clear
         </button>
       </div>
-      <div 
+      <div
         className="scriptarea-noborder"
         ref={scriptAreaRef}
         onDrop={onDrop}
@@ -171,33 +179,89 @@ export default function ScriptArea({ selectedActorId }) {
           {actor.scripts.length === 0 ? (
             <div className="s-hint">Drop blocks here to build your script</div>
           ) : (
-            actor.scripts.map((b, i) => (
-              <div
-                key={b.id}
-                className={`block-palette-title ${draggedBlock?.index === i ? 'dragging' : ''}`}
-                onClick={() => clickBlock(b)}
-                title={
-                  b.name === "Wait" 
-                    ? `Wait ${b.count || 3} seconds - Click to change duration, drag out to remove`
-                    : b.name === "Stop"
-                    ? "Stop execution - Drag out to remove"
-                    : b.name === "Speed"
-                    ? "Increase speed by 1.5x - Drag out to remove"
-                    : "Click to set count, drag out to remove"
-                }
-                draggable
-                onDragStart={(e) => handleBlockDragStart(e, b, i)}
-                onDragEnd={handleBlockDragEnd}
-              >
-                <img className="block-bg" src={b.puzzleBg} alt="" draggable={false} />
-                {b.icon && (
-                  <img className="block-icon" src={b.icon} alt={b.name} draggable={false} />
-                )}
-                {b.soundData && (
-                  <div className="custom-sound-script-indicator"></div>
-                )}
-              </div>
-            ))
+            actor.scripts.map((b, i) => {
+              // Camera control block rendering
+              if (b.type === 'camera_control') {
+                return (
+                  <div
+                    key={b.id}
+                    className={`block-palette-title ${draggedBlock?.index === i ? 'dragging' : ''}`}
+                    onClick={() => clickBlock(b)}
+                    title="Camera Control - Click dropdown to turn on/off camera"
+                    draggable
+                    onDragStart={(e) => handleBlockDragStart(e, b, i)}
+                    onDragEnd={handleBlockDragEnd}
+                  >
+                    <img className="block-bg" src={b.puzzleBg} alt="" draggable={false} />
+                    <select 
+                      value={globalCameraState} // Use the variable from top level
+                      onChange={(e) => {
+                        e.stopPropagation();
+                        const newState = e.target.value;
+                        
+                        // Update global camera state in Redux
+                        dispatch(setCameraState(newState));
+                        
+                        // Trigger camera functionality
+                        if (newState === 'on') {
+                          window.humanDetectionController?.startCamera();
+                        } else {
+                          window.humanDetectionController?.stopCamera();
+                        }
+                      }}
+                      onClick={(e) => e.stopPropagation()}
+                      style={{
+                        position: 'absolute',
+                        top: '50%',
+                        left: '50%',
+                        transform: 'translate(-50%, -50%)',
+                        width: '50px',
+                        height: '24px',
+                        background: 'rgba(255, 255, 255, 0.9)',
+                        border: '1px solid rgba(0,0,0,0.3)',
+                        borderRadius: '4px',
+                        color: 'black',
+                        fontSize: '10px',
+                        zIndex: 2,
+                        cursor: 'pointer'
+                      }}
+                    >
+                      <option value="off">off</option>
+                      <option value="on">on</option>
+                    </select>
+                  </div>
+                );
+              }
+
+              // Regular block rendering (unchanged)
+              return (
+                <div
+                  key={b.id}
+                  className={`block-palette-title ${draggedBlock?.index === i ? 'dragging' : ''}`}
+                  onClick={() => clickBlock(b)}
+                  title={
+                    b.name === "Wait"
+                      ? `Wait ${b.count || 3} seconds - Click to change duration, drag out to remove`
+                      : b.name === "Stop"
+                        ? "Stop execution - Drag out to remove"
+                        : b.name === "Speed"
+                          ? "Increase speed by 1.5x - Drag out to remove"
+                          : "Click to set count, drag out to remove"
+                  }
+                  draggable
+                  onDragStart={(e) => handleBlockDragStart(e, b, i)}
+                  onDragEnd={handleBlockDragEnd}
+                >
+                  <img className="block-bg" src={b.puzzleBg} alt="" draggable={false} />
+                  {b.icon && (
+                    <img className="block-icon" src={b.icon} alt={b.name} draggable={false} />
+                  )}
+                  {b.soundData && (
+                    <div className="custom-sound-script-indicator"></div>
+                  )}
+                </div>
+              );
+            })
           )}
         </div>
       </div>

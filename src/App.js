@@ -1,5 +1,5 @@
 import React, { useEffect, useState } from 'react';
-import { Provider, useSelector, useDispatch } from 'react-redux';
+import { Provider, useDispatch, useSelector } from 'react-redux';
 import store from './store/store';
 import JSZip from 'jszip';
 
@@ -16,7 +16,7 @@ import HeadingModal from './editor/ui/HeadingModal';
 import SplashScreen from './editor/ui/SplashScreen';
 import HumanDetectionFullStage from './editor/ui/HumanDetectionFullStage';
 
-import { clearScript } from './store/sceneSlice';
+import { clearScript, setShowHumanDetection } from './store/sceneSlice';
 
 import './App.css';
 
@@ -31,6 +31,7 @@ const demoActors = [
 function BlockzieJrShell() {
   const dispatch = useDispatch();
   const { scenes, currentSceneIndex } = useSelector(s => s.scene);
+  const showHumanDetection = useSelector(s => s.scene.showHumanDetection); // <-- Redux state
   const actorIdFromScene = scenes[currentSceneIndex]?.actors?.[0]?.id;
 
   const [selectedActorId, setSelectedActorId] = useState(actorIdFromScene || demoActors[0]?.id);
@@ -42,9 +43,6 @@ function BlockzieJrShell() {
   // Splash screen state and message
   const [showSplash, setShowSplash] = useState(true);
   const [splashMessage, setSplashMessage] = useState("Preparing, please wait...");
-
-  // Human Detection modal state
-  const [showHumanDetection, setShowHumanDetection] = useState(false);
 
   useEffect(() => {
     // Show splash only for 3 seconds on initial load
@@ -469,14 +467,14 @@ function BlockzieJrShell() {
           onSave={handleSave}
           onLoad={handleLoad}
           heading={heading}
-          onOpenHumanDetection={() => setShowHumanDetection(true)}
+          onOpenHumanDetection={() => dispatch(setShowHumanDetection(true))} // Use Redux action
         />
       </header>
 
       {/* Human Detection Full Stage Modal */}
       <HumanDetectionFullStage
         isOpen={showHumanDetection}
-        onClose={() => setShowHumanDetection(false)}
+        onClose={() => dispatch(setShowHumanDetection(false))}
       />
 
       {/* Background and Heading Modals */}
