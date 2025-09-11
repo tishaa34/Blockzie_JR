@@ -1,7 +1,7 @@
 import React, { useRef, useState, useEffect, useCallback } from 'react';
 import * as posenet from '@tensorflow-models/posenet';
 import * as tf from '@tensorflow/tfjs';
-import * as faceapi from '@vladmandic/face-api'; // NEW: Import the modern face-api
+import * as faceapi from '@vladmandic/face-api';
 
 const HumanDetectionFullStage = () => {
   const videoRef = useRef(null);
@@ -12,12 +12,12 @@ const HumanDetectionFullStage = () => {
   const modelsInitialized = useRef(false);
 
   const [net, setNet] = useState(null);
-  const [faceNet, setFaceNet] = useState(null); // NEW: Face detection state
+  const [faceNet, setFaceNet] = useState(null);
   const [isVisible, setIsVisible] = useState(false);
   const [cameraStarted, setCameraStarted] = useState(false);
   const [peopleCount, setPeopleCount] = useState(0);
   const [handCount, setHandCount] = useState(0);
-  const [faceCount, setFaceCount] = useState(0); // NEW: Face count state
+  const [faceCount, setFaceCount] = useState(0);
   const [stageRect, setStageRect] = useState({ top: 110, left: 380, width: 830, height: 460 });
   const [loadingStatus, setLoadingStatus] = useState('Initializing...');
   const [detectionStatus, setDetectionStatus] = useState('Not started');
@@ -40,10 +40,10 @@ const HumanDetectionFullStage = () => {
     }
   }, []);
 
-  // NEW: Enhanced async ngOnInit pattern with face detection
+  // Enhanced async ngOnInit pattern with age and gender models
   const ngOnInit = useCallback(async () => {
     if (modelsInitialized.current) return;
-    
+
     try {
       setLoadingStatus('Setting up TensorFlow...');
       console.log('🔄 Setting up TensorFlow...');
@@ -63,40 +63,40 @@ const HumanDetectionFullStage = () => {
       // Load PoseNet model
       setLoadingStatus('Loading PoseNet model (ResNet50)...');
       console.log('🔄 Loading PoseNet ResNet50 model...');
-      
+
       const poseModel = await posenet.load({
         architecture: 'ResNet50',
         outputStride: 32,
         inputResolution: { width: 257, height: 257 },
       });
-      
+
       setNet(poseModel);
       console.log('✅ PoseNet model loaded successfully');
 
-      // NEW: Load face-api models
+      // NEW: Load face-api models with age and gender
       try {
-        setLoadingStatus('Loading Face Detection models...');
-        console.log('🔄 Loading Face Detection models...');
-        
+        setLoadingStatus('Loading Face Detection models (with age & gender)...');
+        console.log('🔄 Loading Face Detection models with age & gender...');
+
         // Set FaceAPI backend to match TensorFlow backend
         await faceapi.tf.setBackend(tf.getBackend());
         await faceapi.tf.ready();
-        
-        // Load face detection models
+
+        // Load all face detection models including age and gender
         await Promise.all([
           faceapi.nets.tinyFaceDetector.loadFromUri('/models'),
           faceapi.nets.faceLandmark68Net.loadFromUri('/models'),
           faceapi.nets.faceExpressionNet.loadFromUri('/models'),
+          faceapi.nets.ageGenderNet.loadFromUri('/models'), // NEW: Age and gender model
         ]);
-        
+
         setFaceNet(true);
-        console.log('✅ Face Detection models loaded successfully');
+        console.log('✅ Face Detection models (with age & gender) loaded successfully');
       } catch (faceError) {
         console.warn('Face detection models failed to load:', faceError);
         setFaceNet(false);
       }
-      
-      // Mark initialization complete
+
       modelsInitialized.current = true;
       setLoadingStatus('All models loaded successfully');
       console.log('✅ All AI models initialized successfully');
@@ -204,46 +204,40 @@ const HumanDetectionFullStage = () => {
     setCameraStarted(false);
     setPeopleCount(0);
     setHandCount(0);
-    setFaceCount(0); // NEW: Reset face count
+    setFaceCount(0);
   }, []);
 
-  // Hand detection with detailed logging
+  // Hand detection
   const checkHandDetected = useCallback((poses) => {
     if (!poses || poses.length === 0) return 0;
-    
+
     const scoreThreshold = 0.1;
     let handsFound = 0;
-    
+
     for (const pose of poses) {
       const leftWrist = pose.keypoints[9];
       const rightWrist = pose.keypoints[10];
-      
-      if (leftWrist && leftWrist.score > scoreThreshold) {
-        handsFound++;
-        console.log('✅ Left wrist detected with score:', leftWrist.score);
-      }
-      if (rightWrist && rightWrist.score > scoreThreshold) {
-        handsFound++;
-        console.log('✅ Right wrist detected with score:', rightWrist.score);
-      }
+
+      if (leftWrist && leftWrist.score > scoreThreshold) handsFound++;
+      if (rightWrist && rightWrist.score > scoreThreshold) handsFound++;
     }
-    
+
     return handsFound;
   }, []);
 
-  // NEW: Face detection using @vladmandic/face-api
+  // Enhanced face detection with age and gender
   const checkFaceDetected = useCallback(async (videoElement) => {
     if (!faceNet || !videoElement) return 0;
-    
+
     try {
       const detections = await faceapi.detectAllFaces(
-        videoElement, 
+        videoElement,
         new faceapi.TinyFaceDetectorOptions({
           inputSize: 416,
           scoreThreshold: 0.5
         })
-      ).withFaceLandmarks().withFaceExpressions();
-      
+      ).withFaceLandmarks().withFaceExpressions().withAgeAndGender(); // NEW: Added withAgeAndGender()
+
       return detections.length;
     } catch (error) {
       console.error('Face detection error:', error);
@@ -251,55 +245,62 @@ const HumanDetectionFullStage = () => {
     }
   }, [faceNet]);
 
-  // NEW: Draw face detection results
+  // MODIFIED: Custom drawing without score numbers
   const drawFaceDetections = useCallback(async (ctx, videoElement) => {
     if (!faceNet || !videoElement) return;
 
     try {
       const detections = await faceapi.detectAllFaces(
-        videoElement, 
-        new faceapi.TinyFaceDetectorOptions({
-          inputSize: 416,
-          scoreThreshold: 0.5
-        })
-      ).withFaceLandmarks().withFaceExpressions();
+        videoElement,
+        new faceapi.TinyFaceDetectorOptions({ inputSize: 416, scoreThreshold: 0.5 })
+      ).withFaceLandmarks().withFaceExpressions().withAgeAndGender();
 
-      detections.forEach((detection, index) => {
-        const { x, y, width, height } = detection.detection.box;
-        
-        // Draw face bounding box
-        ctx.strokeStyle = '#00FFFF'; // Cyan color for faces
+      const displaySize = { width: videoElement.videoWidth, height: videoElement.videoHeight };
+
+      // Match canvas dimensions
+      faceapi.matchDimensions(canvasRef.current, displaySize);
+
+      const resizedDetections = faceapi.resizeResults(detections, displaySize);
+
+      // Clear canvas
+      ctx.clearRect(0, 0, canvasRef.current.width, canvasRef.current.height);
+
+      // REMOVED: faceapi.draw.drawDetections() - this was showing the score
+      // Draw only landmarks without built-in detection boxes
+      faceapi.draw.drawFaceLandmarks(canvasRef.current, resizedDetections);
+
+      // Draw custom bounding boxes and labels manually
+      resizedDetections.forEach((detection) => {
+        const box = detection.detection.box;
+        const age = Math.round(detection.age);
+        const gender = detection.gender;
+        const genderProbability = detection.genderProbability.toFixed(2);
+        const expressions = detection.expressions;
+        const dominantExpression = Object.keys(expressions).reduce((a, b) =>
+          expressions[a] > expressions[b] ? a : b
+        );
+
+        // Draw blue bounding box manually (no score)
+        ctx.strokeStyle = '#4285F4';
         ctx.lineWidth = 3;
-        ctx.strokeRect(x, y, width, height);
-        
-        // Draw face landmarks
-        if (detection.landmarks) {
-          ctx.fillStyle = '#00FFFF';
-          detection.landmarks.positions.forEach(point => {
-            ctx.beginPath();
-            ctx.arc(point.x, point.y, 2, 0, 2 * Math.PI);
-            ctx.fill();
-          });
-        }
+        ctx.strokeRect(box.x, box.y, box.width, box.height);
 
-        // Draw dominant expression
-        if (detection.expressions) {
-          const expressions = detection.expressions;
-          const dominantExpression = Object.keys(expressions).reduce((a, b) => 
-            expressions[a] > expressions[b] ? a : b
-          );
-          
-          ctx.fillStyle = '#00FFFF';
-          ctx.font = 'bold 16px Arial';
-          ctx.fillText(`${dominantExpression} (${(expressions[dominantExpression] * 100).toFixed(1)}%)`, x, y - 10);
-        }
+        // Draw custom label with only age, gender, emotion
+        const label = `${age} yrs, ${gender} (${genderProbability}), ${dominantExpression}`;
+
+        ctx.font = '14px Arial';
+        const textWidth = ctx.measureText(label).width;
+        ctx.fillStyle = 'rgba(66, 133, 244, 0.8)';
+        ctx.fillRect(box.x, box.y - 25, textWidth + 10, 20);
+        ctx.fillStyle = '#FFFFFF';
+        ctx.fillText(label, box.x + 5, box.y - 10);
       });
     } catch (error) {
       console.error('Face drawing error:', error);
     }
   }, [faceNet]);
 
-  // Draw radiating lines for hands with enhanced visibility
+  // Draw radiating lines for hands
   const drawHandRadiatingLines = useCallback((ctx, keypoints) => {
     const leftWrist = keypoints[9];
     const rightWrist = keypoints[10];
@@ -308,18 +309,14 @@ const HumanDetectionFullStage = () => {
 
     if (leftWrist && leftWrist.score > scoreThreshold) {
       handPoints.push(leftWrist);
-      console.log('🖐️ Drawing lines for LEFT wrist at:', leftWrist.position.x, leftWrist.position.y);
     }
     if (rightWrist && rightWrist.score > scoreThreshold) {
       handPoints.push(rightWrist);
-      console.log('🖐️ Drawing lines for RIGHT wrist at:', rightWrist.position.x, rightWrist.position.y);
     }
 
     handPoints.forEach((hand, index) => {
       const centerX = hand.position.x;
       const centerY = hand.position.y;
-
-      console.log(`🎯 Drawing radiating lines from hand ${index + 1} at: (${centerX}, ${centerY})`);
 
       // Draw radiating lines
       const angles = [0, 45, 90, 135, 180, 225, 270, 315];
@@ -380,12 +377,12 @@ const HumanDetectionFullStage = () => {
       if (keypoint.score > 0.2) {
         const x = keypoint.position.x;
         const y = keypoint.position.y;
-        
+
         ctx.beginPath();
         ctx.arc(x, y, 5, 0, 2 * Math.PI);
         ctx.fillStyle = color;
         ctx.fill();
-        
+
         ctx.beginPath();
         ctx.arc(x, y, 2, 0, 2 * Math.PI);
         ctx.fillStyle = '#FFFFFF';
@@ -405,13 +402,13 @@ const HumanDetectionFullStage = () => {
     connections.forEach(([from, to]) => {
       const fromPoint = keypoints[from];
       const toPoint = keypoints[to];
-      
+
       if (fromPoint && toPoint && fromPoint.score > 0.2 && toPoint.score > 0.2) {
         const fromX = fromPoint.position.x;
         const fromY = fromPoint.position.y;
         const toX = toPoint.position.x;
         const toY = toPoint.position.y;
-        
+
         ctx.lineWidth = 3;
         ctx.strokeStyle = color;
         ctx.lineCap = 'round';
@@ -430,7 +427,7 @@ const HumanDetectionFullStage = () => {
 
     const xs = validPoints.map(kp => kp.position.x);
     const ys = validPoints.map(kp => kp.position.y);
-    
+
     const minX = Math.min(...xs) - 20;
     const maxX = Math.max(...xs) + 20;
     const minY = Math.min(...ys) - 20;
@@ -447,7 +444,7 @@ const HumanDetectionFullStage = () => {
     ctx.fillText(`Person ${personIndex + 1}`, minX, minY - 5);
   }, []);
 
-  // NEW: AI Skeleton Visualization with face detection
+  // AI Skeleton Visualization with enhanced face detection
   const drawAISkeletonVisualization = useCallback(async (poses) => {
     if (!canvasRef.current || !videoRef.current) return;
 
@@ -464,7 +461,7 @@ const HumanDetectionFullStage = () => {
 
     ctx.clearRect(0, 0, canvas.width, canvas.height);
 
-    const colors = [ '#00FF00', '#0080FF', '#FF4000', '#FFFF00', '#FF00FF' ];
+    const colors = ['#00FF00', '#0080FF', '#FF4000', '#FFFF00', '#FF00FF'];
 
     poses.forEach((pose, personIndex) => {
       if (pose.score > 0.1) {
@@ -476,13 +473,13 @@ const HumanDetectionFullStage = () => {
       }
     });
 
-    // NEW: Draw face detection results
+    // Draw enhanced face detection results
     if (faceNet) {
       await drawFaceDetections(ctx, video);
     }
   }, [drawHandRadiatingLines, drawFaceDetections, faceNet]);
 
-  // NEW: Enhanced main detection function with face detection
+  // Main detection function
   const startDetection = useCallback(() => {
     if (!net || !cameraStarted || detectionActive.current) {
       console.log('⚠️ Detection not ready');
@@ -511,20 +508,18 @@ const HumanDetectionFullStage = () => {
         const validPoses = poses.filter(pose => pose.score > 0.05);
         const detectedPeople = validPoses.length;
         const handsFound = checkHandDetected(validPoses);
-        
-        // NEW: Face detection
         const facesFound = faceNet ? await checkFaceDetected(videoRef.current) : 0;
-        
+
         setPeopleCount(detectedPeople);
         setHandCount(handsFound);
-        setFaceCount(facesFound); // NEW: Set face count
-        
-        await drawAISkeletonVisualization(validPoses); // NEW: Made async
+        setFaceCount(facesFound);
+
+        await drawAISkeletonVisualization(validPoses);
 
         window.humanDetectionData = {
           handCount: handsFound,
           peopleCount: detectedPeople,
-          faceCount: facesFound, // NEW: Include face count
+          faceCount: facesFound,
           poses: validPoses,
           timestamp: Date.now(),
           cameraActive: cameraStarted
@@ -620,24 +615,25 @@ const HumanDetectionFullStage = () => {
           pointerEvents: 'none'
         }}
       />
+      {/* NEW: Single line HUD spanning full width */}
       <div style={{
         position: 'absolute',
-        bottom: '15px',
-        left: '15px',
+        bottom: '0px',
+        left: '0px',
+        width: '100%',
+        textAlign: 'center',
         backgroundColor: 'rgba(0, 0, 0, 0.9)',
         color: '#00FF00',
-        padding: '12px 16px',
-        borderRadius: '8px',
-        fontSize: '14px',
+        padding: '12px 0',
+        fontSize: '16px',
         fontWeight: 'bold',
-        border: '2px solid #00FF00',
+        borderRadius: '0 0 12px 12px',
+        borderTop: '2px solid #00FF00',
         fontFamily: 'monospace',
-        textShadow: '0 0 10px #00FF00'
+        textShadow: '0 0 10px #00FF00',
+        zIndex: 10002,
       }}>
-        <div>🤖 HUMANS DETECTED: {peopleCount}</div>
-        <div>✋ HANDS FOUND: {handCount}</div>
-        <div>😊 FACES FOUND: {faceCount}</div> {/* NEW: Face count display */}
-        <div>📊 STATUS: {detectionStatus}</div>
+        <span>🤖 HUMANS: {peopleCount} | ✋ HANDS: {handCount} | 😊 FACES: {faceCount}</span>
       </div>
     </div>
   );
