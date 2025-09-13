@@ -17,7 +17,7 @@ const makeDefaultstem = () => ({
   direction: 0,
   height: 5,
   scripts: [],
-  size:1,
+  size: 1,
   visible: true,
 });
 
@@ -53,6 +53,7 @@ const initialState = {
   customSounds: [], // Array to store custom recorded sounds
   showHumanDetection: false, // <-- Add this line
   globalCameraState: 'off',  // <-- Add this line
+  videoOpacity: 100, // NEW: Add video opacity state with a default of 100%
 };
 
 // Safe deep clone for undo
@@ -184,7 +185,7 @@ const sceneSlice = createSlice({
         width,
         height,
         scripts: scripts ?? [],
-        visible:true
+        visible: true,
       };
 
       scene.actors.push(actor);
@@ -238,19 +239,17 @@ const sceneSlice = createSlice({
     scaleActor: (state, action) => {
       const { actorId, scale, fromScript } = action.payload;
       const scene = state.scenes[state.currentSceneIndex];
-      if (!scene) return; // ✅ prevent undefined scene
+      if (!scene) return;
       const actor = scene.actors.find(a => a.id === actorId);
-      if (!actor) return; // ✅ prevent crash if actor not found
+      if (!actor) return;
 
       if (!fromScript) {
         scene.undoStack.push(deepClone(scene));
         scene.redoStack = [];
       }
 
-      // default size = 1
       const newSize = (actor.size || 1) * scale;
 
-      // ✅ clamp size between 0.5x and 3x
       const minSize = 0.5;
       const maxSize = 4.0;
       actor.size = Math.min(Math.max(newSize, minSize), maxSize);
@@ -268,14 +267,14 @@ const sceneSlice = createSlice({
         scene.redoStack = [];
       }
 
-      actor.size = 1; // ✅ reset to default size
+      actor.size = 1;
     },
     disappearActor: (state, action) => {
       const scene = state.scenes[state.currentSceneIndex];
       if (!scene) return;
       const actor = scene.actors.find((a) => a.id === action.payload.actorId);
       if (actor) {
-        actor.visible = false;  // ✅ hide actor
+        actor.visible = false;
       }
     },
 
@@ -284,7 +283,7 @@ const sceneSlice = createSlice({
       if (!scene) return;
       const actor = scene.actors.find((a) => a.id === action.payload.actorId);
       if (actor) {
-        actor.visible = true;   // ✅ show actor again
+        actor.visible = true;
       }
     },
 
@@ -358,17 +357,16 @@ const sceneSlice = createSlice({
     },
 
     updateBlockCount(state, action) {
-      const { actorId, blockId, newCount } = action.payload;
+      const { actorId, blockId, newCount, property = 'count' } = action.payload;
       const scene = state.scenes[state.currentSceneIndex];
       const actor = scene?.actors.find(a => a.id === actorId);
       if (!actor) return;
       const block = actor.scripts.find(b => b.id === blockId);
       if (block) {
-        block.count = Math.min(Math.max(1, newCount), 99);
+        block[property] = Math.min(Math.max(0, newCount), 100);
       }
     },
 
-    // Add this to your reducers object in sceneSlice.js
     updateCameraState: (state, action) => {
       const { actorId, blockId, cameraState } = action.payload;
       const scene = state.scenes[state.currentSceneIndex];
@@ -380,7 +378,7 @@ const sceneSlice = createSlice({
         }
       }
     },
-     setCameraState: (state, action) => {
+    setCameraState: (state, action) => {
       state.globalCameraState = action.payload;
     },
 
@@ -443,27 +441,31 @@ const sceneSlice = createSlice({
       state.showHumanDetection = action.payload;
     },
 
-      // Add this to your reducers object in sceneSlice.js
-overwrite(state, action) {
-  const newState = action.payload;
-  
-  state.scenes = newState.scenes || [makeDefaultScene()];
-  state.currentSceneIndex = newState.currentSceneIndex || 0;
-  state.sceneUndoStack = newState.sceneUndoStack || [];
-  state.sceneRedoStack = newState.sceneRedoStack || [];
-  state.selectedBlockCategory = newState.selectedBlockCategory || 'motion';
-  state.categoryPanelOpen = newState.categoryPanelOpen || false;
-  state.sounds = newState.sounds || { pop: './assets/sounds/pop.mp3' };
-  state.backgroundGallery = newState.backgroundGallery || [
-    './assets/backgrounds/bg1.png',
-    './assets/backgrounds/bg2.png', 
-    './assets/backgrounds/bg3.png',
-    '#ffffff', '#87CEEB', '#98FB98', '#FFB6C1', '#F0E68C'
-  ];
-  state.customSounds = newState.customSounds || [];
-},
+    // NEW: Reducer to update video opacity
+    setVideoOpacity: (state, action) => {
+      state.videoOpacity = Math.min(Math.max(0, action.payload), 100);
+    },
+
+    overwrite(state, action) {
+      const newState = action.payload;
+      
+      state.scenes = newState.scenes || [makeDefaultScene()];
+      state.currentSceneIndex = newState.currentSceneIndex || 0;
+      state.sceneUndoStack = newState.sceneUndoStack || [];
+      state.sceneRedoStack = newState.sceneRedoStack || [];
+      state.selectedBlockCategory = newState.selectedBlockCategory || 'motion';
+      state.categoryPanelOpen = newState.categoryPanelOpen || false;
+      state.sounds = newState.sounds || { pop: './assets/sounds/pop.mp3' };
+      state.backgroundGallery = newState.backgroundGallery || [
+        './assets/backgrounds/bg1.png',
+        './assets/backgrounds/bg2.png', 
+        './assets/backgrounds/bg3.png',
+        '#ffffff', '#87CEEB', '#98FB98', '#FFB6C1', '#F0E68C'
+      ];
+      state.customSounds = newState.customSounds || [];
+      state.videoOpacity = newState.videoOpacity !== undefined ? newState.videoOpacity : 100;
+    },
   },
-  
 });
 
 export const {
@@ -496,9 +498,10 @@ export const {
   removeCustomSound,
   clearAllCustomSounds,
   updateCustomSoundName,
-  setShowHumanDetection, // <-- Add this line
+  setShowHumanDetection,
+  setVideoOpacity, // NEW: Export the new action
   overwrite, 
-   setCameraState,
+  setCameraState,
 } = sceneSlice.actions;
 
 export default sceneSlice.reducer;

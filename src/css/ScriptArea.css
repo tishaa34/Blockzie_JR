@@ -93,3 +93,66 @@
   margin-top: 20px;
   width: 100%;
 }
+
+/*  for camera drop down list */
+
+/* Camera State Select Dropdown Styles */
+.camera-select-dropdown {
+  position: absolute;
+  bottom: -1.5rem;
+  left: 50%;
+  transform: translate(-50%, -50%);
+  width: 50px;
+  height: 24px;
+
+  /* Linear gradient with #d1b45a and orange */
+  background: linear-gradient(135deg, #d1b45a 0%, orange 100%);
+
+  border: 2px solid #654321;
+  border-radius: 6px;
+
+  /* Font styling */
+  color: #4A2C2A; /* Dark brown font */
+  font-size: 10px;
+  font-weight: 600;
+  font-family: 'Arial', sans-serif;
+
+  cursor: pointer;
+  z-index: 2;
+  transition: all 0.3s ease;
+  box-shadow: 0 2px 4px rgba(139, 69, 19, 0.3);
+}
+
+/* Hover effect */
+.camera-select-dropdown:hover {
+  background: linear-gradient(135deg, #ffe5a3 0%, orange 100%);
+  border-color: #8B4513;
+  box-shadow: 0 3px 8px rgba(139, 69, 19, 0.5);
+  transform: translate(-50%, -50%) scale(1.05);
+}
+
+/* Focus effect */
+.camera-select-dropdown:focus {
+  outline: none;
+  border-color: #FFD700;
+  box-shadow: 0 0 0 2px rgba(255, 215, 0, 0.4);
+}
+
+/* Option styling */
+.camera-select-dropdown option {
+  background: linear-gradient(135deg, #FFF8DC 0%, #FFEFD5 100%);
+  color: #4A2C2A;
+  font-weight: 500;
+  padding: 4px;
+}
+
+/* Alternative state classes */
+.camera-select-dropdown.active {
+  background: linear-gradient(135deg, #d1b45a 0%, orange 100%);
+}
+
+.camera-select-dropdown.disabled {
+  background: linear-gradient(135deg, #D3D3D3 0%, #A9A9A9 100%);
+  color: #696969;
+  cursor: not-allowed;
+}

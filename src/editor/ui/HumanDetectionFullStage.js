@@ -1,4 +1,5 @@
 import React, { useRef, useState, useEffect, useCallback } from 'react';
+import { useSelector } from 'react-redux';
 import * as posenet from '@tensorflow-models/posenet';
 import * as tf from '@tensorflow/tfjs';
 import * as faceapi from '@vladmandic/face-api';
@@ -11,6 +12,8 @@ const HumanDetectionFullStage = () => {
   const detectionActive = useRef(false);
   const modelsInitialized = useRef(false);
 
+  const videoOpacity = useSelector((state) => state.scene.videoOpacity);
+
   const [net, setNet] = useState(null);
   const [faceNet, setFaceNet] = useState(null);
   const [isVisible, setIsVisible] = useState(false);
@@ -22,7 +25,6 @@ const HumanDetectionFullStage = () => {
   const [loadingStatus, setLoadingStatus] = useState('Initializing...');
   const [detectionStatus, setDetectionStatus] = useState('Not started');
 
-  // Update stage dimensions
   const updateStageRect = useCallback(() => {
     const stageElement = document.querySelector('.stage-area-section') ||
       document.querySelector('[class*="stage"]') ||
@@ -40,7 +42,6 @@ const HumanDetectionFullStage = () => {
     }
   }, []);
 
-  // Enhanced async ngOnInit pattern with age and gender models
   const ngOnInit = useCallback(async () => {
     if (modelsInitialized.current) return;
 
@@ -48,7 +49,6 @@ const HumanDetectionFullStage = () => {
       setLoadingStatus('Setting up TensorFlow...');
       console.log('🔄 Setting up TensorFlow...');
 
-      // Setup TensorFlow backend
       try {
         await tf.setBackend('webgl');
         console.log('✅ Using WebGL backend');
@@ -60,7 +60,6 @@ const HumanDetectionFullStage = () => {
       await tf.ready();
       console.log('✅ TensorFlow ready with backend:', tf.getBackend());
 
-      // Load PoseNet model
       setLoadingStatus('Loading PoseNet model (ResNet50)...');
       console.log('🔄 Loading PoseNet ResNet50 model...');
 
@@ -73,21 +72,18 @@ const HumanDetectionFullStage = () => {
       setNet(poseModel);
       console.log('✅ PoseNet model loaded successfully');
 
-      // NEW: Load face-api models with age and gender
       try {
         setLoadingStatus('Loading Face Detection models (with age & gender)...');
         console.log('🔄 Loading Face Detection models with age & gender...');
 
-        // Set FaceAPI backend to match TensorFlow backend
         await faceapi.tf.setBackend(tf.getBackend());
         await faceapi.tf.ready();
 
-        // Load all face detection models including age and gender
         await Promise.all([
           faceapi.nets.tinyFaceDetector.loadFromUri('/models'),
           faceapi.nets.faceLandmark68Net.loadFromUri('/models'),
           faceapi.nets.faceExpressionNet.loadFromUri('/models'),
-          faceapi.nets.ageGenderNet.loadFromUri('/models'), // NEW: Age and gender model
+          faceapi.nets.ageGenderNet.loadFromUri('/models'),
         ]);
 
         setFaceNet(true);
@@ -108,7 +104,6 @@ const HumanDetectionFullStage = () => {
     }
   }, []);
 
-  // Initialize models on component mount
   useEffect(() => {
     const initializeComponent = async () => {
       await ngOnInit();
@@ -129,7 +124,6 @@ const HumanDetectionFullStage = () => {
     };
   }, [ngOnInit, updateStageRect]);
 
-  // Start camera
   const startCamera = useCallback(async () => {
     if (cameraStarted) {
       console.log('⚠️ Camera already started');
@@ -179,7 +173,6 @@ const HumanDetectionFullStage = () => {
     }
   }, [cameraStarted, ngOnInit]);
 
-  // Stop camera
   const stopCamera = useCallback(() => {
     console.log('🛑 Stopping camera and detection');
     setDetectionStatus('Detection stopped');
@@ -207,7 +200,6 @@ const HumanDetectionFullStage = () => {
     setFaceCount(0);
   }, []);
 
-  // Hand detection
   const checkHandDetected = useCallback((poses) => {
     if (!poses || poses.length === 0) return 0;
 
@@ -225,7 +217,6 @@ const HumanDetectionFullStage = () => {
     return handsFound;
   }, []);
 
-  // Enhanced face detection with age and gender
   const checkFaceDetected = useCallback(async (videoElement) => {
     if (!faceNet || !videoElement) return 0;
 
@@ -236,7 +227,7 @@ const HumanDetectionFullStage = () => {
           inputSize: 416,
           scoreThreshold: 0.5
         })
-      ).withFaceLandmarks().withFaceExpressions().withAgeAndGender(); // NEW: Added withAgeAndGender()
+      ).withFaceLandmarks().withFaceExpressions().withAgeAndGender();
 
       return detections.length;
     } catch (error) {
@@ -245,7 +236,6 @@ const HumanDetectionFullStage = () => {
     }
   }, [faceNet]);
 
-  // MODIFIED: Custom drawing without score numbers
   const drawFaceDetections = useCallback(async (ctx, videoElement) => {
     if (!faceNet || !videoElement) return;
 
@@ -257,19 +247,14 @@ const HumanDetectionFullStage = () => {
 
       const displaySize = { width: videoElement.videoWidth, height: videoElement.videoHeight };
 
-      // Match canvas dimensions
       faceapi.matchDimensions(canvasRef.current, displaySize);
 
       const resizedDetections = faceapi.resizeResults(detections, displaySize);
 
-      // Clear canvas
       ctx.clearRect(0, 0, canvasRef.current.width, canvasRef.current.height);
 
-      // REMOVED: faceapi.draw.drawDetections() - this was showing the score
-      // Draw only landmarks without built-in detection boxes
       faceapi.draw.drawFaceLandmarks(canvasRef.current, resizedDetections);
 
-      // Draw custom bounding boxes and labels manually
       resizedDetections.forEach((detection) => {
         const box = detection.detection.box;
         const age = Math.round(detection.age);
@@ -280,12 +265,10 @@ const HumanDetectionFullStage = () => {
           expressions[a] > expressions[b] ? a : b
         );
 
-        // Draw blue bounding box manually (no score)
         ctx.strokeStyle = '#4285F4';
         ctx.lineWidth = 3;
         ctx.strokeRect(box.x, box.y, box.width, box.height);
 
-        // Draw custom label with only age, gender, emotion
         const label = `${age} yrs, ${gender} (${genderProbability}), ${dominantExpression}`;
 
         ctx.font = '14px Arial';
@@ -300,7 +283,6 @@ const HumanDetectionFullStage = () => {
     }
   }, [faceNet]);
 
-  // Draw radiating lines for hands
   const drawHandRadiatingLines = useCallback((ctx, keypoints) => {
     const leftWrist = keypoints[9];
     const rightWrist = keypoints[10];
@@ -318,7 +300,6 @@ const HumanDetectionFullStage = () => {
       const centerX = hand.position.x;
       const centerY = hand.position.y;
 
-      // Draw radiating lines
       const angles = [0, 45, 90, 135, 180, 225, 270, 315];
       const lineLength = 80;
 
@@ -327,7 +308,6 @@ const HumanDetectionFullStage = () => {
         const endX = centerX + Math.cos(angle) * lineLength;
         const endY = centerY + Math.sin(angle) * lineLength;
 
-        // Draw thick outer line for visibility
         ctx.strokeStyle = '#FF0000';
         ctx.lineWidth = 5;
         ctx.lineCap = 'round';
@@ -336,7 +316,6 @@ const HumanDetectionFullStage = () => {
         ctx.lineTo(endX, endY);
         ctx.stroke();
 
-        // Draw bright inner line
         ctx.strokeStyle = '#FFFFFF';
         ctx.lineWidth = 2;
         ctx.beginPath();
@@ -344,26 +323,22 @@ const HumanDetectionFullStage = () => {
         ctx.lineTo(endX, endY);
         ctx.stroke();
 
-        // Draw endpoint circle
         ctx.fillStyle = '#FF0000';
         ctx.beginPath();
         ctx.arc(endX, endY, 6, 0, 2 * Math.PI);
         ctx.fill();
 
-        // White center for endpoint
         ctx.fillStyle = '#FFFFFF';
         ctx.beginPath();
         ctx.arc(endX, endY, 3, 0, 2 * Math.PI);
         ctx.fill();
       });
 
-      // Draw large center circle
       ctx.fillStyle = '#FF0000';
       ctx.beginPath();
       ctx.arc(centerX, centerY, 15, 0, 2 * Math.PI);
       ctx.fill();
 
-      // White center highlight
       ctx.fillStyle = '#FFFFFF';
       ctx.beginPath();
       ctx.arc(centerX, centerY, 8, 0, 2 * Math.PI);
@@ -371,7 +346,6 @@ const HumanDetectionFullStage = () => {
     });
   }, []);
 
-  // Draw keypoints
   const drawAIKeypoints = useCallback((ctx, keypoints, color) => {
     keypoints.forEach(keypoint => {
       if (keypoint.score > 0.2) {
@@ -391,7 +365,6 @@ const HumanDetectionFullStage = () => {
     });
   }, []);
 
-  // Draw skeleton
   const drawAISkeleton = useCallback((ctx, keypoints, color) => {
     const connections = [
       [5, 6], [5, 7], [6, 8], [7, 9], [8, 10],
@@ -420,7 +393,6 @@ const HumanDetectionFullStage = () => {
     });
   }, []);
 
-  // Draw bounding box
   const drawPersonBoundingBox = useCallback((ctx, keypoints, color, personIndex) => {
     const validPoints = keypoints.filter(kp => kp.score > 0.2);
     if (validPoints.length === 0) return;
@@ -444,13 +416,13 @@ const HumanDetectionFullStage = () => {
     ctx.fillText(`Person ${personIndex + 1}`, minX, minY - 5);
   }, []);
 
-  // AI Skeleton Visualization with enhanced face detection
   const drawAISkeletonVisualization = useCallback(async (poses) => {
     if (!canvasRef.current || !videoRef.current) return;
 
     const canvas = canvasRef.current;
     const ctx = canvas.getContext('2d');
     const video = videoRef.current;
+    if (!canvas) return; // FIX: Ensure canvas is defined
 
     if (video.videoWidth === 0 || video.videoHeight === 0) return;
 
@@ -473,13 +445,11 @@ const HumanDetectionFullStage = () => {
       }
     });
 
-    // Draw enhanced face detection results
     if (faceNet) {
       await drawFaceDetections(ctx, video);
     }
   }, [drawHandRadiatingLines, drawFaceDetections, faceNet]);
 
-  // Main detection function
   const startDetection = useCallback(() => {
     if (!net || !cameraStarted || detectionActive.current) {
       console.log('⚠️ Detection not ready');
@@ -508,7 +478,30 @@ const HumanDetectionFullStage = () => {
         const validPoses = poses.filter(pose => pose.score > 0.05);
         const detectedPeople = validPoses.length;
         const handsFound = checkHandDetected(validPoses);
-        const facesFound = faceNet ? await checkFaceDetected(videoRef.current) : 0;
+
+        let facesFound = 0;
+        let dominantExpression = null;
+        let leftHand = null;
+        let rightHand = null;
+
+        if (faceNet) {
+          const detections = await faceapi.detectAllFaces(
+            videoRef.current,
+            new faceapi.TinyFaceDetectorOptions({ inputSize: 416, scoreThreshold: 0.5 })
+          ).withFaceExpressions();
+          facesFound = detections.length;
+
+          if (detections.length > 0) {
+            const expressions = detections[0].expressions;
+            dominantExpression = Object.keys(expressions).reduce((a, b) => expressions[a] > expressions[b] ? a : b);
+          }
+        }
+
+        if (validPoses.length > 0) {
+          const firstPose = validPoses[0];
+          leftHand = firstPose.keypoints[9];
+          rightHand = firstPose.keypoints[10];
+        }
 
         setPeopleCount(detectedPeople);
         setHandCount(handsFound);
@@ -522,7 +515,11 @@ const HumanDetectionFullStage = () => {
           faceCount: facesFound,
           poses: validPoses,
           timestamp: Date.now(),
-          cameraActive: cameraStarted
+          cameraActive: cameraStarted,
+          dominantExpression: dominantExpression,
+          leftHand: leftHand,
+          rightHand: rightHand,
+          videoOpacity: window.humanDetectionData?.videoOpacity !== undefined ? window.humanDetectionData.videoOpacity : 100,
         };
 
         if (detectedPeople > 0) {
@@ -540,16 +537,14 @@ const HumanDetectionFullStage = () => {
     };
 
     detect();
-  }, [net, cameraStarted, checkHandDetected, checkFaceDetected, drawAISkeletonVisualization]);
+  }, [net, cameraStarted, checkHandDetected, faceNet, drawAISkeletonVisualization]);
 
-  // Start detection when camera is ready
   useEffect(() => {
     if (cameraStarted && net) {
       startDetection();
     }
   }, [cameraStarted, net, startDetection]);
 
-  // Global controller
   useEffect(() => {
     window.humanDetectionController = {
       startCamera,
@@ -560,7 +555,6 @@ const HumanDetectionFullStage = () => {
     return () => { delete window.humanDetectionController; };
   }, [startCamera, stopCamera, cameraStarted]);
 
-  // Cleanup
   useEffect(() => {
     return () => {
       detectionActive.current = false;
@@ -589,7 +583,8 @@ const HumanDetectionFullStage = () => {
         zIndex: 10000,
         borderRadius: '12px',
         overflow: 'hidden',
-        border: 'none'
+        border: 'none',
+        opacity: videoOpacity / 100, // Apply opacity to the container
       }}
     >
       <video
@@ -615,7 +610,6 @@ const HumanDetectionFullStage = () => {
           pointerEvents: 'none'
         }}
       />
-      {/* NEW: Single line HUD spanning full width */}
       <div style={{
         position: 'absolute',
         bottom: '0px',

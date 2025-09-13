@@ -9,13 +9,12 @@ import {
 import NumberPicker from "./NumberPicker";
 import "../../css/ScriptArea.css";
 import { setCameraState } from "../../store/sceneSlice";
-
 import { run } from "../../utils/runScript";
 
 export default function ScriptArea({ selectedActorId }) {
   const dispatch = useDispatch();
   const { scenes, currentSceneIndex } = useSelector((s) => s.scene);
-  const globalCameraState = useSelector((s) => s.scene.globalCameraState); // Add this line
+  const globalCameraState = useSelector((s) => s.scene.globalCameraState);
   const scene = scenes[currentSceneIndex];
   const actor = scene?.actors.find((a) => a.id === selectedActorId);
 
@@ -30,6 +29,11 @@ export default function ScriptArea({ selectedActorId }) {
     const raw = e.dataTransfer.getData("application/block");
     if (!raw || !actor) return;
     const block = JSON.parse(raw);
+    
+    // Set a default opacity for the new block type
+    if (block.type === 'video_transparency' && !block.hasOwnProperty('opacity')) {
+        block.opacity = 100;
+    }
 
     // Preserve camera state if it exists
     if (block.type === 'camera_control' && block.cameraState) {
@@ -126,6 +130,13 @@ export default function ScriptArea({ selectedActorId }) {
     if (block.name === "Speed") {
       return;
     }
+    
+    // For Video Transparency block, show the number picker
+    if (block.name === "Set Video Transparency") {
+        setTapBlock(block);
+        setPickerOpen(true);
+        return;
+    }
 
     setTapBlock(block);
     setPickerOpen(true);
@@ -134,7 +145,13 @@ export default function ScriptArea({ selectedActorId }) {
   const setCount = (n) => {
     if (!actor || !tapBlock) return;
     dispatch(pushUndoState());
-    dispatch(updateBlockCount({ actorId: actor.id, blockId: tapBlock.id, newCount: n }));
+    
+    // Check if the block is a video transparency block and update its opacity
+    if (tapBlock.name === "Set Video Transparency") {
+        dispatch(updateBlockCount({ actorId: actor.id, blockId: tapBlock.id, newCount: n, property: 'opacity' }));
+    } else {
+        dispatch(updateBlockCount({ actorId: actor.id, blockId: tapBlock.id, newCount: n }));
+    }
   };
 
   if (!actor) {
@@ -150,6 +167,10 @@ export default function ScriptArea({ selectedActorId }) {
       </div>
     );
   }
+
+  const handleOpacityChange = (blockId, newOpacity) => {
+    dispatch(updateBlockCount({ actorId: actor.id, blockId, newCount: newOpacity, property: 'opacity' }));
+  };
 
   return (
     <div className="scriptarea-root">
@@ -194,7 +215,8 @@ export default function ScriptArea({ selectedActorId }) {
                   >
                     <img className="block-bg" src={b.puzzleBg} alt="" draggable={false} />
                     <select 
-                      value={globalCameraState} // Use the variable from top level
+                      className="camera-select-dropdown"
+                      value={globalCameraState}
                       onChange={(e) => {
                         e.stopPropagation();
                         const newState = e.target.value;
@@ -210,25 +232,55 @@ export default function ScriptArea({ selectedActorId }) {
                         }
                       }}
                       onClick={(e) => e.stopPropagation()}
-                      style={{
-                        position: 'absolute',
-                        top: '50%',
-                        left: '50%',
-                        transform: 'translate(-50%, -50%)',
-                        width: '50px',
-                        height: '24px',
-                        background: 'rgba(255, 255, 255, 0.9)',
-                        border: '1px solid rgba(0,0,0,0.3)',
-                        borderRadius: '4px',
-                        color: 'black',
-                        fontSize: '10px',
-                        zIndex: 2,
-                        cursor: 'pointer'
-                      }}
+                      // style={{
+                      //   position: 'absolute',
+                      //   top: '50%',
+                      //   left: '50%',
+                      //   transform: 'translate(-50%, -50%)',
+                      //   width: '50px',
+                      //   height: '24px',
+                      //   background: 'rgba(255, 255, 255, 0.9)',
+                      //   border: '1px solid rgba(0,0,0,0.3)',
+                      //   borderRadius: '4px',
+                      //   color: 'black',
+                      //   fontSize: '10px',
+                      //   zIndex: 2,
+                      //   cursor: 'pointer'
+                      // }}
                     >
                       <option value="off">off</option>
                       <option value="on">on</option>
                     </select>
+                    <img src="./assets/ui/camera.png" 
+                     style={{
+                        position: 'absolute',
+                        top:'42%',
+                        left: '50%',
+                        transform: 'translate(-50%, -50%)',
+                        width: '35px',
+                        height: '35px', 
+                        zIndex: 2,                 
+                      }}
+                    />
+                  </div>
+                );
+              }
+              
+              // Video transparency block rendering
+              if (b.type === 'video_transparency') {
+                return (
+                  <div
+                    key={b.id}
+                    className={`block-palette-title ${draggedBlock?.index === i ? 'dragging' : ''}`}
+                    onClick={() => clickBlock(b)}
+                    title="Set Video Transparency - Click to change opacity"
+                    draggable
+                    onDragStart={(e) => handleBlockDragStart(e, b, i)}
+                    onDragEnd={handleBlockDragEnd}
+                  >
+                    <img className="block-bg" src={b.puzzleBg} alt="" draggable={false} />
+                    <img className="block-icon" src={b.icon} alt={b.name} draggable={false} />
+                    <span className="block-label">{b.opacity}%</span>
                   </div>
                 );
               }
@@ -269,7 +321,7 @@ export default function ScriptArea({ selectedActorId }) {
         isOpen={pickerOpen}
         onClose={() => setPickerOpen(false)}
         onSelect={setCount}
-        currentValue={tapBlock?.count || (tapBlock?.name === "Wait" ? 3 : 1)}
+        currentValue={tapBlock?.name === "Set Video Transparency" ? tapBlock?.opacity : (tapBlock?.count || (tapBlock?.name === "Wait" ? 3 : 1))}
         blockType={tapBlock?.type}
       />
     </div>

@@ -1,19 +1,20 @@
-import { 
-  moveActor, 
-  rotateActor, 
-  scaleActor, 
-  resetActorSize, 
-  disappearActor, 
-  reappearActor 
+import {
+  moveActor,
+  rotateActor,
+  scaleActor,
+  resetActorSize,
+  disappearActor,
+  reappearActor,
+  setVideoOpacity // NEW: Import the setVideoOpacity action
 } from "../store/sceneSlice";
 
-// helper for delays with speed multiplier
+// Helper for delays with speed multiplier
 const delay = (ms, speedMultiplier = 1) => {
   const adjustedTime = Math.max(50, ms / speedMultiplier); // Minimum 50ms delay
   return new Promise((res) => setTimeout(res, adjustedTime));
 };
 
-// helper for sounds
+// Helper for sounds
 async function playCustomSound(block) {
   try {
     const audio = new Audio(block.soundData?.audioURL || block.audioURL);
@@ -26,7 +27,7 @@ async function playCustomSound(block) {
 // Helper function to check if a block is a Stop block
 function isStopBlock(block) {
   return (
-    block?.name === 'Stop' || 
+    block?.name === 'Stop' ||
     block?.type === 'Stop' ||
     (block?.category === 'control' && (block?.name === 'Stop' || block?.type === 'Stop')) ||
     block?.name?.toLowerCase().includes('stop') ||
@@ -37,7 +38,7 @@ function isStopBlock(block) {
 // Helper function to check if a block is a Wait block
 function isWaitBlock(block) {
   return (
-    block?.name === 'Wait' || 
+    block?.name === 'Wait' ||
     block?.type === 'Wait' ||
     (block?.category === 'control' && (block?.name === 'Wait' || block?.type === 'Wait')) ||
     block?.name?.toLowerCase().includes('wait') ||
@@ -48,13 +49,49 @@ function isWaitBlock(block) {
 // Helper function to check if a block is a Speed block
 function isSpeedBlock(block) {
   return (
-    block?.name === 'Speed' || 
+    block?.name === 'Speed' ||
     block?.type === 'Speed' ||
     (block?.category === 'control' && (block?.name === 'Speed' || block?.type === 'Speed')) ||
     block?.name?.toLowerCase().includes('speed') ||
     block?.type?.toLowerCase().includes('speed')
   );
 }
+
+// Helper function to check for happy emotion
+const isHappyDetected = () => {
+    return window.humanDetectionData?.dominantExpression === 'happy';
+};
+
+// Helper function to check for pointing direction
+const isPointing = (direction) => {
+    const data = window.humanDetectionData;
+    if (!data?.leftHand || !data?.rightHand || !data?.poses?.[0]?.keypoints) {
+        return false;
+    }
+
+    const leftWrist = data.leftHand;
+    const rightWrist = data.rightHand;
+    const scoreThreshold = 0.2;
+
+    switch (direction) {
+        case 'up':
+            const noseY = data.poses[0].keypoints[0].position.y;
+            return (leftWrist.score > scoreThreshold && leftWrist.position.y < noseY) ||
+                   (rightWrist.score > scoreThreshold && rightWrist.position.y < noseY);
+        case 'down':
+            const hipY = data.poses[0].keypoints[11].position.y;
+            return (leftWrist.score > scoreThreshold && leftWrist.position.y > hipY) ||
+                   (rightWrist.score > scoreThreshold && rightWrist.position.y > hipY);
+        case 'left':
+            const rightShoulderX = data.poses[0].keypoints[6].position.x;
+            return rightWrist.score > scoreThreshold && rightWrist.position.x > rightShoulderX;
+        case 'right':
+            const leftShoulderX = data.poses[0].keypoints[5].position.x;
+            return leftWrist.score > scoreThreshold && leftWrist.position.x < leftShoulderX;
+        default:
+            return false;
+    }
+};
 
 // exported async run function
 export async function run(actor, dispatch, sounds, selectedActorId) {
@@ -66,6 +103,7 @@ export async function run(actor, dispatch, sounds, selectedActorId) {
     console.log("Actor has no scripts to run:", actor);
     return;
   }
+  
 
   const loops = [];
   const targetActorId = selectedActorId || actor.id;
@@ -78,7 +116,7 @@ export async function run(actor, dispatch, sounds, selectedActorId) {
   for (let i = 0; i < actor.scripts.length; i++) {
     const block = actor.scripts[i];
     console.log(`Block ${i}:`, JSON.stringify(block, null, 2));
-    
+
     if (isStopBlock(block)) {
       stopIndex = i;
       console.log(`🛑 STOP BLOCK FOUND at index ${i} - will stop execution here`);
@@ -89,7 +127,7 @@ export async function run(actor, dispatch, sounds, selectedActorId) {
   try {
     for (let i = 0; i < actor.scripts.length; i++) {
       const b = actor.scripts[i];
-      
+
       // If we've reached the stop index, terminate execution
       if (stopIndex !== -1 && i === stopIndex) {
         console.log(`🛑 EXECUTION STOPPED at block ${i} due to Stop block`);
@@ -97,14 +135,14 @@ export async function run(actor, dispatch, sounds, selectedActorId) {
       }
 
       const c = Math.max(1, Math.min(99, b?.count || 1));
-      
+
       // Handle Speed block
       if (isSpeedBlock(b)) {
         currentSpeedMultiplier = b?.speedMultiplier || 1.5;
         console.log(`⚡ SPEED CHANGED to ${currentSpeedMultiplier}x`);
         continue;
       }
-      
+
       // Handle Wait block
       if (isWaitBlock(b)) {
         const waitTime = (b?.count || 3) * 1000;
@@ -161,6 +199,53 @@ export async function run(actor, dispatch, sounds, selectedActorId) {
             dispatch(rotateActor({ actorId: actor.id, degrees: 90, fromScript: true }));
             await delay(140, currentSpeedMultiplier);
           }
+          break;
+
+        case 'Happy Detected':
+          if (isHappyDetected()) {
+            // The next block in the script will be executed
+          } else {
+            // Skip the next block
+            i++;
+          }
+          break;
+
+        case 'Pointing Up':
+          if (isPointing('up')) {
+            dispatch(moveActor({ actorId: actor.id, dx: 0, dy: -1, fromScript: true }));
+            await delay(180, currentSpeedMultiplier);
+          }
+          break;
+
+        case 'Pointing Down':
+          if (isPointing('down')) {
+            dispatch(moveActor({ actorId: actor.id, dx: 0, dy: 1, fromScript: true }));
+            await delay(180, currentSpeedMultiplier);
+          }
+          break;
+
+        case 'Pointing Left':
+          if (isPointing('left')) {
+            dispatch(moveActor({ actorId: actor.id, dx: -1, dy: 0, fromScript: true }));
+            await delay(180, currentSpeedMultiplier);
+          }
+          break;
+
+        case 'Pointing Right':
+          if (isPointing('right')) {
+            dispatch(moveActor({ actorId: actor.id, dx: 1, dy: 0, fromScript: true }));
+            await delay(180, currentSpeedMultiplier);
+          }
+          break;
+
+        // NEW: Case for "Set Video Transparency" block
+        case 'Set Video Transparency':
+          const newOpacity = b.opacity;
+          if (newOpacity !== undefined) {
+            dispatch(setVideoOpacity(newOpacity));
+            console.log(`🎥 Setting video opacity to ${newOpacity}%`);
+          }
+          await delay(50, currentSpeedMultiplier); // A small delay to allow the state to update
           break;
 
         case 'Pop':
@@ -241,9 +326,9 @@ export async function run(actor, dispatch, sounds, selectedActorId) {
 
       await delay(80, currentSpeedMultiplier);
     }
-    
+
     console.log("✅ Script execution completed normally");
-    
+
   } catch (error) {
     console.error("Script execution error:", error);
     throw error;

@@ -2,7 +2,7 @@ import React, { useState, useRef } from "react";
 import "../../css/BlockPalette.css";
 import { useDispatch, useSelector } from "react-redux";
 import { addBlockToScript, addCustomSound, setCameraState } from "../../store/sceneSlice";
-
+import ConnectionModal from "../ui/ConnectionModal";
 
 // Puzzle backgrounds per category
 const puzzleBgByCategory = {
@@ -16,7 +16,6 @@ const puzzleBgByCategory = {
   humandetection: "./assets/blocks/looks.svg", // Add human detection background
 };
 
-
 // Bar color per category for seamless effect
 const barColorByCategory = {
   start: "#ffe55a",
@@ -28,7 +27,6 @@ const barColorByCategory = {
   end: "#e84141",
   humandetection: "#4CAF50", // Add human detection color
 };
-
 
 // All blocks per category
 const blocksByCategory = {
@@ -98,83 +96,88 @@ const blocksByCategory = {
   // Add human detection blocks
   humandetection: [
     {
-      name: "Turn On Video",
-      icon: "./assets/blockicons/Speaker.svg",
+      name: "Camera Control",
+      type: "camera_control"
+    },
+    {
+      name: "Happy Detected",
+      icon: "./assets/blockicons/Smile.svg",
+      type: "boolean", // This is a condition, not an action
       execute: () => {
-        console.log("Turn on video with transparency");
+        return window.humanDetectionData?.dominantExpression === 'happy';
       }
     },
     {
-      name: "Analyse Hand",
-      icon: "./assets/blockicons/Say.svg",
-      execute: () => {
-        console.log("Analyse image for hand from camera");
-      }
-    },
-    {
-      name: "Hand Detected",
-      icon: "./assets/blockicons/Appear.svg",
-      execute: () => {
-        // Return true/false based on hand detection
-        return window.humanDetectionData?.handDetected || false;
-      }
-    },
-    {
-      name: "Get People Count",
-      icon: "./assets/blockicons/Grow.svg",
-      execute: () => {
-        return window.humanDetectionData?.peopleCount || 0;
-      }
-    },
-    {
-      name: "Hand X Position",
-      icon: "./assets/blockicons/Right.svg",
-      execute: () => {
-        return window.humanDetectionData?.handX || 0;
-      }
-    },
-    {
-      name: "Hand Y Position",
+      name: "Pointing Up",
       icon: "./assets/blockicons/Up.svg",
       execute: () => {
-        return window.humanDetectionData?.handY || 0;
+        const data = window.humanDetectionData;
+        const noseY = data.poses?.[0]?.keypoints[0]?.position.y;
+        const leftHand = data.leftHand;
+        const rightHand = data.rightHand;
+        const scoreThreshold = 0.2;
+        return (leftHand?.score > scoreThreshold && leftHand.position.y < noseY) ||
+               (rightHand?.score > scoreThreshold && rightHand.position.y < noseY);
       }
     },
     {
-      name: "Move to Hand",
-      icon: "./assets/blockicons/Home.svg",
-      execute: (actor) => {
-        const handX = window.humanDetectionData?.handX || 0;
-        const handY = window.humanDetectionData?.handY || 0;
-        // Move sprite to hand position
-        actor.x = handX;
-        actor.y = handY;
+      name: "Pointing Down",
+      icon: "./assets/blockicons/Down.svg",
+      execute: () => {
+        const data = window.humanDetectionData;
+        const hipY = data.poses?.[0]?.keypoints[11]?.position.y;
+        const leftHand = data.leftHand;
+        const rightHand = data.rightHand;
+        const scoreThreshold = 0.2;
+        return (leftHand?.score > scoreThreshold && leftHand.position.y > hipY) ||
+               (rightHand?.score > scoreThreshold && rightHand.position.y > hipY);
       }
+    },
+    {
+      name: "Pointing Left",
+      icon: "./assets/blockicons/Left.svg",
+      execute: () => {
+        const data = window.humanDetectionData;
+        const rightShoulderX = data.poses?.[0]?.keypoints[6]?.position.x;
+        const rightHand = data.rightHand;
+        const scoreThreshold = 0.2;
+        return rightHand?.score > scoreThreshold && rightHand.position.x > rightShoulderX;
+      }
+    },
+    {
+      name: "Pointing Right",
+      icon: "./assets/blockicons/Right.svg",
+      execute: () => {
+        const data = window.humanDetectionData;
+        const leftShoulderX = data.poses?.[0]?.keypoints[5]?.position.x;
+        const leftHand = data.leftHand;
+        const scoreThreshold = 0.2;
+        return leftHand?.score > scoreThreshold && leftHand.position.x < leftShoulderX;
+      }
+    },
+    {
+      name: "Set Video Transparency",
+      icon: "./assets/blockicons/opacity.svg",
+      type: "video_transparency",
+      options: [100, 75, 50, 25, 0],
     },
   ],
 };
 
-
 // Camera Control Block Component
-function CameraControlBlock({ puzzleBg, onCameraChange }) {
+function CameraControlBlock({ puzzleBg }) {
   const dispatch = useDispatch();
   const globalCameraState = useSelector((s) => s.scene.globalCameraState);
   const [showDropdown, setShowDropdown] = useState(false);
 
   const handleCameraToggle = (newState) => {
     dispatch(setCameraState(newState));
-
     if (newState === "on") {
       window.humanDetectionController?.startCamera();
     } else {
       window.humanDetectionController?.stopCamera();
     }
-
     setShowDropdown(false);
-
-    if (onCameraChange && typeof onCameraChange === "function") {
-      onCameraChange(newState);
-    }
   };
 
   const handleArrowClick = (e) => {
@@ -209,39 +212,31 @@ function CameraControlBlock({ puzzleBg, onCameraChange }) {
         draggable={false}
         aria-hidden="true"
       />
-
-      {/* Camera Icon */}
       <img src="./assets/ui/camera.png" alt="Camera" className="camera-icon" />
-
-      {/* Dropdown Arrow */}
+      
       <div className="camera-dropdown-arrow" onClick={handleArrowClick}>
         <img
           src="./assets/misc/pushbutton.svg"
           alt="Toggle Dropdown"
           style={{
-            width: "16px",
-            height: "16px",
+            width: "30px",
+            height: "30px",
             transform: showDropdown ? "rotate(180deg)" : "rotate(0deg)",
             transition: "transform 0.2s ease",
             pointerEvents: "none",
           }}
         />
       </div>
-
-      {/* Dropdown List */}
-      <div
-        className={`camera-dropdown-list ${showDropdown ? "show" : ""}`}
-      >
+      
+      <div className={`camera-dropdown-list ${showDropdown ? "show" : ""}`}>
         <div
-          className={`camera-dropdown-item ${globalCameraState === "on" ? "active" : ""
-            }`}
+          className={`camera-dropdown-item ${globalCameraState === "on" ? "active" : ""}`}
           onClick={() => handleCameraToggle("on")}
         >
           ON
         </div>
         <div
-          className={`camera-dropdown-item ${globalCameraState === "off" ? "active" : ""
-            }`}
+          className={`camera-dropdown-item ${globalCameraState === "off" ? "active" : ""}`}
           onClick={() => handleCameraToggle("off")}
         >
           OFF
@@ -251,7 +246,7 @@ function CameraControlBlock({ puzzleBg, onCameraChange }) {
   );
 }
 
-// Voice Recording Modal Component - Updated with all buttons
+// Voice Recording Modal Component
 function VoiceRecordModal({ isOpen, onClose, onSave }) {
   const [isRecording, setIsRecording] = useState(false);
   const [audioURL, setAudioURL] = useState(null);
@@ -263,18 +258,15 @@ function VoiceRecordModal({ isOpen, onClose, onSave }) {
   const timerRef = useRef(null);
   const audioRef = useRef(null);
 
-
   const startRecording = async () => {
     try {
       const stream = await navigator.mediaDevices.getUserMedia({ audio: true });
       mediaRecorderRef.current = new MediaRecorder(stream);
       audioChunksRef.current = [];
 
-
       mediaRecorderRef.current.ondataavailable = (event) => {
         audioChunksRef.current.push(event.data);
       };
-
 
       mediaRecorderRef.current.onstop = () => {
         const blob = new Blob(audioChunksRef.current, { type: 'audio/wav' });
@@ -284,23 +276,18 @@ function VoiceRecordModal({ isOpen, onClose, onSave }) {
         stream.getTracks().forEach(track => track.stop());
       };
 
-
       mediaRecorderRef.current.start();
       setIsRecording(true);
       setRecordingTime(0);
 
-
       timerRef.current = setInterval(() => {
         setRecordingTime(prev => prev + 1);
       }, 1000);
-
-
     } catch (error) {
       console.error('Error accessing microphone:', error);
       alert('Could not access microphone. Please check permissions.');
     }
   };
-
 
   const stopRecording = () => {
     if (mediaRecorderRef.current && isRecording) {
@@ -309,7 +296,6 @@ function VoiceRecordModal({ isOpen, onClose, onSave }) {
       clearInterval(timerRef.current);
     }
   };
-
 
   const playRecording = () => {
     if (audioURL && !isPlaying) {
@@ -320,7 +306,6 @@ function VoiceRecordModal({ isOpen, onClose, onSave }) {
     }
   };
 
-
   const stopPlayback = () => {
     if (audioRef.current && isPlaying) {
       audioRef.current.pause();
@@ -328,7 +313,6 @@ function VoiceRecordModal({ isOpen, onClose, onSave }) {
       setIsPlaying(false);
     }
   };
-
 
   const saveRecording = () => {
     if (audioURL && audioBlob) {
@@ -344,7 +328,6 @@ function VoiceRecordModal({ isOpen, onClose, onSave }) {
       onClose();
     }
   };
-
 
   const handleClose = () => {
     if (isRecording) {
@@ -363,16 +346,13 @@ function VoiceRecordModal({ isOpen, onClose, onSave }) {
     onClose();
   };
 
-
   const formatTime = (seconds) => {
     const mins = Math.floor(seconds / 60);
     const secs = seconds % 60;
     return `${mins.toString().padStart(2, '0')}:${secs.toString().padStart(2, '0')}`;
   };
 
-
   if (!isOpen) return null;
-
 
   return (
     <div className="voice-modal-overlay">
@@ -381,7 +361,6 @@ function VoiceRecordModal({ isOpen, onClose, onSave }) {
           <img src="./assets/lib/mic.svg" alt="Microphone" className="modal-mic-icon" />
           <button className="modal-close-btn" onClick={handleClose}>×</button>
         </div>
-
 
         <div className="voice-modal-content">
           <div className="waveform-display">
@@ -394,9 +373,7 @@ function VoiceRecordModal({ isOpen, onClose, onSave }) {
             ))}
           </div>
 
-
           <div className="recording-time">{formatTime(recordingTime)}</div>
-
 
           <div className="voice-controls">
             {/* Record Button */}
@@ -411,7 +388,6 @@ function VoiceRecordModal({ isOpen, onClose, onSave }) {
               />
             </button>
 
-
             {/* Play Button */}
             {audioURL && (
               <button
@@ -425,7 +401,6 @@ function VoiceRecordModal({ isOpen, onClose, onSave }) {
                 />
               </button>
             )}
-
 
             {/* Stop Button */}
             {(isRecording || isPlaying) && (
@@ -442,7 +417,6 @@ function VoiceRecordModal({ isOpen, onClose, onSave }) {
             )}
           </div>
 
-
           {audioURL && (
             <button className="save-btn" onClick={saveRecording}>
               ✓ Save Recording
@@ -454,30 +428,12 @@ function VoiceRecordModal({ isOpen, onClose, onSave }) {
   );
 }
 
-
 export default function BlockPalette() {
   const dispatch = useDispatch();
   const [showVoiceModal, setShowVoiceModal] = useState(false);
+  const [showConnectionModal, setShowConnectionModal] = useState(false); // Added connection modal state
   const selectedBlockCategory = useSelector((s) => s.scene.selectedBlockCategory) || "motion";
   const customSounds = useSelector((s) => s.scene.customSounds) || [];
-
-
-  // Add camera change handler
-  const handleCameraChange = (newState) => {
-    console.log('Camera state changed to:', newState);
-    if (newState === "on") {
-      if (window.humanDetectionController) {
-        window.humanDetectionController.startCamera();
-      } else {
-        console.warn('Human detection controller not available');
-      }
-    } else {
-      if (window.humanDetectionController) {
-        window.humanDetectionController.stopCamera();
-      }
-    }
-  };
-
 
   // Get blocks and add custom sound blocks if in sound category
   const getBlocks = () => {
@@ -494,21 +450,15 @@ export default function BlockPalette() {
     // Insert camera control block for humandetection category
     if (selectedBlockCategory === 'humandetection') {
       return [
-        {
-          name: "Camera Control",
-          type: "camera_control"
-        },
         ...baseBlocks
       ];
     }
     return baseBlocks;
   };
 
-
   const blocks = getBlocks();
   const puzzleBg = puzzleBgByCategory[selectedBlockCategory] || "./assets/blocks/blueCmd.svg";
   const barColor = barColorByCategory[selectedBlockCategory] || "#3291d7";
-
 
   const handleDoubleClick = (block) => {
     if (block.type === 'custom_sound') {
@@ -525,7 +475,6 @@ export default function BlockPalette() {
     }
   };
 
-
   const handleDragStart = (block) => (event) => {
     const data = {
       ...block,
@@ -535,19 +484,18 @@ export default function BlockPalette() {
     event.dataTransfer.setData("application/block", JSON.stringify(data));
   };
 
-
   const handleBlockClick = (block) => {
     if (block.name === "Record") {
       setShowVoiceModal(true);
+    } else if (block.requiresConnection) { // Added device connection handling
+      setShowConnectionModal(true);
     }
   };
-
 
   const handleVoiceSave = (customSoundData) => {
     dispatch(addCustomSound(customSoundData));
     console.log('Custom sound saved:', customSoundData);
   };
-
 
   return (
     <>
@@ -565,26 +513,32 @@ export default function BlockPalette() {
               <CameraControlBlock
                 key={block.name + idx}
                 puzzleBg={puzzleBg}
-                onCameraChange={handleCameraChange} // Pass the handler function
               />
             );
           }
-
-
+           // New block for video transparency
+          if (block.type === 'video_transparency') {
+            return (
+              <VideoTransparencyBlock
+                key={block.name + idx}
+                puzzleBg={puzzleBg}
+                options={block.options}
+              />
+            );
+          }
           // Regular block rendering
           return (
             <div
               className={`block-palette-tile ${block.type === 'custom_sound' ? 'custom-sound-block' : ''}`}
               key={(block.name || "end") + idx}
               title={block.name || "End"}
-              draggable
-              onDragStart={handleDragStart(block)}
+              draggable={!block.requiresConnection} // Modified: Only draggable if no connection required
+              onDragStart={!block.requiresConnection ? handleDragStart(block) : undefined} // Modified: Only add drag handler if draggable
               onDoubleClick={() => handleDoubleClick(block)}
               onClick={() => handleBlockClick(block)}
+              style={{ cursor: block.requiresConnection ? 'pointer' : 'grab' }} // Modified: Different cursor for connection blocks
             >
               <img className="block-bg" src={puzzleBg} alt="" draggable={false} aria-hidden="true" />
-
-
               {block.icon && (
                 <img
                   className="block-icon"
@@ -593,13 +547,9 @@ export default function BlockPalette() {
                   draggable={false}
                 />
               )}
-
-
               {typeof block.label === "string" && block.label.trim() !== "" && (
                 <span className="block-label">{block.label}</span>
               )}
-
-
               {block.type === 'custom_sound' && (
                 <div className="custom-sound-indicator">🎤</div>
               )}
@@ -608,12 +558,46 @@ export default function BlockPalette() {
         })}
       </div>
 
-
       <VoiceRecordModal
         isOpen={showVoiceModal}
         onClose={() => setShowVoiceModal(false)}
         onSave={handleVoiceSave}
       />
+
+      {/* Added ConnectionModal */}
+      <ConnectionModal
+        isOpen={showConnectionModal}
+        onClose={() => setShowConnectionModal(false)}
+      />
     </>
+  );
+}
+// New Component for Video Transparency Block
+function VideoTransparencyBlock({ puzzleBg }) { // Removed 'options' prop, will be handled by number picker
+  const dispatch = useDispatch();
+  const currentOpacity = useSelector((s) => s.scene.videoOpacity || 100);
+
+  const handleDragStart = (event) => {
+    const blockData = {
+      name: "Set Video Transparency",
+      icon: "./assets/blockicons/looks.svg",
+      type: "video_transparency",
+      category: "humandetection",
+      puzzleBg: puzzleBg,
+      opacity: currentOpacity,
+    };
+    event.dataTransfer.setData("application/block", JSON.stringify(blockData));
+  };
+
+  return (
+    <div
+      className="block-palette-tile video-transparency-block"
+      draggable={true}
+      onDragStart={handleDragStart}
+      title="Set Video Transparency - Click to set opacity"
+    >
+      <img className="block-bg" src={puzzleBg} alt="" draggable={false} />
+      <img className="block-icon" src="./assets/blockicons/looks.svg" alt="Opacity" draggable={false} />
+    </div>
   );
 }

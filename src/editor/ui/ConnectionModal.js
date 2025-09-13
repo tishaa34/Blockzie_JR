@@ -86,7 +86,7 @@ const ConnectionModal = ({ isOpen, onClose, deviceName, onConnect }) => {
 
       // Scan for nearby devices
       const nearbyDevices = await getDiscoverableBluetoothDevices();
-      
+
       // Combine paired and nearby devices
       const allDevices = [...pairedDevices];
       nearbyDevices.forEach(device => {
@@ -105,7 +105,7 @@ const ConnectionModal = ({ isOpen, onClose, deviceName, onConnect }) => {
   // Get discoverable Bluetooth devices
   const getDiscoverableBluetoothDevices = async () => {
     const devices = [];
-    
+
     try {
       // Try to scan for different types of devices
       const deviceTypes = [
@@ -140,7 +140,7 @@ const ConnectionModal = ({ isOpen, onClose, deviceName, onConnect }) => {
   // Bluetooth fallback for unsupported browsers
   const getBluetoothFallback = async () => {
     const hasBluetoothSupport = 'bluetooth' in navigator;
-    
+
     if (!hasBluetoothSupport) {
       return [{
         id: 'no_support',
@@ -160,7 +160,7 @@ const ConnectionModal = ({ isOpen, onClose, deviceName, onConnect }) => {
         paired: false
       },
       {
-        id: 'speaker_1', 
+        id: 'speaker_1',
         name: 'Bluetooth Speaker',
         type: 'bluetooth',
         paired: false
@@ -168,7 +168,7 @@ const ConnectionModal = ({ isOpen, onClose, deviceName, onConnect }) => {
       {
         id: 'keyboard_1',
         name: 'Bluetooth Keyboard',
-        type: 'bluetooth', 
+        type: 'bluetooth',
         paired: false
       }
     ];
@@ -179,14 +179,14 @@ const ConnectionModal = ({ isOpen, onClose, deviceName, onConnect }) => {
     return new Promise((resolve) => {
       // Check if we can access network information
       const connection = navigator.connection || navigator.mozConnection || navigator.webkitConnection;
-      
+
       if (connection) {
         // Show current connection
         const networks = [{
           id: 'current_connection',
           name: connection.effectiveType ? 'Current Connection' : 'Connected Network',
-          signal: connection.effectiveType === '4g' ? 'Excellent' : 
-                  connection.effectiveType === '3g' ? 'Good' : 'Fair',
+          signal: connection.effectiveType === '4g' ? 'Excellent' :
+            connection.effectiveType === '3g' ? 'Good' : 'Fair',
           secured: true,
           type: 'wifi',
           connected: true
@@ -215,7 +215,7 @@ const ConnectionModal = ({ isOpen, onClose, deviceName, onConnect }) => {
             type: 'wifi'
           },
           {
-            id: 'office_wifi', 
+            id: 'office_wifi',
             name: 'Office Network',
             signal: 'Medium',
             secured: true,
@@ -224,7 +224,7 @@ const ConnectionModal = ({ isOpen, onClose, deviceName, onConnect }) => {
           {
             id: 'public_wifi',
             name: 'Free WiFi',
-            signal: 'Weak', 
+            signal: 'Weak',
             secured: false,
             type: 'wifi'
           }
@@ -254,7 +254,7 @@ const ConnectionModal = ({ isOpen, onClose, deviceName, onConnect }) => {
       if ('permissions' in navigator) {
         try {
           // Request permission to access network info
-          const permission = await navigator.permissions.query({name: 'wifi'});
+          const permission = await navigator.permissions.query({ name: 'wifi' });
           if (permission.state === 'granted') {
             return await getBrowserWiFiNetworks();
           }
@@ -397,7 +397,7 @@ const ConnectionModal = ({ isOpen, onClose, deviceName, onConnect }) => {
 
       const server = await bluetoothDevice.gatt.connect();
       console.log('Connected to', bluetoothDevice.name);
-      
+
       return server;
     } catch (error) {
       throw new Error('Pairing failed: ' + error.message);
@@ -414,8 +414,8 @@ const ConnectionModal = ({ isOpen, onClose, deviceName, onConnect }) => {
       const networkName = prompt('Enter network name (SSID):');
       if (networkName) {
         const password = prompt('Enter network password (leave empty for open network):');
-        onConnect(deviceName, { 
-          type: scanningType, 
+        onConnect(deviceName, {
+          type: scanningType,
           device: {
             ...device,
             name: networkName,
@@ -499,7 +499,7 @@ const ConnectionModal = ({ isOpen, onClose, deviceName, onConnect }) => {
 
               <div className="connection-options">
                 {/* Bluetooth Option */}
-                <div 
+                <div
                   className="connection-option"
                   onClick={() => handleConnectionSelect('bluetooth')}
                 >
@@ -513,7 +513,7 @@ const ConnectionModal = ({ isOpen, onClose, deviceName, onConnect }) => {
                 </div>
 
                 {/* WiFi Option */}
-                <div 
+                <div
                   className="connection-option"
                   onClick={() => handleConnectionSelect('wifi')}
                 >
@@ -527,7 +527,7 @@ const ConnectionModal = ({ isOpen, onClose, deviceName, onConnect }) => {
                 </div>
 
                 {/* Serial Option */}
-                <div 
+                <div
                   className={`connection-option ${selectedConnection === 'serial' ? 'selected' : ''}`}
                   onClick={() => handleConnectionSelect('serial')}
                 >
@@ -571,8 +571,8 @@ const ConnectionModal = ({ isOpen, onClose, deviceName, onConnect }) => {
                 // Connection disabled screen
                 <div className="connection-disabled">
                   <div className="enable-message">
-                    <a 
-                      href="#" 
+                    <a
+                      href="#"
                       onClick={(e) => {
                         e.preventDefault();
                         handleEnableConnection(scanningType);
@@ -600,15 +600,15 @@ const ConnectionModal = ({ isOpen, onClose, deviceName, onConnect }) => {
                     </div>
                   ) : (
                     availableDevices.map((device, index) => (
-                      <div 
+                      <div
                         key={index}
                         className={`device-item ${device.disabled ? 'disabled' : ''}`}
                         onClick={() => handleDeviceSelect(device)}
                       >
                         <div className="device-icon">
-                          <img 
-                            src={`./assets/icons/${device.type === 'bluetooth' ? 'bluetooth-device' : 'wifi-device'}.svg`} 
-                            alt={device.type} 
+                          <img
+                            src={`./assets/icons/${device.type === 'bluetooth' ? 'bluetooth-device' : 'wifi-device'}.svg`}
+                            alt={device.type}
                           />
                         </div>
                         <div className="device-info">
