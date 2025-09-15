@@ -13,7 +13,7 @@ const puzzleBgByCategory = {
   control: "./assets/blocks/flow.svg",
   device: "./assets/blocks/blueCmd.svg",
   end: "./assets/blocks/endshort.svg",
-  humandetection: "./assets/blocks/looks.svg", // Add human detection background
+  humandetection: "./assets/blocks/looks.svg",
 };
 
 // Bar color per category for seamless effect
@@ -25,7 +25,7 @@ const barColorByCategory = {
   control: "#ffc862",
   device: "#68acfc",
   end: "#e84141",
-  humandetection: "#4CAF50", // Add human detection color
+  humandetection: "#4CAF50",
 };
 
 // All blocks per category
@@ -56,60 +56,46 @@ const blocksByCategory = {
   sound: [
     { name: "Pop", icon: "./assets/blockicons/Speaker.svg" },
     { name: "Record", icon: "./assets/blockicons/microphone.svg" },
+    // CORRECTED: Complete Obstacle Detected Block with proper type
+    { 
+      name: "Obstacle Detected", 
+      icon: "./assets/blockicons/Obstacle.svg",
+      type: "obstacle_sound", // This is the key property
+      lowFrequency: 1,
+      highFrequency: 99,
+    }
   ],
   control: [
-    {
-      name: "Wait",
-      icon: "./assets/blockicons/Wait.svg",
+    { name: "Wait", icon: "./assets/blockicons/Wait.svg", 
       execute: async (actor, dispatch, sounds, actorId, count = 3) => {
         return new Promise(resolve => {
           setTimeout(resolve, count * 1000);
         });
-      }
+      } 
     },
-    {
-      name: "Stop",
-      icon: "./assets/blockicons/Stop.svg",
+    { name: "Stop", icon: "./assets/blockicons/Stop.svg",
       execute: () => {
         throw new Error("STOP_EXECUTION");
-      }
+      } 
     },
     { name: "Speed", icon: "./assets/blockicons/Speed0.svg" },
   ],
   device: [
-    {
-      name: "Otto-Bot",
-      icon: "./assets/blockicons/OttoBot.svg",
-      requiresConnection: true
-    },
-    {
-      name: "Light RC",
-      icon: "./assets/blockicons/RCCar.svg",
-      requiresConnection: true
-    },
-    // ...other device blocks if any...
+    { name: "Otto-Bot", icon: "./assets/blockicons/OttoBot.svg", requiresConnection: true },
+    { name: "Light RC", icon: "./assets/blockicons/RCCar.svg", requiresConnection: true },
   ],
   end: [
     { name: "End", icon: null, label: "" },
     { name: "Repeat Forever", icon: "./assets/blockicons/Forever.svg" },
   ],
-  // Add human detection blocks
   humandetection: [
-    {
-      name: "Camera Control",
-      type: "camera_control"
-    },
-    {
-      name: "Happy Detected",
-      icon: "./assets/blockicons/Smile.svg",
-      type: "boolean", // This is a condition, not an action
+    { name: "Camera Control", icon: "./assets/ui/camera.png", type: "camera_control" },
+    { name: "Happy Detected", icon: "./assets/blockicons/Smile.svg", type: "boolean",
       execute: () => {
         return window.humanDetectionData?.dominantExpression === 'happy';
-      }
+      } 
     },
-    {
-      name: "Pointing Up",
-      icon: "./assets/blockicons/Up.svg",
+    { name: "Pointing Up", icon: "./assets/blockicons/Up.svg",
       execute: () => {
         const data = window.humanDetectionData;
         const noseY = data.poses?.[0]?.keypoints[0]?.position.y;
@@ -118,11 +104,9 @@ const blocksByCategory = {
         const scoreThreshold = 0.2;
         return (leftHand?.score > scoreThreshold && leftHand.position.y < noseY) ||
                (rightHand?.score > scoreThreshold && rightHand.position.y < noseY);
-      }
+      } 
     },
-    {
-      name: "Pointing Down",
-      icon: "./assets/blockicons/Down.svg",
+    { name: "Pointing Down", icon: "./assets/blockicons/Down.svg",
       execute: () => {
         const data = window.humanDetectionData;
         const hipY = data.poses?.[0]?.keypoints[11]?.position.y;
@@ -131,40 +115,167 @@ const blocksByCategory = {
         const scoreThreshold = 0.2;
         return (leftHand?.score > scoreThreshold && leftHand.position.y > hipY) ||
                (rightHand?.score > scoreThreshold && rightHand.position.y > hipY);
-      }
+      } 
     },
-    {
-      name: "Pointing Left",
-      icon: "./assets/blockicons/Left.svg",
+    { name: "Pointing Left", icon: "./assets/blockicons/Left.svg",
       execute: () => {
         const data = window.humanDetectionData;
         const rightShoulderX = data.poses?.[0]?.keypoints[6]?.position.x;
         const rightHand = data.rightHand;
         const scoreThreshold = 0.2;
         return rightHand?.score > scoreThreshold && rightHand.position.x > rightShoulderX;
-      }
+      } 
     },
-    {
-      name: "Pointing Right",
-      icon: "./assets/blockicons/Right.svg",
+    { name: "Pointing Right", icon: "./assets/blockicons/Right.svg",
       execute: () => {
         const data = window.humanDetectionData;
         const leftShoulderX = data.poses?.[0]?.keypoints[5]?.position.x;
         const leftHand = data.leftHand;
         const scoreThreshold = 0.2;
         return leftHand?.score > scoreThreshold && leftHand.position.x < leftShoulderX;
-      }
+      } 
     },
-    {
-      name: "Set Video Transparency",
-      icon: "./assets/blockicons/opacity.svg",
-      type: "video_transparency",
-      options: [100, 75, 50, 25, 0],
-    },
+    { name: "Set Video Transparency", icon: "./assets/blockicons/opacity.svg", type: "video_transparency", options: [100, 75, 50, 25, 0] },
+    { name: "Sync Actors with Faces", icon: "./assets/blockicons/person.svg", type: "sync_actors_with_faces" },
   ],
 };
 
-// Camera Control Block Component
+// NEW: Obstacle Detection Block Component
+function ObstacleDetectionBlock({ puzzleBg, block }) {
+  const [lowFreq, setLowFreq] = useState(block.lowFrequency || 1);
+  const [highFreq, setHighFreq] = useState(block.highFrequency || 99);
+
+  const handleDragStart = (event) => {
+    const blockData = {
+      name: "Obstacle Detected",
+      type: "obstacle_sound",
+      category: "sound",
+      puzzleBg: puzzleBg,
+      lowFrequency: lowFreq,
+      highFrequency: highFreq,
+    };
+    event.dataTransfer.setData("application/block", JSON.stringify(blockData));
+  };
+
+  const handleDoubleClick = () => {
+    const blockData = {
+      name: "Obstacle Detected",
+      type: "obstacle_sound",
+      category: "sound",
+      puzzleBg: puzzleBg,
+      lowFrequency: lowFreq,
+      highFrequency: highFreq,
+    };
+    // Add your double click logic here if needed
+  };
+
+  const handleLowFreqChange = (e) => {
+    const value = Math.min(Math.max(1, parseInt(e.target.value) || 1), 99);
+    setLowFreq(value);
+  };
+
+  const handleHighFreqChange = (e) => {
+    const value = Math.min(Math.max(1, parseInt(e.target.value) || 1), 99);
+    setHighFreq(value);
+  };
+
+  return (
+    <div
+      className="block-palette-tile obstacle-detection-tile"
+      title="Obstacle Detected"
+      draggable
+      onDragStart={handleDragStart}
+      onDoubleClick={handleDoubleClick}
+      style={{
+        position: "relative",
+        minHeight: "100px",
+        border: "3px solid #ff6b35",
+        borderRadius: "8px",
+        padding: "8px",
+        margin: "4px",
+        display: "flex",
+        flexDirection: "column",
+        cursor: "move",
+        backgroundColor: "#fff",
+      }}
+    >
+      <img className="block-bg" src={puzzleBg} alt="" draggable={false} aria-hidden="true" />
+      
+      <div style={{ display: "flex", alignItems: "center", marginBottom: "8px", position: "relative", zIndex: 2 }}>
+        <img 
+          className="block-icon"
+          src="./assets/blockicons/Obstacle.svg" 
+          alt="Obstacle Detected" 
+          style={{ width: "20px", height: "20px", marginRight: "8px" }} 
+          draggable={false}
+        />
+        <span style={{ fontSize: "12px", fontWeight: "bold", color: "#333" }}>
+          Obstacle Detected
+        </span>
+      </div>
+      
+      <div style={{ display: "flex", flexDirection: "column", gap: "6px", position: "relative", zIndex: 2 }}>
+        <div style={{ display: "flex", alignItems: "center", gap: "6px" }}>
+          <label style={{ fontSize: "11px", color: "#666", minWidth: "35px", fontWeight: "bold" }}>Low:</label>
+          <input
+            type="number"
+            min="1"
+            max="99"
+            value={lowFreq}
+            onChange={handleLowFreqChange}
+            style={{
+              width: "50px",
+              height: "22px",
+              fontSize: "11px",
+              border: "2px solid #ccc",
+              borderRadius: "4px",
+              textAlign: "center",
+              backgroundColor: "#f9f9f9",
+            }}
+            onClick={(e) => e.stopPropagation()}
+            onMouseDown={(e) => e.stopPropagation()}
+          />
+        </div>
+        
+        <div style={{ display: "flex", alignItems: "center", gap: "6px" }}>
+          <label style={{ fontSize: "11px", color: "#666", minWidth: "35px", fontWeight: "bold" }}>High:</label>
+          <input
+            type="number"
+            min="1"
+            max="99"
+            value={highFreq}
+            onChange={handleHighFreqChange}
+            style={{
+              width: "50px",
+              height: "22px",
+              fontSize: "11px",
+              border: "2px solid #ccc",
+              borderRadius: "4px",
+              textAlign: "center",
+              backgroundColor: "#f9f9f9",
+            }}
+            onClick={(e) => e.stopPropagation()}
+            onMouseDown={(e) => e.stopPropagation()}
+          />
+        </div>
+      </div>
+      
+      <div style={{ 
+        fontSize: "9px", 
+        color: "#888", 
+        marginTop: "6px", 
+        textAlign: "center", 
+        position: "relative", 
+        zIndex: 2,
+        fontStyle: "italic" 
+      }}>
+        Plays alert until obstacle removed
+      </div>
+    </div>
+  );
+}
+
+// Camera Control Block Component - KEEP AS IS
 function CameraControlBlock({ puzzleBg }) {
   const dispatch = useDispatch();
   const globalCameraState = useSelector((s) => s.scene.globalCameraState);
@@ -199,54 +310,46 @@ function CameraControlBlock({ puzzleBg }) {
   };
 
   return (
-    <div
-      className="block-palette-tile camera-control-block"
-      draggable={true}
+    <div 
+      className="camera-control-block block-palette-tile" 
+      draggable 
       onDragStart={handleDragStart}
-      title="Camera Control - Drag to script area"
     >
-      <img
-        className="block-bg"
-        src={puzzleBg}
-        alt=""
-        draggable={false}
-        aria-hidden="true"
+      <img className="block-bg" src={puzzleBg} alt="" draggable={false} />
+      <img 
+        className="camera-icon" 
+        src="./assets/blockicons/camera.svg" 
+        alt="Camera" 
+        draggable={false} 
       />
-      <img src="./assets/ui/camera.png" alt="Camera" className="camera-icon" />
-      
       <div className="camera-dropdown-arrow" onClick={handleArrowClick}>
-        <img
-          src="./assets/misc/pushbutton.svg"
-          alt="Toggle Dropdown"
-          style={{
-            width: "30px",
-            height: "30px",
-            transform: showDropdown ? "rotate(180deg)" : "rotate(0deg)",
-            transition: "transform 0.2s ease",
-            pointerEvents: "none",
-          }}
+        <img 
+          src="./assets/blockicons/dropdown.svg" 
+          alt="Options" 
+          style={{ width: '16px', height: '16px' }} 
         />
       </div>
-      
-      <div className={`camera-dropdown-list ${showDropdown ? "show" : ""}`}>
-        <div
-          className={`camera-dropdown-item ${globalCameraState === "on" ? "active" : ""}`}
-          onClick={() => handleCameraToggle("on")}
-        >
-          ON
+      {showDropdown && (
+        <div className="camera-dropdown-list show">
+          <div 
+            className={`camera-dropdown-item ${globalCameraState === 'on' ? 'active' : ''}`}
+            onClick={() => handleCameraToggle('on')}
+          >
+            ON
+          </div>
+          <div 
+            className={`camera-dropdown-item ${globalCameraState === 'off' ? 'active' : ''}`}
+            onClick={() => handleCameraToggle('off')}
+          >
+            OFF
+          </div>
         </div>
-        <div
-          className={`camera-dropdown-item ${globalCameraState === "off" ? "active" : ""}`}
-          onClick={() => handleCameraToggle("off")}
-        >
-          OFF
-        </div>
-      </div>
+      )}
     </div>
   );
 }
 
-// Voice Recording Modal Component
+// Voice Recording Modal Component - KEEP AS IS
 function VoiceRecordModal({ isOpen, onClose, onSave }) {
   const [isRecording, setIsRecording] = useState(false);
   const [audioURL, setAudioURL] = useState(null);
@@ -279,10 +382,11 @@ function VoiceRecordModal({ isOpen, onClose, onSave }) {
       mediaRecorderRef.current.start();
       setIsRecording(true);
       setRecordingTime(0);
-
+      
       timerRef.current = setInterval(() => {
         setRecordingTime(prev => prev + 1);
       }, 1000);
+
     } catch (error) {
       console.error('Error accessing microphone:', error);
       alert('Could not access microphone. Please check permissions.');
@@ -361,7 +465,7 @@ function VoiceRecordModal({ isOpen, onClose, onSave }) {
           <img src="./assets/lib/mic.svg" alt="Microphone" className="modal-mic-icon" />
           <button className="modal-close-btn" onClick={handleClose}>×</button>
         </div>
-
+        
         <div className="voice-modal-content">
           <div className="waveform-display">
             {Array.from({ length: 15 }).map((_, i) => (
@@ -372,51 +476,48 @@ function VoiceRecordModal({ isOpen, onClose, onSave }) {
               />
             ))}
           </div>
-
+          
           <div className="recording-time">{formatTime(recordingTime)}</div>
-
+          
           <div className="voice-controls">
-            {/* Record Button */}
             <button
               className="control-btn record-control"
               onClick={isRecording ? stopRecording : startRecording}
               title={isRecording ? "Stop Recording" : "Start Recording"}
             >
-              <img
-                src={isRecording ? "./assets/lib/recordon.svg" : "./assets/lib/recordoff.svg"}
-                alt={isRecording ? "Recording" : "Record"}
+              <img 
+                src={isRecording ? "./assets/lib/recordon.svg" : "./assets/lib/recordoff.svg"} 
+                alt={isRecording ? "Recording" : "Record"} 
               />
             </button>
-
-            {/* Play Button */}
+            
             {audioURL && (
               <button
                 className="control-btn play-control"
                 onClick={isPlaying ? stopPlayback : playRecording}
                 title={isPlaying ? "Stop Playback" : "Play Recording"}
               >
-                <img
-                  src={isPlaying ? "./assets/lib/playon.svg" : "./assets/lib/playoff.svg"}
-                  alt={isPlaying ? "Playing" : "Play"}
+                <img 
+                  src={isPlaying ? "./assets/lib/playon.svg" : "./assets/lib/playoff.svg"} 
+                  alt={isPlaying ? "Playing" : "Play"} 
                 />
               </button>
             )}
-
-            {/* Stop Button */}
+            
             {(isRecording || isPlaying) && (
               <button
                 className="control-btn stop-control"
                 onClick={isRecording ? stopRecording : stopPlayback}
                 title="Stop"
               >
-                <img
-                  src={isRecording || isPlaying ? "./assets/lib/stopon.svg" : "./assets/lib/stopoff.svg"}
-                  alt="Stop"
+                <img 
+                  src={isRecording || isPlaying ? "./assets/lib/stopon.svg" : "./assets/lib/stopoff.svg"} 
+                  alt="Stop" 
                 />
               </button>
             )}
           </div>
-
+          
           {audioURL && (
             <button className="save-btn" onClick={saveRecording}>
               ✓ Save Recording
@@ -431,13 +532,14 @@ function VoiceRecordModal({ isOpen, onClose, onSave }) {
 export default function BlockPalette() {
   const dispatch = useDispatch();
   const [showVoiceModal, setShowVoiceModal] = useState(false);
-  const [showConnectionModal, setShowConnectionModal] = useState(false); // Added connection modal state
+
   const selectedBlockCategory = useSelector((s) => s.scene.selectedBlockCategory) || "motion";
   const customSounds = useSelector((s) => s.scene.customSounds) || [];
 
   // Get blocks and add custom sound blocks if in sound category
   const getBlocks = () => {
     const baseBlocks = blocksByCategory[selectedBlockCategory] || [];
+    
     if (selectedBlockCategory === 'sound') {
       const customSoundBlocks = customSounds.map(sound => ({
         name: sound.name,
@@ -447,12 +549,7 @@ export default function BlockPalette() {
       }));
       return [...baseBlocks, ...customSoundBlocks];
     }
-    // Insert camera control block for humandetection category
-    if (selectedBlockCategory === 'humandetection') {
-      return [
-        ...baseBlocks
-      ];
-    }
+    
     return baseBlocks;
   };
 
@@ -461,17 +558,25 @@ export default function BlockPalette() {
   const barColor = barColorByCategory[selectedBlockCategory] || "#3291d7";
 
   const handleDoubleClick = (block) => {
+    // FIXED: Add proper category to blocks
+    const blockWithCategory = {
+      ...block,
+      category: selectedBlockCategory,
+      puzzleBg: puzzleBg
+    };
+
+    // Add execution data for custom sounds
     if (block.type === 'custom_sound') {
       const executableBlock = {
-        ...block,
+        ...blockWithCategory,
         execute: () => {
           const audio = new Audio(block.soundData.audioURL);
           audio.play().catch(err => console.error('Error playing sound:', err));
         }
       };
-      dispatch(addBlockToScript(executableBlock));
+      dispatch(addBlockToScript({ actorId: null, block: executableBlock }));
     } else {
-      dispatch(addBlockToScript(block));
+      dispatch(addBlockToScript({ actorId: null, block: blockWithCategory }));
     }
   };
 
@@ -485,10 +590,10 @@ export default function BlockPalette() {
   };
 
   const handleBlockClick = (block) => {
+    console.log('Block clicked:', block.name); // DEBUG
     if (block.name === "Record") {
+      console.log('Opening voice modal'); // DEBUG
       setShowVoiceModal(true);
-    } else if (block.requiresConnection) { // Added device connection handling
-      setShowConnectionModal(true);
     }
   };
 
@@ -507,38 +612,28 @@ export default function BlockPalette() {
         }}
       >
         {blocks.map((block, idx) => {
-          // Special handling for camera control block
-          if (block.type === 'camera_control') {
-            return (
-              <CameraControlBlock
-                key={block.name + idx}
-                puzzleBg={puzzleBg}
-              />
-            );
+          // Special handling for camera control blocks
+          if (block.type === "camera_control") {
+            return <CameraControlBlock key={idx} puzzleBg={puzzleBg} />;
           }
-           // New block for video transparency
-          if (block.type === 'video_transparency') {
-            return (
-              <VideoTransparencyBlock
-                key={block.name + idx}
-                puzzleBg={puzzleBg}
-                options={block.options}
-              />
-            );
+
+          // NEW: Special handling for obstacle detection blocks
+          if (block.type === "obstacle_sound") {
+            return <ObstacleDetectionBlock key={idx} puzzleBg={puzzleBg} block={block} />;
           }
-          // Regular block rendering
+
           return (
             <div
               className={`block-palette-tile ${block.type === 'custom_sound' ? 'custom-sound-block' : ''}`}
               key={(block.name || "end") + idx}
               title={block.name || "End"}
-              draggable={!block.requiresConnection} // Modified: Only draggable if no connection required
-              onDragStart={!block.requiresConnection ? handleDragStart(block) : undefined} // Modified: Only add drag handler if draggable
+              draggable
+              onDragStart={handleDragStart(block)}
               onDoubleClick={() => handleDoubleClick(block)}
               onClick={() => handleBlockClick(block)}
-              style={{ cursor: block.requiresConnection ? 'pointer' : 'grab' }} // Modified: Different cursor for connection blocks
             >
               <img className="block-bg" src={puzzleBg} alt="" draggable={false} aria-hidden="true" />
+
               {block.icon && (
                 <img
                   className="block-icon"
@@ -547,9 +642,11 @@ export default function BlockPalette() {
                   draggable={false}
                 />
               )}
+
               {typeof block.label === "string" && block.label.trim() !== "" && (
                 <span className="block-label">{block.label}</span>
               )}
+
               {block.type === 'custom_sound' && (
                 <div className="custom-sound-indicator">🎤</div>
               )}
@@ -563,41 +660,8 @@ export default function BlockPalette() {
         onClose={() => setShowVoiceModal(false)}
         onSave={handleVoiceSave}
       />
-
-      {/* Added ConnectionModal */}
-      <ConnectionModal
-        isOpen={showConnectionModal}
-        onClose={() => setShowConnectionModal(false)}
-      />
     </>
   );
 }
-// New Component for Video Transparency Block
-function VideoTransparencyBlock({ puzzleBg }) { // Removed 'options' prop, will be handled by number picker
-  const dispatch = useDispatch();
-  const currentOpacity = useSelector((s) => s.scene.videoOpacity || 100);
 
-  const handleDragStart = (event) => {
-    const blockData = {
-      name: "Set Video Transparency",
-      icon: "./assets/blockicons/looks.svg",
-      type: "video_transparency",
-      category: "humandetection",
-      puzzleBg: puzzleBg,
-      opacity: currentOpacity,
-    };
-    event.dataTransfer.setData("application/block", JSON.stringify(blockData));
-  };
-
-  return (
-    <div
-      className="block-palette-tile video-transparency-block"
-      draggable={true}
-      onDragStart={handleDragStart}
-      title="Set Video Transparency - Click to set opacity"
-    >
-      <img className="block-bg" src={puzzleBg} alt="" draggable={false} />
-      <img className="block-icon" src="./assets/blockicons/looks.svg" alt="Opacity" draggable={false} />
-    </div>
-  );
-}
+export { blocksByCategory };

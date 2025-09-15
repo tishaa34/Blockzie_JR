@@ -3,6 +3,7 @@ import { createSlice, nanoid } from '@reduxjs/toolkit';
 // Grid constants must match Stage.js
 const GRID_WIDTH = 20;
 const GRID_HEIGHT = 15;
+
 // Center indices are integer grid cells (Stage places at (x+0.5, y+0.5) cells)
 const CENTER_X = Math.floor(GRID_WIDTH / 2);
 const CENTER_Y = Math.floor(GRID_HEIGHT / 2);
@@ -33,15 +34,12 @@ const makeDefaultScene = () => ({
 const initialState = {
   scenes: [makeDefaultScene()],
   currentSceneIndex: 0,
-
   // Global scene-level undo/redo (switch, remove scene, etc.)
   sceneUndoStack: [],
   sceneRedoStack: [],
-
   // Block palette UI state
   selectedBlockCategory: 'motion',
   categoryPanelOpen: false,
-
   // Assets (optional)
   sounds: { pop: './assets/sounds/pop.mp3' },
   backgroundGallery: [
@@ -52,7 +50,7 @@ const initialState = {
   ],
   customSounds: [], // Array to store custom recorded sounds
   showHumanDetection: false, // <-- Add this line
-  globalCameraState: 'off',  // <-- Add this line
+  globalCameraState: 'off', // <-- Add this line
   videoOpacity: 100, // NEW: Add video opacity state with a default of 100%
 };
 
@@ -72,6 +70,7 @@ const sceneSlice = createSlice({
       if (state.sceneUndoStack.length > 20) state.sceneUndoStack.shift();
       state.sceneRedoStack = [];
     },
+
     undoSceneAction(state) {
       if (!state.sceneUndoStack.length) return;
       const prev = state.sceneUndoStack.pop();
@@ -82,6 +81,7 @@ const sceneSlice = createSlice({
       state.scenes = prev.scenes;
       state.currentSceneIndex = prev.currentSceneIndex;
     },
+
     redoSceneAction(state) {
       if (!state.sceneRedoStack.length) return;
       const next = state.sceneRedoStack.pop();
@@ -97,6 +97,7 @@ const sceneSlice = createSlice({
     setSelectedBlockCategory(state, action) {
       state.selectedBlockCategory = action.payload;
     },
+
     toggleCategoryPanel(state) {
       state.categoryPanelOpen = !state.categoryPanelOpen;
     },
@@ -109,6 +110,7 @@ const sceneSlice = createSlice({
       if (scene.undoStack.length > 20) scene.undoStack.shift();
       scene.redoStack = [];
     },
+
     undoLastAction(state) {
       const scene = state.scenes[state.currentSceneIndex];
       if (!scene?.undoStack?.length) return;
@@ -117,6 +119,7 @@ const sceneSlice = createSlice({
       scene.actors = previous.actors;
       scene.background = previous.background;
     },
+
     redoLastAction(state) {
       const scene = state.scenes[state.currentSceneIndex];
       if (!scene?.redoStack?.length) return;
@@ -131,15 +134,18 @@ const sceneSlice = createSlice({
       state.scenes.push(makeDefaultScene());
       state.currentSceneIndex = state.scenes.length - 1;
     },
+
     removeScene(state, action) {
       const idx = action.payload;
       if (state.scenes.length <= 1) return;
       if (idx < 0 || idx >= state.scenes.length) return;
+
       state.sceneUndoStack.push({
         scenes: deepClone(state.scenes),
         currentSceneIndex: state.currentSceneIndex,
       });
       state.sceneRedoStack = [];
+
       state.scenes.splice(idx, 1);
       if (state.currentSceneIndex >= state.scenes.length) {
         state.currentSceneIndex = state.scenes.length - 1;
@@ -147,6 +153,7 @@ const sceneSlice = createSlice({
         state.currentSceneIndex--;
       }
     },
+
     switchScene(state, action) {
       const idx = action.payload;
       if (idx >= 0 && idx < state.scenes.length) {
@@ -207,6 +214,7 @@ const sceneSlice = createSlice({
       const { actorId, dx, dy, fromScript } = action.payload;
       const scene = state.scenes[state.currentSceneIndex];
       if (!scene) return;
+
       const actor = scene.actors.find(a => a.id === actorId);
       if (!actor) return;
 
@@ -223,6 +231,7 @@ const sceneSlice = createSlice({
       const { actorId, degrees, fromScript } = action.payload;
       const scene = state.scenes[state.currentSceneIndex];
       if (!scene) return;
+
       const actor = scene.actors.find(a => a.id === actorId);
       if (!actor) return;
 
@@ -240,6 +249,7 @@ const sceneSlice = createSlice({
       const { actorId, scale, fromScript } = action.payload;
       const scene = state.scenes[state.currentSceneIndex];
       if (!scene) return;
+
       const actor = scene.actors.find(a => a.id === actorId);
       if (!actor) return;
 
@@ -249,7 +259,6 @@ const sceneSlice = createSlice({
       }
 
       const newSize = (actor.size || 1) * scale;
-
       const minSize = 0.5;
       const maxSize = 4.0;
       actor.size = Math.min(Math.max(newSize, minSize), maxSize);
@@ -259,6 +268,7 @@ const sceneSlice = createSlice({
       const { actorId, fromScript } = action.payload;
       const scene = state.scenes[state.currentSceneIndex];
       if (!scene) return;
+
       const actor = scene.actors.find(a => a.id === actorId);
       if (!actor) return;
 
@@ -269,9 +279,11 @@ const sceneSlice = createSlice({
 
       actor.size = 1;
     },
+
     disappearActor: (state, action) => {
       const scene = state.scenes[state.currentSceneIndex];
       if (!scene) return;
+
       const actor = scene.actors.find((a) => a.id === action.payload.actorId);
       if (actor) {
         actor.visible = false;
@@ -281,12 +293,12 @@ const sceneSlice = createSlice({
     reappearActor: (state, action) => {
       const scene = state.scenes[state.currentSceneIndex];
       if (!scene) return;
+
       const actor = scene.actors.find((a) => a.id === action.payload.actorId);
       if (actor) {
         actor.visible = true;
       }
     },
-
 
     // Background
     setBackground(state, action) {
@@ -295,17 +307,19 @@ const sceneSlice = createSlice({
         scene.background = action.payload;
       }
     },
+
     addBackgroundToGallery(state, action) {
       const url = action.payload;
       if (!state.backgroundGallery.includes(url)) {
         state.backgroundGallery.push(url);
       }
     },
+
     removeBackgroundFromGallery(state, action) {
       state.backgroundGallery = state.backgroundGallery.filter(bg => bg !== action.payload);
     },
 
-    // Scripts - Updated to handle custom sounds
+    // Scripts - Updated to handle custom sounds and obstacle detection
     addBlockToScript(state, action) {
       const { actorId, block } = action.payload;
       const scene = state.scenes[state.currentSceneIndex];
@@ -316,6 +330,7 @@ const sceneSlice = createSlice({
       if (block.category === 'start') {
         actor.scripts = actor.scripts.filter(b => b.category !== 'start');
       }
+
       if (block.category === 'end') {
         actor.scripts = actor.scripts.filter(b => b.category !== 'end');
       }
@@ -330,6 +345,9 @@ const sceneSlice = createSlice({
         // Add custom sound data if it's a custom sound block
         soundData: block.soundData || null,
         audioURL: block.soundData?.audioURL || null,
+        // NEW: Add obstacle detection frequency properties
+        lowFrequency: block.type === 'obstacle_sound' ? (block.lowFrequency ?? 1) : undefined,
+        highFrequency: block.type === 'obstacle_sound' ? (block.highFrequency ?? 99) : undefined,
       };
 
       if (block.category === 'start') {
@@ -339,6 +357,7 @@ const sceneSlice = createSlice({
       } else {
         const startIndex = actor.scripts.findIndex(b => b.category === 'start');
         const endIndex = actor.scripts.findIndex(b => b.category === 'end');
+
         if (startIndex !== -1 && endIndex !== -1) {
           actor.scripts.splice(endIndex, 0, newBlock);
         } else {
@@ -351,6 +370,7 @@ const sceneSlice = createSlice({
       const scene = state.scenes[state.currentSceneIndex];
       const actor = scene?.actors.find(a => a.id === action.payload.actorId);
       if (!actor) return;
+
       scene.undoStack.push(deepClone(scene));
       scene.redoStack = [];
       actor.scripts = [];
@@ -361,9 +381,28 @@ const sceneSlice = createSlice({
       const scene = state.scenes[state.currentSceneIndex];
       const actor = scene?.actors.find(a => a.id === actorId);
       if (!actor) return;
+
       const block = actor.scripts.find(b => b.id === blockId);
       if (block) {
         block[property] = Math.min(Math.max(0, newCount), 100);
+      }
+    },
+
+    // NEW: Update obstacle frequency properties
+    updateObstacleFrequency(state, action) {
+      const { actorId, blockId, lowFrequency, highFrequency } = action.payload;
+      const scene = state.scenes[state.currentSceneIndex];
+      const actor = scene?.actors.find(a => a.id === actorId);
+      if (!actor) return;
+
+      const block = actor.scripts.find(b => b.id === blockId);
+      if (block) {
+        if (lowFrequency !== undefined) {
+          block.lowFrequency = Math.min(Math.max(1, lowFrequency), 99);
+        }
+        if (highFrequency !== undefined) {
+          block.highFrequency = Math.min(Math.max(1, highFrequency), 99);
+        }
       }
     },
 
@@ -378,6 +417,7 @@ const sceneSlice = createSlice({
         }
       }
     },
+
     setCameraState: (state, action) => {
       state.globalCameraState = action.payload;
     },
@@ -392,9 +432,8 @@ const sceneSlice = createSlice({
         type: 'custom',
         createdAt: Date.now(),
       };
-      
       state.customSounds.push(customSound);
-      
+
       // Limit to 10 custom sounds to prevent memory issues
       if (state.customSounds.length > 10) {
         const removedSound = state.customSounds.shift();
@@ -408,7 +447,7 @@ const sceneSlice = createSlice({
     removeCustomSound(state, action) {
       const soundId = action.payload;
       const soundIndex = state.customSounds.findIndex(sound => sound.id === soundId);
-      
+
       if (soundIndex !== -1) {
         const removedSound = state.customSounds[soundIndex];
         // Clean up object URL
@@ -441,6 +480,27 @@ const sceneSlice = createSlice({
       state.showHumanDetection = action.payload;
     },
 
+    // NEW: Reducer to sync actors with faces
+    syncActorsWithFaces: (state, action) => {
+      const faceCount = action.payload;
+      const scene = state.scenes[state.currentSceneIndex];
+      if (!scene) return;
+
+      const currentActorCount = scene.actors.length;
+
+      if (faceCount > currentActorCount) {
+        // Add new actors if more faces are detected
+        for (let i = 0; i < faceCount - currentActorCount; i++) {
+          scene.actors.push(makeDefaultstem());
+        }
+      } else if (faceCount < currentActorCount) {
+        // Remove actors if fewer faces are detected, but keep at least one
+        for (let i = 0; i < currentActorCount - faceCount && scene.actors.length > 1; i++) {
+          scene.actors.pop();
+        }
+      }
+    },
+
     // NEW: Reducer to update video opacity
     setVideoOpacity: (state, action) => {
       state.videoOpacity = Math.min(Math.max(0, action.payload), 100);
@@ -448,7 +508,6 @@ const sceneSlice = createSlice({
 
     overwrite(state, action) {
       const newState = action.payload;
-      
       state.scenes = newState.scenes || [makeDefaultScene()];
       state.currentSceneIndex = newState.currentSceneIndex || 0;
       state.sceneUndoStack = newState.sceneUndoStack || [];
@@ -458,7 +517,7 @@ const sceneSlice = createSlice({
       state.sounds = newState.sounds || { pop: './assets/sounds/pop.mp3' };
       state.backgroundGallery = newState.backgroundGallery || [
         './assets/backgrounds/bg1.png',
-        './assets/backgrounds/bg2.png', 
+        './assets/backgrounds/bg2.png',
         './assets/backgrounds/bg3.png',
         '#ffffff', '#87CEEB', '#98FB98', '#FFB6C1', '#F0E68C'
       ];
@@ -485,7 +544,7 @@ export const {
   addActor,
   removeActor,
   disappearActor,
-  reappearActor, 
+  reappearActor,
   moveActor,
   rotateActor,
   setBackground,
@@ -494,13 +553,15 @@ export const {
   addBlockToScript,
   clearScript,
   updateBlockCount,
+  updateObstacleFrequency, // NEW: Export the new action
   addCustomSound,
   removeCustomSound,
   clearAllCustomSounds,
   updateCustomSoundName,
   setShowHumanDetection,
-  setVideoOpacity, // NEW: Export the new action
-  overwrite, 
+  setVideoOpacity, // NEW: Export the setVideoOpacity action
+  syncActorsWithFaces, // NEW: Export the new action
+  overwrite,
   setCameraState,
 } = sceneSlice.actions;
 

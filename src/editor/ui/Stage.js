@@ -1,5 +1,5 @@
 import React, { useState, useRef } from "react";
-import { useSelector, useDispatch } from "react-redux";
+import { useSelector, useDispatch} from "react-redux";
 import { moveActor, pushUndoState } from "../../store/sceneSlice";
 import { run } from "../../utils/runScript";
 import "../../css/Stage.css";
@@ -21,7 +21,7 @@ export default function Stage({
   const { scenes, currentSceneIndex } = useSelector((s) => s.scene);
   const scene  = scenes[currentSceneIndex];
   const actors = scene?.actors ?? [];
-
+  // const store  = useStore();
   // drag refs/state
   const containerRef  = useRef(null);
   const draggingRef   = useRef(false);   // live "am I dragging?"
@@ -81,7 +81,7 @@ export default function Stage({
             block => block.category === "start" && block.name === "Start On Bump"
           );
           if (hasBumpScript) {
-            run(movedActor, dispatch, scene?.sounds, movedActor.id).catch(err => {
+            run(movedActor, dispatch, scene?.sounds, movedActor.id,).catch(err => {
               console.error("Error running Start On Bump script:", err);
             });
           }

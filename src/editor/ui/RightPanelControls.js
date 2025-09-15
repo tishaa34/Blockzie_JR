@@ -1,5 +1,5 @@
 import React, { useState } from "react";
-import { useSelector, useDispatch } from "react-redux";
+import { useSelector, useDispatch,  } from "react-redux";
 import { run } from "../../utils/runScript";
 import BackgroundGallery from "./BackgroundGallery"; // Import the new component
 import "../../css/RightPanelControls.css";
@@ -15,7 +15,8 @@ export default function RightPanelControls({
   const { scenes, currentSceneIndex } = useSelector((s) => s.scene);
   const scene = scenes[currentSceneIndex];
   const actor = scene?.actors.find((a) => a.id === selectedActorId);
-  
+  // const store = useStore();
+
   // Add state for background gallery modal
   const [backgroundModalOpen, setBackgroundModalOpen] = useState(false);
 

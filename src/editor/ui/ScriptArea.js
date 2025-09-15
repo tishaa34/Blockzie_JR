@@ -1,5 +1,5 @@
 import React, { useState, useRef } from "react";
-import { useSelector, useDispatch } from "react-redux";
+import { useSelector, useDispatch, useStore} from "react-redux";
 import {
   addBlockToScript,
   clearScript,
@@ -17,7 +17,7 @@ export default function ScriptArea({ selectedActorId }) {
   const globalCameraState = useSelector((s) => s.scene.globalCameraState);
   const scene = scenes[currentSceneIndex];
   const actor = scene?.actors.find((a) => a.id === selectedActorId);
-
+  const store = useStore(); // Initialize useStore
   const [pickerOpen, setPickerOpen] = useState(false);
   const [tapBlock, setTapBlock] = useState(null);
   const [draggedBlock, setDraggedBlock] = useState(null);
@@ -29,10 +29,10 @@ export default function ScriptArea({ selectedActorId }) {
     const raw = e.dataTransfer.getData("application/block");
     if (!raw || !actor) return;
     const block = JSON.parse(raw);
-    
+
     // Set a default opacity for the new block type
     if (block.type === 'video_transparency' && !block.hasOwnProperty('opacity')) {
-        block.opacity = 100;
+      block.opacity = 100;
     }
 
     // Preserve camera state if it exists
@@ -105,7 +105,7 @@ export default function ScriptArea({ selectedActorId }) {
   const clickBlock = async (block) => {
     if (block.category === "start" && block.name === "Start on Green Flag") {
       try {
-        await run(actor, dispatch, scene?.sounds, actor.id);
+        await run(actor, dispatch, scene?.sounds, actor.id, store.getState);
       } catch (err) {
         console.error("Error while running script:", err);
       }
@@ -130,12 +130,12 @@ export default function ScriptArea({ selectedActorId }) {
     if (block.name === "Speed") {
       return;
     }
-    
+
     // For Video Transparency block, show the number picker
     if (block.name === "Set Video Transparency") {
-        setTapBlock(block);
-        setPickerOpen(true);
-        return;
+      setTapBlock(block);
+      setPickerOpen(true);
+      return;
     }
 
     setTapBlock(block);
@@ -145,12 +145,12 @@ export default function ScriptArea({ selectedActorId }) {
   const setCount = (n) => {
     if (!actor || !tapBlock) return;
     dispatch(pushUndoState());
-    
+
     // Check if the block is a video transparency block and update its opacity
     if (tapBlock.name === "Set Video Transparency") {
-        dispatch(updateBlockCount({ actorId: actor.id, blockId: tapBlock.id, newCount: n, property: 'opacity' }));
+      dispatch(updateBlockCount({ actorId: actor.id, blockId: tapBlock.id, newCount: n, property: 'opacity' }));
     } else {
-        dispatch(updateBlockCount({ actorId: actor.id, blockId: tapBlock.id, newCount: n }));
+      dispatch(updateBlockCount({ actorId: actor.id, blockId: tapBlock.id, newCount: n }));
     }
   };
 
@@ -214,16 +214,16 @@ export default function ScriptArea({ selectedActorId }) {
                     onDragEnd={handleBlockDragEnd}
                   >
                     <img className="block-bg" src={b.puzzleBg} alt="" draggable={false} />
-                    <select 
+                    <select
                       className="camera-select-dropdown"
                       value={globalCameraState}
                       onChange={(e) => {
                         e.stopPropagation();
                         const newState = e.target.value;
-                        
+
                         // Update global camera state in Redux
                         dispatch(setCameraState(newState));
-                        
+
                         // Trigger camera functionality
                         if (newState === 'on') {
                           window.humanDetectionController?.startCamera();
@@ -232,40 +232,40 @@ export default function ScriptArea({ selectedActorId }) {
                         }
                       }}
                       onClick={(e) => e.stopPropagation()}
-                      // style={{
-                      //   position: 'absolute',
-                      //   top: '50%',
-                      //   left: '50%',
-                      //   transform: 'translate(-50%, -50%)',
-                      //   width: '50px',
-                      //   height: '24px',
-                      //   background: 'rgba(255, 255, 255, 0.9)',
-                      //   border: '1px solid rgba(0,0,0,0.3)',
-                      //   borderRadius: '4px',
-                      //   color: 'black',
-                      //   fontSize: '10px',
-                      //   zIndex: 2,
-                      //   cursor: 'pointer'
-                      // }}
+                    // style={{
+                    //   position: 'absolute',
+                    //   top: '50%',
+                    //   left: '50%',
+                    //   transform: 'translate(-50%, -50%)',
+                    //   width: '50px',
+                    //   height: '24px',
+                    //   background: 'rgba(255, 255, 255, 0.9)',
+                    //   border: '1px solid rgba(0,0,0,0.3)',
+                    //   borderRadius: '4px',
+                    //   color: 'black',
+                    //   fontSize: '10px',
+                    //   zIndex: 2,
+                    //   cursor: 'pointer'
+                    // }}
                     >
                       <option value="off">off</option>
                       <option value="on">on</option>
                     </select>
-                    <img src="./assets/ui/camera.png" 
-                     style={{
+                    <img src="./assets/ui/camera.png"
+                      style={{
                         position: 'absolute',
-                        top:'42%',
+                        top: '42%',
                         left: '50%',
                         transform: 'translate(-50%, -50%)',
                         width: '35px',
-                        height: '35px', 
-                        zIndex: 2,                 
+                        height: '35px',
+                        zIndex: 2,
                       }}
                     />
                   </div>
                 );
               }
-              
+
               // Video transparency block rendering
               if (b.type === 'video_transparency') {
                 return (
