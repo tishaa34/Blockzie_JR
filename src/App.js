@@ -1,5 +1,6 @@
 import React, { useEffect, useState } from 'react';
 import { Provider, useDispatch, useSelector } from 'react-redux';
+import { useStore } from 'react-redux'
 import store from './store/store';
 import JSZip from 'jszip';
 
@@ -33,7 +34,7 @@ function BlockzieJrShell() {
   const { scenes, currentSceneIndex } = useSelector(s => s.scene);
   const showHumanDetection = useSelector(s => s.scene.showHumanDetection); // <-- Redux state
   const actorIdFromScene = scenes[currentSceneIndex]?.actors?.[0]?.id;
-
+  const store = useStore();
   const [selectedActorId, setSelectedActorId] = useState(actorIdFromScene || demoActors[0]?.id);
   const [bgModalOpen, setBgModalOpen] = useState(false);
   const [heading, setHeading] = useState({ text: "", color: "#222", size: 38 });
@@ -43,6 +44,12 @@ function BlockzieJrShell() {
   // Splash screen state and message
   const [showSplash, setShowSplash] = useState(true);
   const [splashMessage, setSplashMessage] = useState("Preparing, please wait...");
+
+   useEffect(() => {
+    // Make Redux store globally accessible for runScript
+    window.__REDUX_STORE__ = store;
+    console.log('🚧 Redux store made globally accessible');
+  }, [store]);
 
   useEffect(() => {
     // Show splash only for 3 seconds on initial load

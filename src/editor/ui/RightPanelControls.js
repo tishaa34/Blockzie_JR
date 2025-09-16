@@ -41,7 +41,7 @@ export default function RightPanelControls({
         </button>
         {/* New Obstacle Button */}
         <button className="rp-btn" onClick={() => setObstacleModalOpen(true)} title="Add Obstacle">
-          <img src="./assets/ui/obstacle.svg" alt="Obstacle" />
+          <img src="./assets/ui/Obstacle.png" alt="Obstacle" />
         </button>
         <button className="rp-btn" onClick={() => run(actor, dispatch, scene?.sounds, actor.id)} title="Green Flag">
           <img src="./assets/ui/go.svg" alt="Green Flag" />

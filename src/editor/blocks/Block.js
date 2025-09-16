@@ -56,14 +56,7 @@ const blocksByCategory = {
   sound: [
     { name: "Pop", icon: "./assets/blockicons/Speaker.svg" },
     { name: "Record", icon: "./assets/blockicons/microphone.svg" },
-    // CORRECTED: Complete Obstacle Detected Block with proper type
-    { 
-      name: "Obstacle Detected", 
-      icon: "./assets/blockicons/Obstacle.svg",
-      type: "obstacle_sound", // This is the key property
-      lowFrequency: 1,
-      highFrequency: 99,
-    }
+
   ],
   control: [
     { name: "Wait", icon: "./assets/blockicons/Wait.svg", 
@@ -140,140 +133,7 @@ const blocksByCategory = {
   ],
 };
 
-// NEW: Obstacle Detection Block Component
-function ObstacleDetectionBlock({ puzzleBg, block }) {
-  const [lowFreq, setLowFreq] = useState(block.lowFrequency || 1);
-  const [highFreq, setHighFreq] = useState(block.highFrequency || 99);
 
-  const handleDragStart = (event) => {
-    const blockData = {
-      name: "Obstacle Detected",
-      type: "obstacle_sound",
-      category: "sound",
-      puzzleBg: puzzleBg,
-      lowFrequency: lowFreq,
-      highFrequency: highFreq,
-    };
-    event.dataTransfer.setData("application/block", JSON.stringify(blockData));
-  };
-
-  const handleDoubleClick = () => {
-    const blockData = {
-      name: "Obstacle Detected",
-      type: "obstacle_sound",
-      category: "sound",
-      puzzleBg: puzzleBg,
-      lowFrequency: lowFreq,
-      highFrequency: highFreq,
-    };
-    // Add your double click logic here if needed
-  };
-
-  const handleLowFreqChange = (e) => {
-    const value = Math.min(Math.max(1, parseInt(e.target.value) || 1), 99);
-    setLowFreq(value);
-  };
-
-  const handleHighFreqChange = (e) => {
-    const value = Math.min(Math.max(1, parseInt(e.target.value) || 1), 99);
-    setHighFreq(value);
-  };
-
-  return (
-    <div
-      className="block-palette-tile obstacle-detection-tile"
-      title="Obstacle Detected"
-      draggable
-      onDragStart={handleDragStart}
-      onDoubleClick={handleDoubleClick}
-      style={{
-        position: "relative",
-        minHeight: "100px",
-        border: "3px solid #ff6b35",
-        borderRadius: "8px",
-        padding: "8px",
-        margin: "4px",
-        display: "flex",
-        flexDirection: "column",
-        cursor: "move",
-        backgroundColor: "#fff",
-      }}
-    >
-      <img className="block-bg" src={puzzleBg} alt="" draggable={false} aria-hidden="true" />
-      
-      <div style={{ display: "flex", alignItems: "center", marginBottom: "8px", position: "relative", zIndex: 2 }}>
-        <img 
-          className="block-icon"
-          src="./assets/blockicons/Obstacle.svg" 
-          alt="Obstacle Detected" 
-          style={{ width: "20px", height: "20px", marginRight: "8px" }} 
-          draggable={false}
-        />
-        <span style={{ fontSize: "12px", fontWeight: "bold", color: "#333" }}>
-          Obstacle Detected
-        </span>
-      </div>
-      
-      <div style={{ display: "flex", flexDirection: "column", gap: "6px", position: "relative", zIndex: 2 }}>
-        <div style={{ display: "flex", alignItems: "center", gap: "6px" }}>
-          <label style={{ fontSize: "11px", color: "#666", minWidth: "35px", fontWeight: "bold" }}>Low:</label>
-          <input
-            type="number"
-            min="1"
-            max="99"
-            value={lowFreq}
-            onChange={handleLowFreqChange}
-            style={{
-              width: "50px",
-              height: "22px",
-              fontSize: "11px",
-              border: "2px solid #ccc",
-              borderRadius: "4px",
-              textAlign: "center",
-              backgroundColor: "#f9f9f9",
-            }}
-            onClick={(e) => e.stopPropagation()}
-            onMouseDown={(e) => e.stopPropagation()}
-          />
-        </div>
-        
-        <div style={{ display: "flex", alignItems: "center", gap: "6px" }}>
-          <label style={{ fontSize: "11px", color: "#666", minWidth: "35px", fontWeight: "bold" }}>High:</label>
-          <input
-            type="number"
-            min="1"
-            max="99"
-            value={highFreq}
-            onChange={handleHighFreqChange}
-            style={{
-              width: "50px",
-              height: "22px",
-              fontSize: "11px",
-              border: "2px solid #ccc",
-              borderRadius: "4px",
-              textAlign: "center",
-              backgroundColor: "#f9f9f9",
-            }}
-            onClick={(e) => e.stopPropagation()}
-            onMouseDown={(e) => e.stopPropagation()}
-          />
-        </div>
-      </div>
-      
-      <div style={{ 
-        fontSize: "9px", 
-        color: "#888", 
-        marginTop: "6px", 
-        textAlign: "center", 
-        position: "relative", 
-        zIndex: 2,
-        fontStyle: "italic" 
-      }}>
-        Plays alert until obstacle removed
-      </div>
-    </div>
-  );
-}
 
 // Camera Control Block Component - KEEP AS IS
 function CameraControlBlock({ puzzleBg }) {
@@ -615,11 +475,6 @@ export default function BlockPalette() {
           // Special handling for camera control blocks
           if (block.type === "camera_control") {
             return <CameraControlBlock key={idx} puzzleBg={puzzleBg} />;
-          }
-
-          // NEW: Special handling for obstacle detection blocks
-          if (block.type === "obstacle_sound") {
-            return <ObstacleDetectionBlock key={idx} puzzleBg={puzzleBg} block={block} />;
           }
 
           return (

@@ -200,23 +200,27 @@ const HumanDetectionFullStage = () => {
     setFaceCount(0);
   }, []);
 
+  // FIXED: More strict hand detection
   const checkHandDetected = useCallback((poses) => {
     if (!poses || poses.length === 0) return 0;
 
-    const scoreThreshold = 0.1;
+    const scoreThreshold = 0.3; // INCREASED from 0.1 to 0.3
     let handsFound = 0;
 
-    for (const pose of poses) {
-      const leftWrist = pose.keypoints[9];
-      const rightWrist = pose.keypoints[10];
+    // Only check the first (most confident) pose
+    const pose = poses[0];
+    if (!pose || pose.score < 0.3) return 0;
 
-      if (leftWrist && leftWrist.score > scoreThreshold) handsFound++;
-      if (rightWrist && rightWrist.score > scoreThreshold) handsFound++;
-    }
+    const leftWrist = pose.keypoints[9];
+    const rightWrist = pose.keypoints[10];
 
-    return handsFound;
+    if (leftWrist && leftWrist.score > scoreThreshold) handsFound++;
+    if (rightWrist && rightWrist.score > scoreThreshold) handsFound++;
+
+    return Math.min(handsFound, 2); // Max 2 hands
   }, []);
 
+  // FIXED: More strict face detection
   const checkFaceDetected = useCallback(async (videoElement) => {
     if (!faceNet || !videoElement) return 0;
 
@@ -225,11 +229,17 @@ const HumanDetectionFullStage = () => {
         videoElement,
         new faceapi.TinyFaceDetectorOptions({
           inputSize: 416,
-          scoreThreshold: 0.5
+          scoreThreshold: 0.7 // INCREASED from 0.5 to 0.7
         })
       ).withFaceLandmarks().withFaceExpressions().withAgeAndGender();
 
-      return detections.length;
+      // Filter detections by size to avoid tiny false positives
+      const validDetections = detections.filter(detection => {
+        const box = detection.detection.box;
+        return box.width > 50 && box.height > 50; // Minimum face size
+      });
+
+      return Math.min(validDetections.length, 1); // Max 1 face expected
     } catch (error) {
       console.error('Face detection error:', error);
       return 0;
@@ -242,14 +252,23 @@ const HumanDetectionFullStage = () => {
     try {
       const detections = await faceapi.detectAllFaces(
         videoElement,
-        new faceapi.TinyFaceDetectorOptions({ inputSize: 416, scoreThreshold: 0.5 })
+        new faceapi.TinyFaceDetectorOptions({ 
+          inputSize: 416, 
+          scoreThreshold: 0.7 // INCREASED threshold
+        })
       ).withFaceLandmarks().withFaceExpressions().withAgeAndGender();
+
+      // Filter by size
+      const validDetections = detections.filter(detection => {
+        const box = detection.detection.box;
+        return box.width > 50 && box.height > 50;
+      });
 
       const displaySize = { width: videoElement.videoWidth, height: videoElement.videoHeight };
 
       faceapi.matchDimensions(canvasRef.current, displaySize);
 
-      const resizedDetections = faceapi.resizeResults(detections, displaySize);
+      const resizedDetections = faceapi.resizeResults(validDetections, displaySize);
 
       ctx.clearRect(0, 0, canvasRef.current.width, canvasRef.current.height);
 
@@ -287,7 +306,7 @@ const HumanDetectionFullStage = () => {
     const leftWrist = keypoints[9];
     const rightWrist = keypoints[10];
     const handPoints = [];
-    const scoreThreshold = 0.1;
+    const scoreThreshold = 0.3; // INCREASED threshold
 
     if (leftWrist && leftWrist.score > scoreThreshold) {
       handPoints.push(leftWrist);
@@ -348,7 +367,7 @@ const HumanDetectionFullStage = () => {
 
   const drawAIKeypoints = useCallback((ctx, keypoints, color) => {
     keypoints.forEach(keypoint => {
-      if (keypoint.score > 0.2) {
+      if (keypoint.score > 0.3) { // INCREASED threshold
         const x = keypoint.position.x;
         const y = keypoint.position.y;
 
@@ -376,7 +395,7 @@ const HumanDetectionFullStage = () => {
       const fromPoint = keypoints[from];
       const toPoint = keypoints[to];
 
-      if (fromPoint && toPoint && fromPoint.score > 0.2 && toPoint.score > 0.2) {
+      if (fromPoint && toPoint && fromPoint.score > 0.3 && toPoint.score > 0.3) { // INCREASED threshold
         const fromX = fromPoint.position.x;
         const fromY = fromPoint.position.y;
         const toX = toPoint.position.x;
@@ -394,7 +413,7 @@ const HumanDetectionFullStage = () => {
   }, []);
 
   const drawPersonBoundingBox = useCallback((ctx, keypoints, color, personIndex) => {
-    const validPoints = keypoints.filter(kp => kp.score > 0.2);
+    const validPoints = keypoints.filter(kp => kp.score > 0.3); // INCREASED threshold
     if (validPoints.length === 0) return;
 
     const xs = validPoints.map(kp => kp.position.x);
@@ -422,7 +441,7 @@ const HumanDetectionFullStage = () => {
     const canvas = canvasRef.current;
     const ctx = canvas.getContext('2d');
     const video = videoRef.current;
-    if (!canvas) return; // FIX: Ensure canvas is defined
+    if (!canvas) return;
 
     if (video.videoWidth === 0 || video.videoHeight === 0) return;
 
@@ -436,7 +455,7 @@ const HumanDetectionFullStage = () => {
     const colors = ['#00FF00', '#0080FF', '#FF4000', '#FFFF00', '#FF00FF'];
 
     poses.forEach((pose, personIndex) => {
-      if (pose.score > 0.1) {
+      if (pose.score > 0.3) { // INCREASED threshold
         const color = colors[personIndex % colors.length];
         drawAIKeypoints(ctx, pose.keypoints, color);
         drawAISkeleton(ctx, pose.keypoints, color);
@@ -450,6 +469,7 @@ const HumanDetectionFullStage = () => {
     }
   }, [drawHandRadiatingLines, drawFaceDetections, faceNet]);
 
+  // MAIN FIX: Much stricter detection parameters
   const startDetection = useCallback(() => {
     if (!net || !cameraStarted || detectionActive.current) {
       console.log('⚠️ Detection not ready');
@@ -468,32 +488,45 @@ const HumanDetectionFullStage = () => {
       }
 
       try {
+        // FIXED: Much stricter pose detection settings
         const poses = await net.estimateMultiplePoses(videoRef.current, {
           flipHorizontal: false,
-          maxDetections: 5,
-          scoreThreshold: 0.1,
-          nmsRadius: 20
+          maxDetections: 1, // CHANGED from 5 to 1 - expect only 1 person
+          scoreThreshold: 0.3, // INCREASED from 0.1 to 0.3
+          nmsRadius: 30 // INCREASED from 20 to 30 to reduce overlaps
         });
 
-        const validPoses = poses.filter(pose => pose.score > 0.05);
-        const detectedPeople = validPoses.length;
-        const handsFound = checkHandDetected(validPoses);
+        // FIXED: Much stricter filtering
+        const validPoses = poses.filter(pose => {
+          // Require minimum number of visible keypoints
+          const visibleKeypoints = pose.keypoints.filter(kp => kp.score > 0.3).length;
+          return pose.score > 0.4 && visibleKeypoints >= 8; // Need at least 8 visible keypoints
+        });
+
+        // FORCE maximum of 1 person detection
+        const detectedPeople = Math.min(validPoses.length, 1);
+        const handsFound = validPoses.length > 0 ? checkHandDetected([validPoses[0]]) : 0;
 
         let facesFound = 0;
         let dominantExpression = null;
         let leftHand = null;
         let rightHand = null;
 
-        if (faceNet) {
-          const detections = await faceapi.detectAllFaces(
-            videoRef.current,
-            new faceapi.TinyFaceDetectorOptions({ inputSize: 416, scoreThreshold: 0.5 })
-          ).withFaceExpressions();
-          facesFound = detections.length;
-
-          if (detections.length > 0) {
-            const expressions = detections[0].expressions;
-            dominantExpression = Object.keys(expressions).reduce((a, b) => expressions[a] > expressions[b] ? a : b);
+        if (faceNet && detectedPeople > 0) {
+          facesFound = await checkFaceDetected(videoRef.current);
+          
+          if (facesFound > 0) {
+            const detections = await faceapi.detectAllFaces(
+              videoRef.current,
+              new faceapi.TinyFaceDetectorOptions({ inputSize: 416, scoreThreshold: 0.7 })
+            ).withFaceExpressions();
+            
+            if (detections.length > 0) {
+              const expressions = detections[0].expressions;
+              dominantExpression = Object.keys(expressions).reduce((a, b) => 
+                expressions[a] > expressions[b] ? a : b
+              );
+            }
           }
         }
 
@@ -507,13 +540,13 @@ const HumanDetectionFullStage = () => {
         setHandCount(handsFound);
         setFaceCount(facesFound);
 
-        await drawAISkeletonVisualization(validPoses);
+        await drawAISkeletonVisualization(validPoses.slice(0, 1)); // Only draw first pose
 
         window.humanDetectionData = {
           handCount: handsFound,
           peopleCount: detectedPeople,
           faceCount: facesFound,
-          poses: validPoses,
+          poses: validPoses.slice(0, 1), // Only keep first pose
           timestamp: Date.now(),
           cameraActive: cameraStarted,
           dominantExpression: dominantExpression,
@@ -584,7 +617,7 @@ const HumanDetectionFullStage = () => {
         borderRadius: '12px',
         overflow: 'hidden',
         border: 'none',
-        opacity: videoOpacity / 100, // Apply opacity to the container
+        opacity: videoOpacity / 100,
       }}
     >
       <video

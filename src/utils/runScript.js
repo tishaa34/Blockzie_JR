@@ -78,61 +78,144 @@ function playFrequencySound(frequency = 440, duration = 300) {
   });
 }
 
-// FIXED: Simple obstacle detection using dispatch to get fresh state
-function checkForObstacle(actor, direction, dispatch, currentSceneData) {
+// IMPROVED: Better Redux store access for obstacle detection
+function getCurrentSceneData(dispatch) {
   try {
-    // Use the scene data passed from the run function
-    if (!currentSceneData || !currentSceneData.actors) {
-      console.log("🚧 No scene data available");
-      return false;
+    // Method 1: Try to access store from the dispatch function context
+    if (dispatch && dispatch.getState) {
+      const state = dispatch.getState();
+      return state.scene?.scenes?.[state.scene?.currentSceneIndex];
     }
-    
-    // Calculate next position
-    let nextX = actor.x;
-    let nextY = actor.y;
-    
-    switch (direction) {
-      case 'right': nextX = actor.x + 1; break;
-      case 'left': nextX = actor.x - 1; break;
-      case 'up': nextY = actor.y - 1; break;
-      case 'down': nextY = actor.y + 1; break;
-    }
-    
-    console.log(`🚧 Checking ${direction}: (${actor.x},${actor.y}) -> (${nextX},${nextY})`);
-    
-    // Check boundaries (20x15 grid)
-    if (nextX < 0 || nextX >= 20 || nextY < 0 || nextY >= 15) {
-      console.log(`🚧 WALL OBSTACLE at (${nextX},${nextY})`);
-      return true;
-    }
-    
-    // Check for other visible actors
-    const otherActors = currentSceneData.actors.filter(a => 
-      a.id !== actor.id && 
-      a.visible !== false
-    );
-    
-    console.log(`🚧 Checking against ${otherActors.length} other actors:`);
-    
-    for (const otherActor of otherActors) {
-      console.log(`🚧   - "${otherActor.name || 'Actor'}" at (${otherActor.x},${otherActor.y})`);
-      
-      // Check if positions overlap (same grid cell)
-      if (Math.floor(otherActor.x) === Math.floor(nextX) && 
-          Math.floor(otherActor.y) === Math.floor(nextY)) {
-        console.log(`🚧 ❌ SPRITE COLLISION! "${otherActor.name || 'Actor'}" blocks move to (${nextX},${nextY})`);
-        return true;
+
+    // Method 2: Try various global store access patterns
+    const possibleStores = [
+      window.__REDUX_STORE__,
+      window.reduxStore,
+      window.store,
+      window.__store__
+    ];
+
+    for (const store of possibleStores) {
+      if (store && store.getState) {
+        const state = store.getState();
+        const currentScene = state.scene?.scenes?.[state.scene?.currentSceneIndex];
+        if (currentScene) {
+          console.log(`🚧 Found scene data via global store:`, {
+            actors: currentScene.actors?.length || 0,
+            obstacles: currentScene.obstacles?.length || 0
+          });
+          return currentScene;
+        }
       }
     }
+
+    console.warn("🚧 No Redux store found - obstacle detection will be skipped");
+    return null;
+  } catch (err) {
+    console.error("🚧 Error accessing scene data:", err);
+    return null;
+  }
+}
+
+// FIXED: Predictive collision detection - prevents movement into obstacles
+function checkForObstacle(actor, direction, dispatch, currentSceneData) {
+  try {
+    console.log(`🚧 === OBSTACLE CHECK START ===`);
+    console.log(`🚧 Actor "${actor.name || actor.id}" at (${actor.x}, ${actor.y}) wants to move ${direction}`);
+
+    // Use the scene data passed from the run function
+    if (!currentSceneData || !currentSceneData.actors) {
+      console.log("🚧 ❌ No scene data available - skipping obstacle check");
+      return false;
+    }
+
+    console.log(`🚧 Scene data:`, {
+      actors: currentSceneData.actors?.length || 0,
+      obstacles: currentSceneData.obstacles?.length || 0,
+      background: currentSceneData.background
+    });
     
-    console.log("🚧 ✅ Path is clear");
+    // Get current sprite position (rounded to grid)
+    const currentX = Math.round(actor.x);
+    const currentY = Math.round(actor.y);
+    
+    // Calculate WHERE the sprite WANTS TO MOVE (next position)
+    let targetX = currentX;
+    let targetY = currentY;
+    
+    switch (direction) {
+      case 'right': targetX = currentX + 1; break;
+      case 'left': targetX = currentX - 1; break;
+      case 'up': targetY = currentY - 1; break;
+      case 'down': targetY = currentY + 1; break;
+    }
+    
+    console.log(`🚧 Current grid position: (${currentX}, ${currentY})`);
+    console.log(`🚧 Target grid position: (${targetX}, ${targetY})`);
+    
+    // Check boundaries (20x15 grid)
+    if (targetX < 0 || targetX >= 20 || targetY < 0 || targetY >= 15) {
+      console.log(`🚧 ❌ WALL BOUNDARY! Cannot move to (${targetX},${targetY})`);
+      return true;
+    }
+
+    // NEW: Check if target position contains an obstacle
+    if (currentSceneData.obstacles && currentSceneData.obstacles.length > 0) {
+      console.log(`🚧 Checking ${currentSceneData.obstacles.length} obstacles:`);
+      for (const obstacle of currentSceneData.obstacles) {
+        const obstacleX = Math.round(obstacle.x);
+        const obstacleY = Math.round(obstacle.y);
+        
+        console.log(`🚧 - Obstacle "${obstacle.shape}" at grid (${obstacleX}, ${obstacleY})`);
+
+        // CRITICAL: Check if target position is occupied by obstacle
+        if (targetX === obstacleX && targetY === obstacleY) {
+          console.log(`🚧 ❌ OBSTACLE BLOCKS MOVEMENT! "${obstacle.shape}" is at target position (${targetX},${targetY})`);
+          return true; // Block movement BEFORE it happens
+        }
+      }
+      console.log(`🚧 ✅ Target position (${targetX}, ${targetY}) is clear of obstacles`);
+    } else {
+      console.log(`🚧 No obstacles in scene`);
+    }
+    
+    // Check for other visible actors at target position
+    if (currentSceneData.actors && currentSceneData.actors.length > 0) {
+      const otherActors = currentSceneData.actors.filter(a => 
+        a.id !== actor.id && 
+        a.visible !== false
+      );
+      
+      console.log(`🚧 Checking ${otherActors.length} other actors:`);
+      
+      for (const otherActor of otherActors) {
+        const otherX = Math.round(otherActor.x);
+        const otherY = Math.round(otherActor.y);
+        
+        console.log(`🚧 - "${otherActor.name || 'Actor'}" at grid (${otherX},${otherY})`);
+        
+        // Check if target position is occupied by another actor
+        if (targetX === otherX && targetY === otherY) {
+          console.log(`🚧 ❌ ACTOR BLOCKS MOVEMENT! "${otherActor.name || 'Actor'}" is at target position (${targetX},${targetY})`);
+          return true;
+        }
+      }
+      console.log(`🚧 ✅ Target position (${targetX}, ${targetY}) is clear of other actors`);
+    } else {
+      console.log(`🚧 No other actors to check`);
+    }
+    
+    console.log("🚧 ✅ Movement allowed - target position is clear");
+    console.log(`🚧 === OBSTACLE CHECK END ===`);
     return false;
     
   } catch (err) {
-    console.error("Error in obstacle detection:", err);
+    console.error("🚧 Error in obstacle detection:", err);
     return false;
   }
 }
+
+
 
 // UPDATED: Helper for Pop sound with multiple fallbacks
 async function playPopSound(sounds) {
@@ -248,7 +331,7 @@ const isPointing = (direction) => {
   }
 };
 
-// MAIN: exported async run function - BACK TO ORIGINAL SIGNATURE (no currentScene parameter)
+// MAIN: exported async run function with obstacle collision detection
 export async function run(actor, dispatch, sounds, selectedActorId) {
   if (!actor) {
     console.warn("run() called with no actor!");
@@ -263,6 +346,7 @@ export async function run(actor, dispatch, sounds, selectedActorId) {
   const loops = [];
   const targetActorId = selectedActorId || actor.id;
   let currentSpeedMultiplier = 1;
+  let obstacleCollisionDetected = false; // NEW: Flag to track obstacle collision
 
   console.log("🚀 Starting script execution with", actor.scripts.length, "blocks");
   console.log("🔊 Available sounds:", sounds);
@@ -281,6 +365,12 @@ export async function run(actor, dispatch, sounds, selectedActorId) {
   try {
     for (let i = 0; i < actor.scripts.length; i++) {
       const b = actor.scripts[i];
+
+      // NEW: Check if obstacle collision was detected and stop execution
+      if (obstacleCollisionDetected) {
+        console.log(`🚧 🛑 SCRIPT EXECUTION STOPPED DUE TO OBSTACLE COLLISION`);
+        break;
+      }
 
       if (stopIndex !== -1 && i === stopIndex) {
         console.log(`🛑 EXECUTION STOPPED at block ${i}`);
@@ -325,6 +415,21 @@ export async function run(actor, dispatch, sounds, selectedActorId) {
       switch (blockIdentifier) {
         case 'Move Right':
           for (let k = 0; k < c; k++) {
+            // NEW: Get current scene data and check for obstacles before moving
+            const currentScene = getCurrentSceneData(dispatch);
+            
+            // FIXED: Only check obstacles if scene data is available
+            if (currentScene) {
+              if (checkForObstacle(actor, 'right', dispatch, currentScene)) {
+                console.log(`🚧 ❌ OBSTACLE DETECTED! Playing alert sound and stopping execution.`);
+                await playFrequencySound(600, 800);
+                obstacleCollisionDetected = true;
+                break;
+              }
+            } else {
+              console.log(`🚧 ⚠️ Scene data not available, proceeding without obstacle check`);
+            }
+
             dispatch(moveActor({ actorId: actor.id, dx: 1, dy: 0, fromScript: true }));
             await delay(180, currentSpeedMultiplier);
           }
@@ -332,6 +437,18 @@ export async function run(actor, dispatch, sounds, selectedActorId) {
 
         case 'Move Left':
           for (let k = 0; k < c; k++) {
+            const currentScene = getCurrentSceneData(dispatch);
+            if (currentScene) {
+              if (checkForObstacle(actor, 'left', dispatch, currentScene)) {
+                console.log(`🚧 ❌ OBSTACLE DETECTED! Playing alert sound and stopping execution.`);
+                await playFrequencySound(600, 800);
+                obstacleCollisionDetected = true;
+                break;
+              }
+            } else {
+              console.log(`🚧 ⚠️ Scene data not available, proceeding without obstacle check`);
+            }
+
             dispatch(moveActor({ actorId: actor.id, dx: -1, dy: 0, fromScript: true }));
             await delay(180, currentSpeedMultiplier);
           }
@@ -339,6 +456,18 @@ export async function run(actor, dispatch, sounds, selectedActorId) {
 
         case 'Move Up':
           for (let k = 0; k < c; k++) {
+            const currentScene = getCurrentSceneData(dispatch);
+            if (currentScene) {
+              if (checkForObstacle(actor, 'up', dispatch, currentScene)) {
+                console.log(`🚧 ❌ OBSTACLE DETECTED! Playing alert sound and stopping execution.`);
+                await playFrequencySound(600, 800);
+                obstacleCollisionDetected = true;
+                break;
+              }
+            } else {
+              console.log(`🚧 ⚠️ Scene data not available, proceeding without obstacle check`);
+            }
+
             dispatch(moveActor({ actorId: actor.id, dx: 0, dy: -1, fromScript: true }));
             await delay(120, currentSpeedMultiplier);
             dispatch(moveActor({ actorId: actor.id, dx: 0, dy: 2, fromScript: true }));
@@ -348,6 +477,18 @@ export async function run(actor, dispatch, sounds, selectedActorId) {
 
         case 'Move Down':
           for (let k = 0; k < c; k++) {
+            const currentScene = getCurrentSceneData(dispatch);
+            if (currentScene) {
+              if (checkForObstacle(actor, 'down', dispatch, currentScene)) {
+                console.log(`🚧 ❌ OBSTACLE DETECTED! Playing alert sound and stopping execution.`);
+                await playFrequencySound(600, 800);
+                obstacleCollisionDetected = true;
+                break;
+              }
+            } else {
+              console.log(`🚧 ⚠️ Scene data not available, proceeding without obstacle check`);
+            }
+
             dispatch(moveActor({ actorId: actor.id, dx: 0, dy: 1, fromScript: true }));
             await delay(180, currentSpeedMultiplier);
           }
@@ -377,6 +518,15 @@ export async function run(actor, dispatch, sounds, selectedActorId) {
 
         case 'Pointing Up':
           if (isPointing('up')) {
+            const currentScene = getCurrentSceneData(dispatch);
+            if (currentScene) {
+              if (checkForObstacle(actor, 'up', dispatch, currentScene)) {
+                console.log(`🚧 ❌ OBSTACLE DETECTED! Playing alert sound and stopping execution.`);
+                await playFrequencySound(600, 800);
+                obstacleCollisionDetected = true;
+                break;
+              }
+            }
             dispatch(moveActor({ actorId: actor.id, dx: 0, dy: -1, fromScript: true }));
             await delay(180, currentSpeedMultiplier);
           }
@@ -384,6 +534,15 @@ export async function run(actor, dispatch, sounds, selectedActorId) {
 
         case 'Pointing Down':
           if (isPointing('down')) {
+            const currentScene = getCurrentSceneData(dispatch);
+            if (currentScene) {
+              if (checkForObstacle(actor, 'down', dispatch, currentScene)) {
+                console.log(`🚧 ❌ OBSTACLE DETECTED! Playing alert sound and stopping execution.`);
+                await playFrequencySound(600, 800);
+                obstacleCollisionDetected = true;
+                break;
+              }
+            }
             dispatch(moveActor({ actorId: actor.id, dx: 0, dy: 1, fromScript: true }));
             await delay(180, currentSpeedMultiplier);
           }
@@ -391,6 +550,15 @@ export async function run(actor, dispatch, sounds, selectedActorId) {
 
         case 'Pointing Left':
           if (isPointing('left')) {
+            const currentScene = getCurrentSceneData(dispatch);
+            if (currentScene) {
+              if (checkForObstacle(actor, 'left', dispatch, currentScene)) {
+                console.log(`🚧 ❌ OBSTACLE DETECTED! Playing alert sound and stopping execution.`);
+                await playFrequencySound(600, 800);
+                obstacleCollisionDetected = true;
+                break;
+              }
+            }
             dispatch(moveActor({ actorId: actor.id, dx: -1, dy: 0, fromScript: true }));
             await delay(180, currentSpeedMultiplier);
           }
@@ -398,6 +566,15 @@ export async function run(actor, dispatch, sounds, selectedActorId) {
 
         case 'Pointing Right':
           if (isPointing('right')) {
+            const currentScene = getCurrentSceneData(dispatch);
+            if (currentScene) {
+              if (checkForObstacle(actor, 'right', dispatch, currentScene)) {
+                console.log(`🚧 ❌ OBSTACLE DETECTED! Playing alert sound and stopping execution.`);
+                await playFrequencySound(600, 800);
+                obstacleCollisionDetected = true;
+                break;
+              }
+            }
             dispatch(moveActor({ actorId: actor.id, dx: 1, dy: 0, fromScript: true }));
             await delay(180, currentSpeedMultiplier);
           }
@@ -496,7 +673,11 @@ export async function run(actor, dispatch, sounds, selectedActorId) {
       await delay(80, currentSpeedMultiplier);
     }
 
-    console.log("✅ Script execution completed normally");
+    if (obstacleCollisionDetected) {
+      console.log("🚧 ❌ Script execution terminated due to obstacle collision");
+    } else {
+      console.log("✅ Script execution completed normally");
+    }
   } catch (error) {
     console.error("Script execution error:", error);
     throw error;
