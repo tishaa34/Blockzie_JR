@@ -12,11 +12,83 @@ const PREVIEW_WIDTH = STAGE_WIDTH * SCALE;
 const PREVIEW_HEIGHT = STAGE_HEIGHT * SCALE;
 const CELL_SIZE = GRID_SIZE * SCALE;
 
-
 export default function SceneManager() {
   const dispatch = useDispatch();
   const { scenes, currentSceneIndex } = useSelector((state) => state.scene);
   const basePath = "./assets/";
+
+  // Obstacle renderer for preview
+  const renderObstaclePreview = (obstacle) => {
+    const size = CELL_SIZE * 2; // Obstacles are 2 cells in preview
+    
+    let obstacleElement;
+    switch (obstacle.shape) {
+      case 'square':
+        obstacleElement = (
+          <div
+            style={{
+              width: size,
+              height: size,
+              backgroundColor: '#4a90e2',
+              borderRadius: '2px',
+            }}
+          />
+        );
+        break;
+      case 'triangle':
+        obstacleElement = (
+          <div
+            style={{
+              width: 0,
+              height: 0,
+              borderLeft: `${size/2}px solid transparent`,
+              borderRight: `${size/2}px solid transparent`,
+              borderBottom: `${size}px solid #28a745`,
+            }}
+          />
+        );
+        break;
+      case 'circle':
+        obstacleElement = (
+          <div
+            style={{
+              width: size,
+              height: size,
+              backgroundColor: '#ffc107',
+              borderRadius: '50%',
+            }}
+          />
+        );
+        break;
+      default:
+        obstacleElement = (
+          <div
+            style={{
+              width: size,
+              height: size,
+              backgroundColor: '#6c757d',
+              borderRadius: '2px',
+            }}
+          />
+        );
+    }
+
+    return (
+      <div
+        key={obstacle.id}
+        className="scene-thumb-obstacle"
+        style={{
+          position: 'absolute',
+          left: obstacle.x * CELL_SIZE,
+          top: obstacle.y * CELL_SIZE,
+          transform: 'translate(-50%, -50%)',
+          pointerEvents: 'none',
+        }}
+      >
+        {obstacleElement}
+      </div>
+    );
+  };
 
   return (
     <div className="scene-manager-xscroll">
@@ -51,6 +123,10 @@ export default function SceneManager() {
                 boxSizing: "border-box"
               }}
             >
+              {/* Render obstacles in preview */}
+              {scene.obstacles?.map(renderObstaclePreview)}
+              
+              {/* Render actors in preview */}
               {scene.actors?.map(actor => {
                 if (actor.visible === false) return null;
                 const actorSize = 5 * CELL_SIZE * (actor.size || 1)

@@ -1,6 +1,6 @@
 import React, { useState, useRef } from "react";
 import { useSelector, useDispatch} from "react-redux";
-import { moveActor, pushUndoState } from "../../store/sceneSlice";
+import { moveActor, moveObstacle, pushUndoState } from "../../store/sceneSlice";
 import { run } from "../../utils/runScript";
 import "../../css/Stage.css";
 
@@ -21,13 +21,15 @@ export default function Stage({
   const { scenes, currentSceneIndex } = useSelector((s) => s.scene);
   const scene  = scenes[currentSceneIndex];
   const actors = scene?.actors ?? [];
-  // const store  = useStore();
+  const obstacles = scene?.obstacles ?? []; // Add obstacles
+  
   // drag refs/state
   const containerRef  = useRef(null);
   const draggingRef   = useRef(false);   // live "am I dragging?"
   const movedRef      = useRef(false);   // remembers if threshold crossed
 
   const [draggedId,     setDraggedId]   = useState(null);
+  const [draggedType,   setDraggedType] = useState(null); // 'actor' or 'obstacle'
   const [dragStartPos,  setDragStart]   = useState({ x: 0, y: 0 });
   const [dragOffset,    setDragOffset]  = useState({ x: 0, y: 0 });
   const [dragPosition,  setDragPos]     = useState({ x: 0, y: 0 });
@@ -91,18 +93,21 @@ export default function Stage({
   }
 
   /* -------- drag handlers -------- */
-  function onDragStart(e, actor) {
+  function onDragStart(e, item, type) {
     e.preventDefault();
     if (!containerRef.current) return;
     const rect = containerRef.current.getBoundingClientRect();
-    const actorLeft = (actor.x + 0.5) * CELL_SIZE;
-    const actorTop  = (actor.y + 0.5) * CELL_SIZE;
+    const itemLeft = (item.x + 0.5) * CELL_SIZE;
+    const itemTop  = (item.y + 0.5) * CELL_SIZE;
     const clientX   = e.clientX ?? e.touches[0].clientX;
     const clientY   = e.clientY ?? e.touches[0].clientY;
-    setDraggedId(actor.id);
-    setSelectedActorId(actor.id);
-    setDragOffset({ x: clientX - rect.left - actorLeft, y: clientY - rect.top - actorTop });
-    setDragPos({ x: actorLeft, y: actorTop });
+    setDraggedId(item.id);
+    setDraggedType(type);
+    if (type === 'actor') {
+      setSelectedActorId(item.id);
+    }
+    setDragOffset({ x: clientX - rect.left - itemLeft, y: clientY - rect.top - itemTop });
+    setDragPos({ x: itemLeft, y: itemTop });
     setDragStart({ x: clientX, y: clientY });
     draggingRef.current = false;
     movedRef.current    = false;
@@ -137,17 +142,27 @@ export default function Stage({
       const pos = stageCoords(clientX, clientY);
       const gridX = Math.round(pos.x / CELL_SIZE - 0.5);
       const gridY = Math.round(pos.y / CELL_SIZE - 0.5);
-      const actor = actors.find((a) => a.id === draggedId);
-      if (actor && (gridX !== actor.x || gridY !== actor.y)) {
-        dispatch(pushUndoState());
-        dispatch(moveActor({ actorId: actor.id, dx: gridX - actor.x, dy: gridY - actor.y }));
-        // Check for Start On Bump after move
-        const bumpedActor = { ...actor, x: gridX, y: gridY }; // simulate new position
-        checkForStartOnBump(bumpedActor);
+      
+      if (draggedType === 'actor') {
+        const actor = actors.find((a) => a.id === draggedId);
+        if (actor && (gridX !== actor.x || gridY !== actor.y)) {
+          dispatch(pushUndoState());
+          dispatch(moveActor({ actorId: actor.id, dx: gridX - actor.x, dy: gridY - actor.y }));
+          // Check for Start On Bump after move
+          const bumpedActor = { ...actor, x: gridX, y: gridY }; // simulate new position
+          checkForStartOnBump(bumpedActor);
+        }
+      } else if (draggedType === 'obstacle') {
+        const obstacle = obstacles.find((o) => o.id === draggedId);
+        if (obstacle && (gridX !== obstacle.x || gridY !== obstacle.y)) {
+          dispatch(pushUndoState());
+          dispatch(moveObstacle({ obstacleId: obstacle.id, dx: gridX - obstacle.x, dy: gridY - obstacle.y }));
+        }
       }
     }
     draggingRef.current = false;
     setDraggedId(null);
+    setDraggedType(null);
     setDragOffset({ x: 0, y: 0 });
     setDragPos({ x: 0, y: 0 });
     window.removeEventListener("mousemove", onDragMove);
@@ -172,6 +187,87 @@ export default function Stage({
         console.error("tap-script error:", err)
       );
     }
+  };
+
+  /* -------- obstacle renderer -------- */
+  const renderObstacle = (obstacle) => {
+    const isDragged = draggedId === obstacle.id && draggedType === 'obstacle' && draggingRef.current;
+    const left = isDragged ? dragPosition.x : (obstacle.x + 0.5) * CELL_SIZE;
+    const top = isDragged ? dragPosition.y : (obstacle.y + 0.5) * CELL_SIZE;
+    const size = CELL_SIZE * 2; // Obstacles are 2 cells in size
+
+    let obstacleElement;
+    switch (obstacle.shape) {
+      case 'square':
+        obstacleElement = (
+          <div
+            style={{
+              width: size,
+              height: size,
+              backgroundColor: '#4a90e2',
+              borderRadius: '4px',
+            }}
+          />
+        );
+        break;
+      case 'triangle':
+        obstacleElement = (
+          <div
+            style={{
+              width: 0,
+              height: 0,
+              borderLeft: `${size/2}px solid transparent`,
+              borderRight: `${size/2}px solid transparent`,
+              borderBottom: `${size}px solid #28a745`,
+            }}
+          />
+        );
+        break;
+      case 'circle':
+        obstacleElement = (
+          <div
+            style={{
+              width: size,
+              height: size,
+              backgroundColor: '#ffc107',
+              borderRadius: '50%',
+            }}
+          />
+        );
+        break;
+      default:
+        obstacleElement = (
+          <div
+            style={{
+              width: size,
+              height: size,
+              backgroundColor: '#6c757d',
+              borderRadius: '4px',
+            }}
+          />
+        );
+    }
+
+    return (
+      <div
+        key={obstacle.id}
+        className="obstacle"
+        onMouseDown={(e) => onDragStart(e, obstacle, 'obstacle')}
+        onTouchStart={(e) => onDragStart(e, obstacle, 'obstacle')}
+        style={{
+          position: 'absolute',
+          left,
+          top,
+          transform: 'translate(-50%, -50%)',
+          cursor: 'grab',
+          transition: isDragged ? 'none' : 'left 0.1s linear, top 0.1s linear',
+          zIndex: 2,
+          userSelect: 'none',
+        }}
+      >
+        {obstacleElement}
+      </div>
+    );
   };
 
   /* -------- render -------- */
@@ -214,9 +310,13 @@ export default function Stage({
         </div>
       )}
 
+      {/* Render obstacles */}
+      {obstacles.map(renderObstacle)}
+
+      {/* Render actors */}
       {actors.map((actor) => {
         if (actor.visible === false) return null;
-        const isDragged  = draggedId === actor.id && draggingRef.current;
+        const isDragged  = draggedId === actor.id && draggedType === 'actor' && draggingRef.current;
         const left = isDragged ? dragPosition.x : (actor.x + 0.5) * CELL_SIZE;
         const top  = isDragged ? dragPosition.y : (actor.y + 0.5) * CELL_SIZE;
         const size = CELL_SIZE * 4 * (actor.size || 1);
@@ -228,8 +328,8 @@ export default function Stage({
             alt={actor.name}
             draggable={false}
             className={`actor${isSelected ? " selected" : ""}`}
-            onMouseDown={(e) => onDragStart(e, actor)}
-            onTouchStart={(e) => onDragStart(e, actor)}
+            onMouseDown={(e) => onDragStart(e, actor, 'actor')}
+            onTouchStart={(e) => onDragStart(e, actor, 'actor')}
             onClick={(e) => handleActorTap(actor, e)}
             style={{
               position: "absolute",

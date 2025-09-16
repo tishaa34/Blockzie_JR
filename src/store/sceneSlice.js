@@ -1,12 +1,15 @@
 import { createSlice, nanoid } from '@reduxjs/toolkit';
 
+
 // Grid constants must match Stage.js
 const GRID_WIDTH = 20;
 const GRID_HEIGHT = 15;
 
+
 // Center indices are integer grid cells (Stage places at (x+0.5, y+0.5) cells)
 const CENTER_X = Math.floor(GRID_WIDTH / 2);
 const CENTER_Y = Math.floor(GRID_HEIGHT / 2);
+
 
 // Default starter actor
 const makeDefaultstem = () => ({
@@ -22,14 +25,17 @@ const makeDefaultstem = () => ({
   visible: true,
 });
 
+
 // Default scene
 const makeDefaultScene = () => ({
   id: nanoid(),
   background: '#ffffff',
   actors: [makeDefaultstem()],
+  obstacles: [], // Add obstacles array to default scene
   undoStack: [],
   redoStack: [],
 });
+
 
 const initialState = {
   scenes: [makeDefaultScene()],
@@ -54,8 +60,10 @@ const initialState = {
   videoOpacity: 100, // NEW: Add video opacity state with a default of 100%
 };
 
+
 // Safe deep clone for undo
 const deepClone = (obj) => JSON.parse(JSON.stringify(obj));
+
 
 const sceneSlice = createSlice({
   name: 'scene',
@@ -71,6 +79,7 @@ const sceneSlice = createSlice({
       state.sceneRedoStack = [];
     },
 
+
     undoSceneAction(state) {
       if (!state.sceneUndoStack.length) return;
       const prev = state.sceneUndoStack.pop();
@@ -81,6 +90,7 @@ const sceneSlice = createSlice({
       state.scenes = prev.scenes;
       state.currentSceneIndex = prev.currentSceneIndex;
     },
+
 
     redoSceneAction(state) {
       if (!state.sceneRedoStack.length) return;
@@ -93,14 +103,17 @@ const sceneSlice = createSlice({
       state.currentSceneIndex = next.currentSceneIndex;
     },
 
+
     // UI state
     setSelectedBlockCategory(state, action) {
       state.selectedBlockCategory = action.payload;
     },
 
+
     toggleCategoryPanel(state) {
       state.categoryPanelOpen = !state.categoryPanelOpen;
     },
+
 
     // Per-scene undo/redo (actors/background changes)
     pushUndoState(state) {
@@ -111,6 +124,7 @@ const sceneSlice = createSlice({
       scene.redoStack = [];
     },
 
+
     undoLastAction(state) {
       const scene = state.scenes[state.currentSceneIndex];
       if (!scene?.undoStack?.length) return;
@@ -118,7 +132,9 @@ const sceneSlice = createSlice({
       scene.redoStack.push(deepClone(scene));
       scene.actors = previous.actors;
       scene.background = previous.background;
+      scene.obstacles = previous.obstacles || []; // Include obstacles in undo
     },
+
 
     redoLastAction(state) {
       const scene = state.scenes[state.currentSceneIndex];
@@ -127,7 +143,9 @@ const sceneSlice = createSlice({
       scene.undoStack.push(deepClone(scene));
       scene.actors = next.actors;
       scene.background = next.background;
+      scene.obstacles = next.obstacles || []; // Include obstacles in redo
     },
+
 
     // Scene CRUD
     addScene(state) {
@@ -135,16 +153,19 @@ const sceneSlice = createSlice({
       state.currentSceneIndex = state.scenes.length - 1;
     },
 
+
     removeScene(state, action) {
       const idx = action.payload;
       if (state.scenes.length <= 1) return;
       if (idx < 0 || idx >= state.scenes.length) return;
+
 
       state.sceneUndoStack.push({
         scenes: deepClone(state.scenes),
         currentSceneIndex: state.currentSceneIndex,
       });
       state.sceneRedoStack = [];
+
 
       state.scenes.splice(idx, 1);
       if (state.currentSceneIndex >= state.scenes.length) {
@@ -154,6 +175,7 @@ const sceneSlice = createSlice({
       }
     },
 
+
     switchScene(state, action) {
       const idx = action.payload;
       if (idx >= 0 && idx < state.scenes.length) {
@@ -161,14 +183,58 @@ const sceneSlice = createSlice({
       }
     },
 
+
+    // Obstacle actions
+    addObstacle(state, action) {
+      const { obstacle } = action.payload;
+      const currentScene = state.scenes[state.currentSceneIndex];
+      if (currentScene) {
+        if (!currentScene.obstacles) {
+          currentScene.obstacles = [];
+        }
+        currentScene.obstacles.push({
+          id: `obstacle-${Date.now()}-${Math.random()}`,
+          shape: obstacle.shape,
+          x: Math.floor(Math.random() * 18) + 1, // Random position within grid
+          y: Math.floor(Math.random() * 15) + 1,
+          ...obstacle
+        });
+      }
+    },
+
+    removeObstacle(state, action) {
+      const { obstacleId } = action.payload;
+      const currentScene = state.scenes[state.currentSceneIndex];
+      if (currentScene && currentScene.obstacles) {
+        currentScene.obstacles = currentScene.obstacles.filter(
+          obstacle => obstacle.id !== obstacleId
+        );
+      }
+    },
+
+    moveObstacle(state, action) {
+      const { obstacleId, dx, dy } = action.payload;
+      const currentScene = state.scenes[state.currentSceneIndex];
+      if (currentScene && currentScene.obstacles) {
+        const obstacle = currentScene.obstacles.find(o => o.id === obstacleId);
+        if (obstacle) {
+          obstacle.x += dx;
+          obstacle.y += dy;
+        }
+      }
+    },
+
+
     // Actors
     addActor(state, action) {
       const scene = state.scenes[state.currentSceneIndex];
       if (!scene) return;
 
+
       // Push per-scene undo
       scene.undoStack.push(deepClone(scene));
       scene.redoStack = [];
+
 
       const {
         id,
@@ -181,6 +247,7 @@ const sceneSlice = createSlice({
         height,
         scripts,
       } = action.payload || {};
+
 
       const actor = {
         id: id ?? nanoid(),
@@ -195,68 +262,84 @@ const sceneSlice = createSlice({
         visible: true,
       };
 
+
       scene.actors.push(actor);
     },
+
 
     removeActor(state, action) {
       const scene = state.scenes[state.currentSceneIndex];
       if (!scene) return;
       if (scene.actors.length <= 1) return;
 
+
       scene.undoStack.push(deepClone(scene));
       scene.redoStack = [];
+
 
       const targetId = action.payload.actorId;
       scene.actors = scene.actors.filter(a => a.id !== targetId);
     },
+
 
     moveActor(state, action) {
       const { actorId, dx, dy, fromScript } = action.payload;
       const scene = state.scenes[state.currentSceneIndex];
       if (!scene) return;
 
+
       const actor = scene.actors.find(a => a.id === actorId);
       if (!actor) return;
+
 
       if (!fromScript) {
         scene.undoStack.push(deepClone(scene));
         scene.redoStack = [];
       }
 
+
       actor.x = Math.min(Math.max(0, actor.x + dx), GRID_WIDTH - 1);
       actor.y = Math.min(Math.max(0, actor.y + dy), GRID_HEIGHT - 1);
     },
+
 
     rotateActor(state, action) {
       const { actorId, degrees, fromScript } = action.payload;
       const scene = state.scenes[state.currentSceneIndex];
       if (!scene) return;
 
+
       const actor = scene.actors.find(a => a.id === actorId);
       if (!actor) return;
+
 
       if (!fromScript) {
         scene.undoStack.push(deepClone(scene));
         scene.redoStack = [];
       }
+
 
       let newDir = (actor.direction + degrees) % 360;
       if (newDir < 0) newDir += 360;
       actor.direction = newDir;
     },
 
+
     scaleActor: (state, action) => {
       const { actorId, scale, fromScript } = action.payload;
       const scene = state.scenes[state.currentSceneIndex];
       if (!scene) return;
 
+
       const actor = scene.actors.find(a => a.id === actorId);
       if (!actor) return;
+
 
       if (!fromScript) {
         scene.undoStack.push(deepClone(scene));
         scene.redoStack = [];
       }
+
 
       const newSize = (actor.size || 1) * scale;
       const minSize = 0.5;
@@ -264,25 +347,31 @@ const sceneSlice = createSlice({
       actor.size = Math.min(Math.max(newSize, minSize), maxSize);
     },
 
+
     resetActorSize: (state, action) => {
       const { actorId, fromScript } = action.payload;
       const scene = state.scenes[state.currentSceneIndex];
       if (!scene) return;
 
+
       const actor = scene.actors.find(a => a.id === actorId);
       if (!actor) return;
+
 
       if (!fromScript) {
         scene.undoStack.push(deepClone(scene));
         scene.redoStack = [];
       }
 
+
       actor.size = 1;
     },
+
 
     disappearActor: (state, action) => {
       const scene = state.scenes[state.currentSceneIndex];
       if (!scene) return;
+
 
       const actor = scene.actors.find((a) => a.id === action.payload.actorId);
       if (actor) {
@@ -290,15 +379,18 @@ const sceneSlice = createSlice({
       }
     },
 
+
     reappearActor: (state, action) => {
       const scene = state.scenes[state.currentSceneIndex];
       if (!scene) return;
+
 
       const actor = scene.actors.find((a) => a.id === action.payload.actorId);
       if (actor) {
         actor.visible = true;
       }
     },
+
 
     // Background
     setBackground(state, action) {
@@ -308,6 +400,7 @@ const sceneSlice = createSlice({
       }
     },
 
+
     addBackgroundToGallery(state, action) {
       const url = action.payload;
       if (!state.backgroundGallery.includes(url)) {
@@ -315,9 +408,11 @@ const sceneSlice = createSlice({
       }
     },
 
+
     removeBackgroundFromGallery(state, action) {
       state.backgroundGallery = state.backgroundGallery.filter(bg => bg !== action.payload);
     },
+
 
     // Scripts - Updated to handle custom sounds and obstacle detection
     addBlockToScript(state, action) {
@@ -326,14 +421,17 @@ const sceneSlice = createSlice({
       const actor = scene?.actors.find(a => a.id === actorId);
       if (!actor) return;
 
+
       // Ensure only one start and one end
       if (block.category === 'start') {
         actor.scripts = actor.scripts.filter(b => b.category !== 'start');
       }
 
+
       if (block.category === 'end') {
         actor.scripts = actor.scripts.filter(b => b.category !== 'end');
       }
+
 
       const newBlock = {
         id: nanoid(),
@@ -350,6 +448,7 @@ const sceneSlice = createSlice({
         highFrequency: block.type === 'obstacle_sound' ? (block.highFrequency ?? 99) : undefined,
       };
 
+
       if (block.category === 'start') {
         actor.scripts.unshift(newBlock);
       } else if (block.category === 'end') {
@@ -357,6 +456,7 @@ const sceneSlice = createSlice({
       } else {
         const startIndex = actor.scripts.findIndex(b => b.category === 'start');
         const endIndex = actor.scripts.findIndex(b => b.category === 'end');
+
 
         if (startIndex !== -1 && endIndex !== -1) {
           actor.scripts.splice(endIndex, 0, newBlock);
@@ -366,15 +466,18 @@ const sceneSlice = createSlice({
       }
     },
 
+
     clearScript(state, action) {
       const scene = state.scenes[state.currentSceneIndex];
       const actor = scene?.actors.find(a => a.id === action.payload.actorId);
       if (!actor) return;
 
+
       scene.undoStack.push(deepClone(scene));
       scene.redoStack = [];
       actor.scripts = [];
     },
+
 
     updateBlockCount(state, action) {
       const { actorId, blockId, newCount, property = 'count' } = action.payload;
@@ -382,11 +485,13 @@ const sceneSlice = createSlice({
       const actor = scene?.actors.find(a => a.id === actorId);
       if (!actor) return;
 
+
       const block = actor.scripts.find(b => b.id === blockId);
       if (block) {
         block[property] = Math.min(Math.max(0, newCount), 100);
       }
     },
+
 
     // NEW: Update obstacle frequency properties
     updateObstacleFrequency(state, action) {
@@ -394,6 +499,7 @@ const sceneSlice = createSlice({
       const scene = state.scenes[state.currentSceneIndex];
       const actor = scene?.actors.find(a => a.id === actorId);
       if (!actor) return;
+
 
       const block = actor.scripts.find(b => b.id === blockId);
       if (block) {
@@ -405,6 +511,7 @@ const sceneSlice = createSlice({
         }
       }
     },
+
 
     updateCameraState: (state, action) => {
       const { actorId, blockId, cameraState } = action.payload;
@@ -418,9 +525,11 @@ const sceneSlice = createSlice({
       }
     },
 
+
     setCameraState: (state, action) => {
       state.globalCameraState = action.payload;
     },
+
 
     // Custom Sound Management - NEW REDUCERS
     addCustomSound(state, action) {
@@ -434,6 +543,7 @@ const sceneSlice = createSlice({
       };
       state.customSounds.push(customSound);
 
+
       // Limit to 10 custom sounds to prevent memory issues
       if (state.customSounds.length > 10) {
         const removedSound = state.customSounds.shift();
@@ -444,9 +554,11 @@ const sceneSlice = createSlice({
       }
     },
 
+
     removeCustomSound(state, action) {
       const soundId = action.payload;
       const soundIndex = state.customSounds.findIndex(sound => sound.id === soundId);
+
 
       if (soundIndex !== -1) {
         const removedSound = state.customSounds[soundIndex];
@@ -458,6 +570,7 @@ const sceneSlice = createSlice({
       }
     },
 
+
     clearAllCustomSounds(state) {
       // Clean up all object URLs
       state.customSounds.forEach(sound => {
@@ -468,6 +581,7 @@ const sceneSlice = createSlice({
       state.customSounds = [];
     },
 
+
     updateCustomSoundName(state, action) {
       const { soundId, newName } = action.payload;
       const sound = state.customSounds.find(s => s.id === soundId);
@@ -476,9 +590,11 @@ const sceneSlice = createSlice({
       }
     },
 
+
     setShowHumanDetection: (state, action) => {
       state.showHumanDetection = action.payload;
     },
+
 
     // NEW: Reducer to sync actors with faces
     syncActorsWithFaces: (state, action) => {
@@ -486,7 +602,9 @@ const sceneSlice = createSlice({
       const scene = state.scenes[state.currentSceneIndex];
       if (!scene) return;
 
+
       const currentActorCount = scene.actors.length;
+
 
       if (faceCount > currentActorCount) {
         // Add new actors if more faces are detected
@@ -501,10 +619,12 @@ const sceneSlice = createSlice({
       }
     },
 
+
     // NEW: Reducer to update video opacity
     setVideoOpacity: (state, action) => {
       state.videoOpacity = Math.min(Math.max(0, action.payload), 100);
     },
+
 
     overwrite(state, action) {
       const newState = action.payload;
@@ -526,6 +646,7 @@ const sceneSlice = createSlice({
     },
   },
 });
+
 
 export const {
   undoSceneAction,
@@ -563,6 +684,10 @@ export const {
   syncActorsWithFaces, // NEW: Export the new action
   overwrite,
   setCameraState,
+  addObstacle,
+  removeObstacle,
+  moveObstacle,
 } = sceneSlice.actions;
+
 
 export default sceneSlice.reducer;

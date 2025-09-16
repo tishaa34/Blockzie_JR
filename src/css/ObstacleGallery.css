@@ -1,0 +1,183 @@
+.obstacle-gallery-overlay {
+  position: fixed;
+  top: 0;
+  left: 0;
+  right: 0;
+  bottom: 0;
+  background: rgba(0, 0, 0, 0.5);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  z-index: 1000;
+}
+
+.obstacle-gallery {
+  background: white;
+  border-radius: 15px;
+  width: 400px;
+  max-width: 90vw;
+  max-height: 80vh;
+  box-shadow: 0 10px 30px rgba(0, 0, 0, 0.3);
+  overflow: hidden;
+}
+
+.obstacle-gallery-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  padding: 20px;
+  border-bottom: 1px solid #eee;
+  background: #f8f9fa;
+}
+
+.obstacle-gallery-header h3 {
+  margin: 0;
+  color: #333;
+  font-size: 18px;
+}
+
+.close-btn {
+  background: none;
+  border: none;
+  font-size: 24px;
+  cursor: pointer;
+  color: #666;
+  width: 30px;
+  height: 30px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  border-radius: 50%;
+  transition: all 0.2s ease;
+}
+
+.close-btn:hover {
+  background: #e9ecef;
+  color: #333;
+}
+
+.obstacle-gallery-content {
+  padding: 20px;
+}
+
+.obstacle-shapes {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(80px, 1fr));
+  gap: 15px;
+  margin-bottom: 20px;
+}
+
+.obstacle-item {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  padding: 15px;
+  border: 2px solid #ddd;
+  border-radius: 10px;
+  cursor: pointer;
+  transition: all 0.2s ease;
+  background: white;
+}
+
+.obstacle-item:hover {
+  border-color: #4a90e2;
+  background: rgba(74, 144, 226, 0.05);
+}
+
+.obstacle-item.selected {
+  border-color: #4a90e2;
+  background: rgba(74, 144, 226, 0.1);
+}
+
+.obstacle-item.delete-item {
+  border-color: #dc3545;
+}
+
+.obstacle-item.delete-item:hover {
+  border-color: #c82333;
+  background: rgba(220, 53, 69, 0.05);
+}
+
+.obstacle-shape {
+  width: 40px;
+  height: 40px;
+  margin-bottom: 8px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+
+.obstacle-shape.square {
+  background: #4a90e2;
+  border-radius: 4px;
+}
+
+.obstacle-shape.triangle {
+  width: 0;
+  height: 0;
+  border-left: 20px solid transparent;
+  border-right: 20px solid transparent;
+  border-bottom: 35px solid #28a745;
+  background: none;
+}
+
+.obstacle-shape.circle {
+  background: #ffc107;
+  border-radius: 50%;
+}
+
+.obstacle-shape.delete-cross {
+  background: #dc3545;
+  color: white;
+  border-radius: 50%;
+  font-size: 24px;
+  font-weight: bold;
+  line-height: 1;
+}
+
+.obstacle-item span {
+  font-size: 12px;
+  color: #666;
+  text-align: center;
+}
+
+.obstacle-gallery-footer {
+  display: flex;
+  justify-content: space-between;
+  padding: 20px;
+  background: #f8f9fa;
+  border-top: 1px solid #eee;
+}
+
+.cancel-btn, .add-btn {
+  padding: 10px 20px;
+  border: none;
+  border-radius: 8px;
+  cursor: pointer;
+  font-size: 14px;
+  font-weight: 500;
+  transition: all 0.2s ease;
+}
+
+.cancel-btn {
+  background: #6c757d;
+  color: white;
+}
+
+.cancel-btn:hover {
+  background: #5a6268;
+}
+
+.add-btn {
+  background: #28a745;
+  color: white;
+}
+
+.add-btn:hover:not(:disabled) {
+  background: #218838;
+}
+
+.add-btn:disabled {
+  background: #ccc;
+  cursor: not-allowed;
+}
