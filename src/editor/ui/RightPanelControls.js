@@ -2,7 +2,6 @@ import React, { useState } from "react";
 import { useSelector, useDispatch,  } from "react-redux";
 import { run } from "../../utils/runScript";
 import BackgroundGallery from "./BackgroundGallery"; // Import the new component
-import ObstacleGallery from "./ObstacleGallery"; // Import obstacle gallery
 import "../../css/RightPanelControls.css";
 
 export default function RightPanelControls({
@@ -20,8 +19,6 @@ export default function RightPanelControls({
 
   // Add state for background gallery modal
   const [backgroundModalOpen, setBackgroundModalOpen] = useState(false);
-  // Add state for obstacle gallery modal
-  const [obstacleModalOpen, setObstacleModalOpen] = useState(false);
 
   return (
     <>
@@ -39,10 +36,6 @@ export default function RightPanelControls({
         <button className="rp-btn" onClick={() => setBackgroundModalOpen(true)} title="Choose Background">
           <img src="./assets/ui/scene1.svg" alt="Background" />
         </button>
-        {/* New Obstacle Button */}
-        <button className="rp-btn" onClick={() => setObstacleModalOpen(true)} title="Add Obstacle">
-          <img src="./assets/ui/Obstacle.png" alt="Obstacle" />
-        </button>
         <button className="rp-btn" onClick={() => run(actor, dispatch, scene?.sounds, actor.id)} title="Green Flag">
           <img src="./assets/ui/go.svg" alt="Green Flag" />
         </button>
@@ -52,12 +45,6 @@ export default function RightPanelControls({
       <BackgroundGallery 
         open={backgroundModalOpen} 
         onClose={() => setBackgroundModalOpen(false)} 
-      />
-      
-      {/* Obstacle Gallery Modal */}
-      <ObstacleGallery 
-        open={obstacleModalOpen} 
-        onClose={() => setObstacleModalOpen(false)} 
       />
     </>
   );
