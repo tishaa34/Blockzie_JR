@@ -3,7 +3,6 @@ import { Provider, useDispatch, useSelector } from 'react-redux';
 import { useStore } from 'react-redux'
 import store from './store/store';
 import JSZip from 'jszip';
-
 import SceneManager from './editor/ui/SceneManager';
 import Stage from './editor/ui/Stage';
 import BlockPalette from './editor/blocks/Block';
@@ -16,6 +15,7 @@ import BackgroundGallery from './editor/ui/BackgroundGallery';
 import HeadingModal from './editor/ui/HeadingModal';
 import SplashScreen from './editor/ui/SplashScreen';
 import HumanDetectionFullStage from './editor/ui/HumanDetectionFullStage';
+import SimulatorModal from '../src/SimulatorView/SimulatorModal';
 
 import { clearScript, setShowHumanDetection } from './store/sceneSlice';
 
@@ -29,10 +29,18 @@ const demoActors = [
   },
 ];
 
+// SIMULATOR BACKGROUNDS - UPDATED WITH ACTUAL IMAGE PATHS
+const simulatorBackgrounds = [
+  './assets/backgrounds/bg1.svg',
+  './assets/backgrounds/bg2.svg',
+  './assets/backgrounds/bg3.svg',
+  './assets/backgrounds/bg4.svg'
+];
+
 function BlockzieJrShell() {
   const dispatch = useDispatch();
   const { scenes, currentSceneIndex } = useSelector(s => s.scene);
-  const showHumanDetection = useSelector(s => s.scene.showHumanDetection); // <-- Redux state
+  const showHumanDetection = useSelector(s => s.scene.showHumanDetection);
   const actorIdFromScene = scenes[currentSceneIndex]?.actors?.[0]?.id;
   const store = useStore();
   const [selectedActorId, setSelectedActorId] = useState(actorIdFromScene || demoActors[0]?.id);
@@ -45,7 +53,32 @@ function BlockzieJrShell() {
   const [showSplash, setShowSplash] = useState(true);
   const [splashMessage, setSplashMessage] = useState("Preparing, please wait...");
 
-   useEffect(() => {
+  // SIMULATOR STATE - UPDATED WITH BACKGROUND IMAGES
+  const [showSimulatorModal, setShowSimulatorModal] = useState(false);
+  const [currentBgIndex, setCurrentBgIndex] = useState(0);
+
+  // SIMULATOR FUNCTIONS
+  const openSimulator = () => {
+    console.log('🚀 Opening simulator...');
+    setShowSimulatorModal(true);
+  };
+
+  const closeSimulator = () => {
+    console.log('❌ Closing simulator...');
+    setShowSimulatorModal(false);
+  };
+
+  // BACKGROUND CHANGE FUNCTION - NOW CYCLES THROUGH IMAGES
+  const changeSimulatorBackground = () => {
+    console.log('🎨 BEFORE change - currentBgIndex:', currentBgIndex);
+    setCurrentBgIndex(prevIndex => {
+      const newIndex = (prevIndex + 1) % simulatorBackgrounds.length;
+      console.log('🎨 AFTER change - newIndex:', newIndex, 'Image:', simulatorBackgrounds[newIndex]);
+      return newIndex;
+    });
+  };
+
+  useEffect(() => {
     // Make Redux store globally accessible for runScript
     window.__REDUX_STORE__ = store;
     console.log('🚧 Redux store made globally accessible');
@@ -61,9 +94,15 @@ function BlockzieJrShell() {
     if (actorIdFromScene) setSelectedActorId(actorIdFromScene);
   }, [actorIdFromScene, currentSceneIndex]);
 
+  // DEBUG: Log background changes
+  useEffect(() => {
+    console.log('🎨 Background index changed to:', currentBgIndex, 'Image:', simulatorBackgrounds[currentBgIndex]);
+  }, [currentBgIndex]);
+
   const handleSplashComplete = () => {
     setShowSplash(false);
   };
+
 
   // Helper function to convert blob to base64 data URL (Electron-compatible)
   const blobToBase64 = (blob, filePath = '') => {
@@ -464,7 +503,6 @@ function BlockzieJrShell() {
     return <SplashScreen onComplete={handleSplashComplete} message={splashMessage} />;
   }
 
-
   return (
     <div className="sjr-root">
       {/* Top Navbar with simplified Toolbar */}
@@ -474,7 +512,7 @@ function BlockzieJrShell() {
           onSave={handleSave}
           onLoad={handleLoad}
           heading={heading}
-          onOpenHumanDetection={() => dispatch(setShowHumanDetection(true))} // Use Redux action
+          onOpenHumanDetection={() => dispatch(setShowHumanDetection(true))}
         />
       </header>
 
@@ -500,12 +538,23 @@ function BlockzieJrShell() {
         </section>
 
         <section className="stage-area-section">
-          <Stage
-            selectedActorId={selectedActorId}
-            setSelectedActorId={setSelectedActorId}
-            heading={heading}
-            showGrid={showGrid}
-          />
+          <div style={{ position: 'relative' }}>
+            <Stage
+              selectedActorId={selectedActorId}
+              setSelectedActorId={setSelectedActorId}
+              heading={heading}
+              showGrid={showGrid}
+            />
+
+            {/* SIMULATOR MODAL WITH CORRECT PROPS PASSING */}
+            {showSimulatorModal && (
+              <SimulatorModal
+                onClose={closeSimulator}
+                background={simulatorBackgrounds[currentBgIndex]}
+                onBackgroundChange={changeSimulatorBackground}
+              />
+            )}
+          </div>
         </section>
 
         <section className="right-panel-section">
@@ -515,6 +564,8 @@ function BlockzieJrShell() {
             onHeading={() => setHeadingModalOpen(true)}
             onGreenFlag={handleGreenFlag}
             selectedActorId={selectedActorId}
+            onSimulator={openSimulator} // Add this
+            onBackgroundChange={changeSimulatorBackground} // Add this
           />
 
           <div className="scene-manager-container">

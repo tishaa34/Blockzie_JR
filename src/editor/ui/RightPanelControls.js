@@ -1,8 +1,8 @@
 import React, { useState } from "react";
-import { useSelector, useDispatch, } from "react-redux";
+import { useSelector, useDispatch } from "react-redux";
 import { run } from "../../utils/runScript";
 import BackgroundGallery from "./BackgroundGallery";
-import SimulatorControls from "../../SimulatorView/SimulatorControl";
+import SimulatorControl from "../../SimulatorView/SimulatorControl";
 import SimulatorModal from "../../SimulatorView/SimulatorModal";
 import "../../css/RightPanelControls.css";
 import "../../css/SimulatorView.css";
@@ -12,7 +12,9 @@ export default function RightPanelControls({
   onGridToggle,
   onHeading,
   onGreenFlag,
-  selectedActorId
+  selectedActorId,
+  onSimulator, // Added this prop
+  onBackgroundChange // Added this prop
 }) {
   const dispatch = useDispatch();
   const { scenes, currentSceneIndex } = useSelector((s) => s.scene);
@@ -24,6 +26,9 @@ export default function RightPanelControls({
 
   const handleSimulatorToggle = () => {
     setSimulatorOpen(!simulatorOpen);
+    if (!simulatorOpen && onSimulator) {
+      onSimulator(); // Call the onSimulator prop when opening
+    }
   };
 
   return (
@@ -51,7 +56,7 @@ export default function RightPanelControls({
             </button>
           </>
         ) : (
-          <SimulatorControls />
+          <SimulatorControl onBackgroundChange={onBackgroundChange} />
         )}
       </div>
 
@@ -60,7 +65,12 @@ export default function RightPanelControls({
         onClose={() => setBackgroundModalOpen(false)}
       />
 
-      {simulatorOpen && <SimulatorModal onClose={handleSimulatorToggle} />}
+      {simulatorOpen && (
+        <SimulatorModal 
+          onClose={handleSimulatorToggle} 
+          onBackgroundChange={onBackgroundChange}
+        />
+      )}
     </>
   );
 }

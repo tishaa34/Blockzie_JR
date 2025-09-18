@@ -2,40 +2,36 @@ import React from 'react';
 import "../css/RightPanelControls.css";
 import "../css/SimulatorView.css";
 
-export default function SimulatorControls() {
+export default function SimulatorControls({ onBackgroundChange }) {
   const handleBackgroundSelection = () => {
     console.log("Background selection clicked");
-    // Add logic for background selection
+    if (onBackgroundChange) {
+      onBackgroundChange();
+    }
   };
 
   const handleDrawTailLine = () => {
     console.log("Draw tail line clicked");
-    // Add logic for drawing tail line
   };
 
   const handleUploadBackground = () => {
     console.log("Upload your own background clicked");
-    // Add logic for uploading a background
   };
 
   const handleSaveProject = () => {
     console.log("Save project clicked");
-    // Add logic for saving the project
   };
 
   const handleLoadProject = () => {
     console.log("Load project clicked");
-    // Add logic for loading a project
   };
 
   const handleObstacle = () => {
     console.log("Obstacle button clicked");
-    // Add logic for obstacle placement
   };
 
   const handleColoredArea = () => {
     console.log("Colored area button clicked");
-    // Add logic for colored area definition
   };
 
   return (

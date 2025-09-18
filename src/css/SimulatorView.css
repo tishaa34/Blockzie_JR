@@ -49,20 +49,23 @@
 }
 
 .simulator-close-btn::before {
-  content: "×";
+  /* content: "×"; */
   line-height: 1;
 }
 
 .simulator-stage-area {
   width: 100%;
   height: 100%;
-  background-color: #fff;
+  /* background-color: #fff;  ⛔ remove or comment this */
   border: none !important;
   border-radius: 0 !important;
   box-shadow: none !important;
   cursor: default;
   position: relative;
-  pointer-events: auto; /* Enable all interactions */
+  pointer-events: auto;
+  background-size: cover;       /* ✅ support images */
+  background-position: center;  /* ✅ center the image */
+  background-repeat: no-repeat; /* ✅ no tiling */
 }
 
 /* Ensure actors in simulator are fully interactive */

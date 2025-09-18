@@ -412,6 +412,34 @@ const sceneSlice = createSlice({
     removeBackgroundFromGallery(state, action) {
       state.backgroundGallery = state.backgroundGallery.filter(bg => bg !== action.payload);
     },
+    
+    // NEW REDUCER: Cycles to the next background in the gallery
+    cycleNextBackground(state) {
+      const scene = state.scenes[state.currentSceneIndex];
+      if (!scene) return;
+    
+      // 1. Push undo state for the scene (per-scene undo)
+      scene.undoStack.push(deepClone(scene));
+      if (scene.undoStack.length > 20) scene.undoStack.shift();
+      scene.redoStack = [];
+    
+      // 2. Get gallery and current background
+      const gallery = state.backgroundGallery;
+      const currentBg = scene.background;
+    
+      let currentIndex = gallery.findIndex(bg => bg === currentBg);
+    
+      // If the current background is not found in the gallery, start the cycle from the first background.
+      if (currentIndex === -1) {
+        currentIndex = -1;
+      }
+    
+      // 3. Calculate next index (circularly/cyclically)
+      const nextIndex = (currentIndex + 1) % gallery.length;
+    
+      // 4. Set the new background
+      scene.background = gallery[nextIndex];
+    },
 
 
     // Scripts - Updated to handle custom sounds and obstacle detection
@@ -671,17 +699,18 @@ export const {
   setBackground,
   addBackgroundToGallery,
   removeBackgroundFromGallery,
+  cycleNextBackground, // <--- NEW EXPORT
   addBlockToScript,
   clearScript,
   updateBlockCount,
-  updateObstacleFrequency, // NEW: Export the new action
+  updateObstacleFrequency,
   addCustomSound,
   removeCustomSound,
   clearAllCustomSounds,
   updateCustomSoundName,
   setShowHumanDetection,
-  setVideoOpacity, // NEW: Export the setVideoOpacity action
-  syncActorsWithFaces, // NEW: Export the new action
+  setVideoOpacity,
+  syncActorsWithFaces,
   overwrite,
   setCameraState,
   addObstacle,
