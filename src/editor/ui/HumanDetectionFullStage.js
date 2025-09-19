@@ -42,70 +42,70 @@ const HumanDetectionFullStage = () => {
     }
   }, []);
 
-const ngOnInit = useCallback(async () => {
-  if (modelsInitialized.current) return;
-
-  try {
-    setLoadingStatus('Setting up TensorFlow...');
-    console.log('🔄 Setting up TensorFlow...');
+  const ngOnInit = useCallback(async () => {
+    if (modelsInitialized.current) return;
 
     try {
-      await tf.setBackend('webgl');
-      console.log('✅ Using WebGL backend');
-    } catch (webglError) {
-      console.warn('WebGL not available, using CPU backend:', webglError);
-      await tf.setBackend('cpu');
+      setLoadingStatus('Setting up TensorFlow...');
+      console.log('🔄 Setting up TensorFlow...');
+
+      try {
+        await tf.setBackend('webgl');
+        console.log('✅ Using WebGL backend');
+      } catch (webglError) {
+        console.warn('WebGL not available, using CPU backend:', webglError);
+        await tf.setBackend('cpu');
+      }
+
+      await tf.ready();
+      console.log('✅ TensorFlow ready with backend:', tf.getBackend());
+
+      setLoadingStatus('Loading PoseNet model (ResNet50)...');
+      console.log('🔄 Loading PoseNet ResNet50 model...');
+
+      const poseModel = await posenet.load({
+        architecture: 'ResNet50',
+        outputStride: 32,
+        inputResolution: { width: 257, height: 257 },
+      });
+
+      setNet(poseModel);
+      console.log('✅ PoseNet model loaded successfully');
+
+      try {
+        setLoadingStatus('Loading Face Detection models (with age & gender)...');
+        console.log('🔄 Loading Face Detection models with age & gender...');
+
+        await faceapi.tf.setBackend(tf.getBackend());
+        await faceapi.tf.ready();
+
+        // UPDATED: Use HTTPS CDN instead of local models
+        const MODEL_URL = 'https://vladmandic.github.io/face-api/model';
+
+        await Promise.all([
+          faceapi.nets.tinyFaceDetector.loadFromUri(MODEL_URL),
+          faceapi.nets.faceLandmark68Net.loadFromUri(MODEL_URL),
+          faceapi.nets.faceExpressionNet.loadFromUri(MODEL_URL),
+          faceapi.nets.ageGenderNet.loadFromUri(MODEL_URL),
+        ]);
+
+        setFaceNet(true);
+        console.log('✅ Face Detection models (with age & gender) loaded successfully');
+      } catch (faceError) {
+        console.warn('Face detection models failed to load:', faceError);
+        setFaceNet(false);
+      }
+
+      modelsInitialized.current = true;
+      setLoadingStatus('All models loaded successfully');
+      console.log('✅ All AI models initialized successfully');
+
+    } catch (error) {
+      console.error('❌ Model loading error:', error);
+      setLoadingStatus(`Error: ${error.message}`);
+      modelsInitialized.current = false;
     }
-
-    await tf.ready();
-    console.log('✅ TensorFlow ready with backend:', tf.getBackend());
-
-    setLoadingStatus('Loading PoseNet model (ResNet50)...');
-    console.log('🔄 Loading PoseNet ResNet50 model...');
-
-    const poseModel = await posenet.load({
-      architecture: 'ResNet50',
-      outputStride: 32,
-      inputResolution: { width: 257, height: 257 },
-    });
-
-    setNet(poseModel);
-    console.log('✅ PoseNet model loaded successfully');
-
-    try {
-      setLoadingStatus('Loading Face Detection models (with age & gender)...');
-      console.log('🔄 Loading Face Detection models with age & gender...');
-
-      await faceapi.tf.setBackend(tf.getBackend());
-      await faceapi.tf.ready();
-
-      // UPDATED: Use HTTPS CDN instead of local models
-      const MODEL_URL = 'https://vladmandic.github.io/face-api/model';
-      
-      await Promise.all([
-        faceapi.nets.tinyFaceDetector.loadFromUri(MODEL_URL),
-        faceapi.nets.faceLandmark68Net.loadFromUri(MODEL_URL),
-        faceapi.nets.faceExpressionNet.loadFromUri(MODEL_URL),
-        faceapi.nets.ageGenderNet.loadFromUri(MODEL_URL),
-      ]);
-
-      setFaceNet(true);
-      console.log('✅ Face Detection models (with age & gender) loaded successfully');
-    } catch (faceError) {
-      console.warn('Face detection models failed to load:', faceError);
-      setFaceNet(false);
-    }
-
-    modelsInitialized.current = true;
-    setLoadingStatus('All models loaded successfully');
-    console.log('✅ All AI models initialized successfully');
-
-  } catch (error) {
-    console.error('❌ Model loading error:', error);
-    setLoadingStatus(`Error: ${error.message}`);
-    modelsInitialized.current = false;
-  }
-}, []);
+  }, []);
 
 
   useEffect(() => {
@@ -204,27 +204,29 @@ const ngOnInit = useCallback(async () => {
     setFaceCount(0);
   }, []);
 
-  // FIXED: More strict hand detection
+  // Replace the checkHandDetected function with this:
   const checkHandDetected = useCallback((poses) => {
     if (!poses || poses.length === 0) return 0;
 
-    const scoreThreshold = 0.3; // INCREASED from 0.1 to 0.3
+    const scoreThreshold = 0.2; // Lowered from 0.3 to 0.2
     let handsFound = 0;
 
-    // Only check the first (most confident) pose
-    const pose = poses[0];
-    if (!pose || pose.score < 0.3) return 0;
+    // Check all poses, not just the first one
+    poses.forEach(pose => {
+      if (pose.score > 0.2) { // Lowered threshold
+        const leftWrist = pose.keypoints[9];
+        const rightWrist = pose.keypoints[10];
 
-    const leftWrist = pose.keypoints[9];
-    const rightWrist = pose.keypoints[10];
-
-    if (leftWrist && leftWrist.score > scoreThreshold) handsFound++;
-    if (rightWrist && rightWrist.score > scoreThreshold) handsFound++;
+        if (leftWrist && leftWrist.score > scoreThreshold) handsFound++;
+        if (rightWrist && rightWrist.score > scoreThreshold) handsFound++;
+      }
+    });
 
     return Math.min(handsFound, 2); // Max 2 hands
   }, []);
 
-  // FIXED: More strict face detection
+
+  // Replace the checkFaceDetected function with this:
   const checkFaceDetected = useCallback(async (videoElement) => {
     if (!faceNet || !videoElement) return 0;
 
@@ -233,17 +235,17 @@ const ngOnInit = useCallback(async () => {
         videoElement,
         new faceapi.TinyFaceDetectorOptions({
           inputSize: 416,
-          scoreThreshold: 0.7 // INCREASED from 0.5 to 0.7
+          scoreThreshold: 0.4 // Lowered from 0.7 to 0.4 for better detection
         })
       ).withFaceLandmarks().withFaceExpressions().withAgeAndGender();
 
-      // Filter detections by size to avoid tiny false positives
+      // More lenient size filtering
       const validDetections = detections.filter(detection => {
         const box = detection.detection.box;
-        return box.width > 50 && box.height > 50; // Minimum face size
+        return box.width > 30 && box.height > 30; // Reduced from 50 to 30
       });
 
-      return Math.min(validDetections.length, 1); // Max 1 face expected
+      return Math.min(validDetections.length, 3); // Allow up to 3 faces instead of 1
     } catch (error) {
       console.error('Face detection error:', error);
       return 0;
@@ -473,7 +475,7 @@ const ngOnInit = useCallback(async () => {
     }
   }, [drawHandRadiatingLines, drawFaceDetections, faceNet]);
 
-  // MAIN FIX: Much stricter detection parameters
+  // Replace the entire startDetection function with this fixed version:
   const startDetection = useCallback(() => {
     if (!net || !cameraStarted || detectionActive.current) {
       console.log('⚠️ Detection not ready');
@@ -492,37 +494,46 @@ const ngOnInit = useCallback(async () => {
       }
 
       try {
-        // FIXED: Much stricter pose detection settings
+        // FIXED: Get poses with more lenient settings
         const poses = await net.estimateMultiplePoses(videoRef.current, {
           flipHorizontal: false,
-          maxDetections: 1, // CHANGED from 5 to 1 - expect only 1 person
-          scoreThreshold: 0.3, // INCREASED from 0.1 to 0.3
-          nmsRadius: 30 // INCREASED from 20 to 30 to reduce overlaps
+          maxDetections: 3, // Allow more detections initially
+          scoreThreshold: 0.1, // Lower threshold for initial detection
+          nmsRadius: 30
         });
 
-        // FIXED: Much stricter filtering
-        const validPoses = poses.filter(pose => {
-          // Require minimum number of visible keypoints
-          const visibleKeypoints = pose.keypoints.filter(kp => kp.score > 0.3).length;
-          return pose.score > 0.4 && visibleKeypoints >= 8; // Need at least 8 visible keypoints
-        });
-
-        // FORCE maximum of 1 person detection
-        const detectedPeople = Math.min(validPoses.length, 1);
-        const handsFound = validPoses.length > 0 ? checkHandDetected([validPoses[0]]) : 0;
-
+        // FIXED: Independent detection logic
+        let detectedPeople = 0;
+        let handsFound = 0;
         let facesFound = 0;
+
+        // 1. INDEPENDENT PEOPLE DETECTION - only needs basic pose
+        const validPeopleCount = poses.filter(pose => {
+          const visibleKeypoints = pose.keypoints.filter(kp => kp.score > 0.2).length;
+          return pose.score > 0.2 && visibleKeypoints >= 5; // Relaxed requirements
+        }).length;
+        detectedPeople = Math.min(validPeopleCount, 1);
+
+        // 2. INDEPENDENT HAND DETECTION - runs regardless of people detection
+        if (poses.length > 0) {
+          handsFound = checkHandDetected(poses);
+        }
+
+        // 3. INDEPENDENT FACE DETECTION - runs regardless of other detections
+        if (faceNet) {
+          facesFound = await checkFaceDetected(videoRef.current);
+        }
+
         let dominantExpression = null;
         let leftHand = null;
         let rightHand = null;
 
-        if (faceNet && detectedPeople > 0) {
-          facesFound = await checkFaceDetected(videoRef.current);
-
-          if (facesFound > 0) {
+        // Get additional data only if we have detections
+        if (facesFound > 0) {
+          try {
             const detections = await faceapi.detectAllFaces(
               videoRef.current,
-              new faceapi.TinyFaceDetectorOptions({ inputSize: 416, scoreThreshold: 0.7 })
+              new faceapi.TinyFaceDetectorOptions({ inputSize: 416, scoreThreshold: 0.5 }) // Lowered threshold
             ).withFaceExpressions();
 
             if (detections.length > 0) {
@@ -531,26 +542,32 @@ const ngOnInit = useCallback(async () => {
                 expressions[a] > expressions[b] ? a : b
               );
             }
+          } catch (error) {
+            console.error('Expression detection error:', error);
           }
         }
 
-        if (validPoses.length > 0) {
-          const firstPose = validPoses[0];
+        if (poses.length > 0) {
+          const firstPose = poses[0];
           leftHand = firstPose.keypoints[9];
           rightHand = firstPose.keypoints[10];
         }
 
+        // Update counts independently
         setPeopleCount(detectedPeople);
         setHandCount(handsFound);
         setFaceCount(facesFound);
 
-        await drawAISkeletonVisualization(validPoses.slice(0, 1)); // Only draw first pose
+        // Draw visualization only for valid poses
+        const validPoses = poses.filter(pose => pose.score > 0.2);
+        await drawAISkeletonVisualization(validPoses.slice(0, 1));
 
+        // Update global data
         window.humanDetectionData = {
           handCount: handsFound,
           peopleCount: detectedPeople,
           faceCount: facesFound,
-          poses: validPoses.slice(0, 1), // Only keep first pose
+          poses: validPoses.slice(0, 1),
           timestamp: Date.now(),
           cameraActive: cameraStarted,
           dominantExpression: dominantExpression,
@@ -559,8 +576,9 @@ const ngOnInit = useCallback(async () => {
           videoOpacity: window.humanDetectionData?.videoOpacity !== undefined ? window.humanDetectionData.videoOpacity : 100,
         };
 
-        if (detectedPeople > 0) {
-          console.log(`🤖 Detection: ${detectedPeople} people, ${handsFound} hands, ${facesFound} faces`);
+        // Debug logging
+        if (detectedPeople > 0 || handsFound > 0 || facesFound > 0) {
+          console.log(`🤖 Independent Detection: ${detectedPeople} people, ${handsFound} hands, ${facesFound} faces`);
         }
 
       } catch (error) {

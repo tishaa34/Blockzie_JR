@@ -1,43 +1,59 @@
 import React, { useState } from 'react';
-import ObstacleGallery from '../editor/ui/ObstacleGallery'; // Your correct path
+import { useDispatch, useSelector } from 'react-redux';
+import ObstacleGallery from '../editor/ui/ObstacleGallery';
+import ColoredAreaGallery from '../editor/ui/ColoredAreaGallery';
+import { 
+  cycleSimulatorBackground,
+  uploadSimulatorBackground,
+  saveProjectFromSimulator, 
+  loadProjectFromSimulator,
+} from '../utils/runScript';
 import "../css/RightPanelControls.css";
 import "../css/SimulatorView.css";
 
 export default function SimulatorControls({ onBackgroundChange }) {
   const [showObstacleGallery, setShowObstacleGallery] = useState(false);
+  const [showColoredAreaGallery, setShowColoredAreaGallery] = useState(false);
+  const dispatch = useDispatch();
+  const getState = useSelector(state => state);
 
   const handleBackgroundSelection = () => {
-    console.log("Background selection clicked");
-    if (onBackgroundChange) {
-      onBackgroundChange();
-    }
+    console.log("Background selection clicked - cycling simulator background only");
+    cycleSimulatorBackground();
   };
 
   const handleDrawTailLine = () => {
     console.log("Draw tail line clicked");
   };
 
-  const handleUploadBackground = () => {
+  const handleUploadBackground = async () => {
     console.log("Upload your own background clicked");
+    const success = await uploadSimulatorBackground();
+    if (success) {
+      console.log("✅ Background uploaded successfully");
+    } else {
+      console.log("❌ Background upload failed or cancelled");
+    }
   };
 
   const handleSaveProject = () => {
     console.log("Save project clicked");
+    saveProjectFromSimulator(dispatch, () => getState);
   };
 
-  const handleLoadProject = () => {
+  const handleLoadProject = async () => {
     console.log("Load project clicked");
+    await loadProjectFromSimulator(dispatch);
   };
 
   const handleObstacle = () => {
     console.log("Obstacle button clicked");
-    console.log("Current showObstacleGallery state:", showObstacleGallery);
     setShowObstacleGallery(true);
-    console.log("Setting showObstacleGallery to true");
   };
 
   const handleColoredArea = () => {
     console.log("Colored area button clicked");
+    setShowColoredAreaGallery(true);
   };
 
   const closeObstacleGallery = () => {
@@ -45,7 +61,10 @@ export default function SimulatorControls({ onBackgroundChange }) {
     setShowObstacleGallery(false);
   };
 
-  console.log("Rendering SimulatorControls, showObstacleGallery:", showObstacleGallery);
+  const closeColoredAreaGallery = () => {
+    console.log("Closing colored area gallery");
+    setShowColoredAreaGallery(false);
+  };
 
   return (
     <>
@@ -57,7 +76,7 @@ export default function SimulatorControls({ onBackgroundChange }) {
           <img src="./assets/ui/drawTailLine.svg" alt="Draw Tail Line" />
         </button>
         <button className="rp-btn" onClick={handleUploadBackground} title="Upload Background">
-          <img src="./assets/ui/uploadBg.svg" alt="Upload Background" />
+          <img src="./assets/ui/upload.png" alt="Upload Background" />
         </button>
         <button className="rp-btn" onClick={handleSaveProject} title="Save Project">
           <img src="./assets/ui/save.png" alt="Save Project" />
@@ -73,13 +92,14 @@ export default function SimulatorControls({ onBackgroundChange }) {
         </button>
       </div>
       
-      {/* Debug: Show state */}
-      {console.log("About to render ObstacleGallery with open:", showObstacleGallery)}
-      
-      {/* Obstacle Gallery Modal */}
       <ObstacleGallery 
         open={showObstacleGallery} 
         onClose={closeObstacleGallery} 
+      />
+      
+      <ColoredAreaGallery 
+        open={showColoredAreaGallery} 
+        onClose={closeColoredAreaGallery} 
       />
     </>
   );

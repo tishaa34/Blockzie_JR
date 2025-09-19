@@ -1,6 +1,6 @@
 import React, { useState } from 'react';
 import { useDispatch } from 'react-redux';
-import { addObstacle } from '../../store/sceneSlice'; // Adjust path as needed
+import { addObstacleToScene } from '../../utils/runScript'; // Import from runScript
 import '../../css/ObstacleGallery.css';
 
 const ObstacleGallery = ({ open, onClose }) => {
@@ -14,39 +14,37 @@ const ObstacleGallery = ({ open, onClose }) => {
     { id: 'triangle', name: 'Triangle', shape: 'triangle', color: '#4ecdc4' },
     { id: 'circle', name: 'Circle', shape: 'circle', color: '#45b7d1' },
     { id: 'rectangle', name: 'Rectangle', shape: 'rectangle', color: '#96ceb4' },
-    // { id: 'pentagon', name: 'Pentagon', shape: 'pentagon', color: '#ffeaa7' },
-    // { id: 'hexagon', name: 'Hexagon', shape: 'hexagon', color: '#dda0dd' }
   ];
 
-// Updated handleAddObstacle function
-const handleAddObstacle = (obstacle) => {
-  console.log('Adding obstacle:', obstacle);
-  
-  try {
-    // Create obstacle with simpler structure first
-    const obstacleData = {
-      id: `${obstacle.shape}_${Date.now()}`,
-      shape: obstacle.shape || 'square',
-      name: obstacle.name || 'Obstacle',
-      color: obstacle.color || '#ff6b6b',
-      x: Math.floor(Math.random() * 300) + 50,
-      y: Math.floor(Math.random() * 200) + 50,
-      width: 50,
-      height: 50
-    };
+  // Add obstacle to scene directly when clicked
+  const handleAddObstacle = (obstacle) => {
+    console.log('Adding obstacle:', obstacle);
     
-    console.log('Final obstacle data being dispatched:', obstacleData);
-    
-    // Dispatch the action
-    dispatch(addObstacle(obstacleData));
-    
-    console.log('Obstacle dispatched successfully');
-    onClose();
-  } catch (error) {
-    console.error('Error in handleAddObstacle:', error);
-  }
-};
-
+    try {
+      // Create obstacle with all required properties
+      const obstacleData = {
+        id: `obstacle_${Date.now()}`,
+        shape: obstacle.shape,
+        name: obstacle.name,
+        color: obstacle.color,
+        x: Math.random() * 300 + 50,
+        y: Math.random() * 200 + 50,
+        width: 50,
+        height: 50,
+        type: 'obstacle'
+      };
+      
+      console.log('Final obstacle data being dispatched:', obstacleData);
+      
+      // Use the function from runScript.js
+      addObstacleToScene(obstacleData, dispatch);
+      
+      console.log('Obstacle dispatched successfully');
+      onClose();
+    } catch (error) {
+      console.error('Error in handleAddObstacle:', error);
+    }
+  };
 
   if (!open) {
     console.log("ObstacleGallery not rendering - open is false");

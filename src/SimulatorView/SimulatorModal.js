@@ -1,13 +1,22 @@
 import React, { useState, useEffect, useCallback } from 'react';
 import { useSelector, useDispatch } from 'react-redux';
-import { removeObstacle, moveObstacle } from '../store/sceneSlice';
+import { 
+  removeObstacleFromScene, 
+  moveObstacleInScene, 
+  getCurrentSimulatorBackground,
+  removeColoredAreaFromScene,
+  moveColoredAreaInScene
+} from '../utils/runScript';
 import '../css/SimulatorView.css';
 
 const SimulatorModal = ({ onClose, background }) => {
   const [stageRect, setStageRect] = useState(null);
   const [draggedObstacle, setDraggedObstacle] = useState(null);
+  const [draggedColoredArea, setDraggedColoredArea] = useState(null);
   const [dragOffset, setDragOffset] = useState({ x: 0, y: 0 });
-  const [hoveredObstacle, setHoveredObstacle] = useState(null); // New state for hover
+  const [hoveredObstacle, setHoveredObstacle] = useState(null);
+  const [hoveredColoredArea, setHoveredColoredArea] = useState(null);
+  const [simulatorBg, setSimulatorBg] = useState(getCurrentSimulatorBackground());
   
   const dispatch = useDispatch();
   
@@ -18,7 +27,29 @@ const SimulatorModal = ({ onClose, background }) => {
     return scene?.obstacles || [];
   });
 
+  // Get colored areas from Redux store
+  const coloredAreas = useSelector(state => {
+    const scene = state.scene.scenes[currentSceneIndex];
+    return scene?.coloredAreas || [];
+  });
+
   console.log('SimulatorModal obstacles:', obstacles);
+  console.log('SimulatorModal coloredAreas:', coloredAreas);
+
+  // Listen for background changes from localStorage
+  useEffect(() => {
+    const handleStorageChange = () => {
+      setSimulatorBg(getCurrentSimulatorBackground());
+    };
+
+    window.addEventListener('storage', handleStorageChange);
+    window.addEventListener('simulatorBackgroundChanged', handleStorageChange);
+    
+    return () => {
+      window.removeEventListener('storage', handleStorageChange);
+      window.removeEventListener('simulatorBackgroundChanged', handleStorageChange);
+    };
+  }, []);
 
   const updateStageRect = useCallback(() => {
     const stageElement = document.querySelector('.stage-area-section');
@@ -44,30 +75,47 @@ const SimulatorModal = ({ onClose, background }) => {
     });
   };
 
+  // Handle colored area dragging
+  const handleColoredAreaMouseDown = (e, coloredArea) => {
+    e.preventDefault();
+    setDraggedColoredArea(coloredArea);
+    const rect = e.target.getBoundingClientRect();
+    setDragOffset({
+      x: e.clientX - rect.left,
+      y: e.clientY - rect.top
+    });
+  };
+
+  // Updated handleMouseMove to handle both obstacles and colored areas
   const handleMouseMove = useCallback((e) => {
     if (draggedObstacle && stageRect) {
       const newX = e.clientX - stageRect.left - dragOffset.x;
       const newY = e.clientY - stageRect.top - dragOffset.y;
       
-      // Keep obstacles within bounds
       const boundedX = Math.max(0, Math.min(newX, stageRect.width - 50));
       const boundedY = Math.max(0, Math.min(newY, stageRect.height - 50));
       
-      dispatch(moveObstacle({
-        id: draggedObstacle.id,
-        x: boundedX,
-        y: boundedY
-      }));
+      moveObstacleInScene(draggedObstacle.id, boundedX, boundedY, dispatch);
+    } else if (draggedColoredArea && stageRect) {
+      const newX = e.clientX - stageRect.left - dragOffset.x;
+      const newY = e.clientY - stageRect.top - dragOffset.y;
+      
+      const boundedX = Math.max(0, Math.min(newX, stageRect.width - 60));
+      const boundedY = Math.max(0, Math.min(newY, stageRect.height - 60));
+      
+      moveColoredAreaInScene(draggedColoredArea.id, boundedX, boundedY, dispatch);
     }
-  }, [draggedObstacle, stageRect, dragOffset, dispatch]);
+  }, [draggedObstacle, draggedColoredArea, stageRect, dragOffset, dispatch]);
 
+  // Updated handleMouseUp to handle both
   const handleMouseUp = useCallback(() => {
     setDraggedObstacle(null);
+    setDraggedColoredArea(null);
     setDragOffset({ x: 0, y: 0 });
   }, []);
 
   useEffect(() => {
-    if (draggedObstacle) {
+    if (draggedObstacle || draggedColoredArea) {
       document.addEventListener('mousemove', handleMouseMove);
       document.addEventListener('mouseup', handleMouseUp);
       
@@ -76,22 +124,38 @@ const SimulatorModal = ({ onClose, background }) => {
         document.removeEventListener('mouseup', handleMouseUp);
       };
     }
-  }, [draggedObstacle, handleMouseMove, handleMouseUp]);
+  }, [draggedObstacle, draggedColoredArea, handleMouseMove, handleMouseUp]);
 
   // Handle obstacle removal
   const handleRemoveObstacle = (obstacleId, e) => {
     e.stopPropagation();
     console.log('Removing obstacle:', obstacleId);
-    dispatch(removeObstacle(obstacleId));
+    removeObstacleFromScene(obstacleId, dispatch);
   };
 
-  // Handle mouse enter/leave for hover effect
+  // Handle colored area removal
+  const handleRemoveColoredArea = (coloredAreaId, e) => {
+    e.stopPropagation();
+    console.log('Removing colored area:', coloredAreaId);
+    removeColoredAreaFromScene(coloredAreaId, dispatch);
+  };
+
+  // Handle mouse enter/leave for obstacles
   const handleObstacleMouseEnter = (obstacleId) => {
     setHoveredObstacle(obstacleId);
   };
 
   const handleObstacleMouseLeave = () => {
     setHoveredObstacle(null);
+  };
+
+  // Handle mouse enter/leave for colored areas
+  const handleColoredAreaMouseEnter = (coloredAreaId) => {
+    setHoveredColoredArea(coloredAreaId);
+  };
+
+  const handleColoredAreaMouseLeave = () => {
+    setHoveredColoredArea(null);
   };
 
   if (!stageRect) return null;
@@ -109,13 +173,11 @@ const SimulatorModal = ({ onClose, background }) => {
     flexDirection: 'column',
   };
 
-  if (background && (background.startsWith('#') || background.startsWith('rgb'))) {
-    modalStyle.backgroundColor = background;
-  } else if (background) {
-    modalStyle.backgroundImage = `url(${background})`;
-    modalStyle.backgroundSize = 'cover';
-    modalStyle.backgroundPosition = 'center';
-  }
+  // Use simulator-specific background
+  console.log('Using simulator background:', simulatorBg);
+  modalStyle.backgroundImage = `url(${simulatorBg})`;
+  modalStyle.backgroundSize = 'cover';
+  modalStyle.backgroundPosition = 'center';
 
   return (
     <div style={modalStyle}>
@@ -168,7 +230,6 @@ const SimulatorModal = ({ onClose, background }) => {
                 width: '100%',
                 height: '100%',
                 position: 'relative',
-                // Add shape-specific styles
                 borderRadius: obstacle.shape === 'circle' ? '50%' : 
                            obstacle.shape === 'square' || obstacle.shape === 'rectangle' ? '4px' : '0'
               }}
@@ -218,6 +279,76 @@ const SimulatorModal = ({ onClose, background }) => {
                 <button
                   className="obstacle-remove-btn"
                   onClick={(e) => handleRemoveObstacle(obstacle.id, e)}
+                  style={{
+                    position: 'absolute',
+                    top: '-8px',
+                    right: '-8px',
+                    background: '#ff4757',
+                    color: 'white',
+                    border: 'none',
+                    borderRadius: '50%',
+                    width: '20px',
+                    height: '20px',
+                    cursor: 'pointer',
+                    fontSize: '12px',
+                    display: 'flex',
+                    alignItems: 'center',
+                    justifyContent: 'center',
+                    zIndex: 13,
+                    transition: 'all 0.2s ease-in-out',
+                    transform: 'scale(1.1)',
+                    boxShadow: '0 2px 4px rgba(0,0,0,0.2)'
+                  }}
+                >
+                  ×
+                </button>
+              )}
+            </div>
+          </div>
+        );
+      })}
+
+      {/* Render colored areas (NO TEXT - just colored blocks) */}
+      {coloredAreas.map((coloredArea) => {
+        console.log('Rendering colored area:', coloredArea);
+        const isHovered = hoveredColoredArea === coloredArea.id;
+        
+        return (
+          <div
+            key={coloredArea.id}
+            className="simulator-colored-area"
+            style={{
+              position: 'absolute',
+              left: `${coloredArea.x || 0}px`,
+              top: `${coloredArea.y || 0}px`,
+              width: `${coloredArea.width || 60}px`,
+              height: `${coloredArea.height || 60}px`,
+              cursor: draggedColoredArea?.id === coloredArea.id ? 'grabbing' : 'grab',
+              zIndex: 11
+            }}
+            onMouseDown={(e) => handleColoredAreaMouseDown(e, coloredArea)}
+            onMouseEnter={() => handleColoredAreaMouseEnter(coloredArea.id)}
+            onMouseLeave={handleColoredAreaMouseLeave}
+          >
+            <div 
+              style={{ 
+                backgroundColor: coloredArea.color || '#ffeb3b',
+                width: '100%',
+                height: '100%',
+                position: 'relative',
+                borderRadius: '4px',
+                boxSizing: 'border-box',
+                boxShadow: '0 2px 4px rgba(0,0,0,0.2)',
+                border: '1px solid rgba(0,0,0,0.1)'
+              }}
+            >
+              {/* NO TEXT - Just a colored block */}
+              
+              {/* Remove button - Only visible on hover */}
+              {isHovered && (
+                <button
+                  className="colored-area-remove-btn"
+                  onClick={(e) => handleRemoveColoredArea(coloredArea.id, e)}
                   style={{
                     position: 'absolute',
                     top: '-8px',
