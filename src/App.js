@@ -16,7 +16,7 @@ import HeadingModal from './editor/ui/HeadingModal';
 import SplashScreen from './editor/ui/SplashScreen';
 import HumanDetectionFullStage from './editor/ui/HumanDetectionFullStage';
 import SimulatorModal from '../src/SimulatorView/SimulatorModal';
-
+import SimulatorControls from '../src/SimulatorView/SimulatorControl';
 import { clearScript, setShowHumanDetection } from './store/sceneSlice';
 
 import './App.css';

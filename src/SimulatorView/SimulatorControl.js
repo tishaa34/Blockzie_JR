@@ -1,8 +1,11 @@
-import React from 'react';
+import React, { useState } from 'react';
+import ObstacleGallery from '../editor/ui/ObstacleGallery'; // Your correct path
 import "../css/RightPanelControls.css";
 import "../css/SimulatorView.css";
 
 export default function SimulatorControls({ onBackgroundChange }) {
+  const [showObstacleGallery, setShowObstacleGallery] = useState(false);
+
   const handleBackgroundSelection = () => {
     console.log("Background selection clicked");
     if (onBackgroundChange) {
@@ -28,35 +31,56 @@ export default function SimulatorControls({ onBackgroundChange }) {
 
   const handleObstacle = () => {
     console.log("Obstacle button clicked");
+    console.log("Current showObstacleGallery state:", showObstacleGallery);
+    setShowObstacleGallery(true);
+    console.log("Setting showObstacleGallery to true");
   };
 
   const handleColoredArea = () => {
     console.log("Colored area button clicked");
   };
 
+  const closeObstacleGallery = () => {
+    console.log("Closing obstacle gallery");
+    setShowObstacleGallery(false);
+  };
+
+  console.log("Rendering SimulatorControls, showObstacleGallery:", showObstacleGallery);
+
   return (
     <>
-      <button className="rp-btn" onClick={handleBackgroundSelection} title="Background Selection">
-        <img src="./assets/ui/backgrounds.png" alt="Background Selection" />
-      </button>
-      <button className="rp-btn" onClick={handleDrawTailLine} title="Draw Tail Line">
-        <img src="./assets/ui/drawTailLine.svg" alt="Draw Tail Line" />
-      </button>
-      <button className="rp-btn" onClick={handleUploadBackground} title="Upload Background">
-        <img src="./assets/ui/uploadBg.svg" alt="Upload Background" />
-      </button>
-      <button className="rp-btn" onClick={handleSaveProject} title="Save Project">
-        <img src="./assets/ui/save.png" alt="Save Project" />
-      </button>
-      <button className="rp-btn" onClick={handleLoadProject} title="Load Project">
-        <img src="./assets/ui/load.png" alt="Load Project" />
-      </button>
-      <button className="rp-btn" onClick={handleObstacle} title="Obstacle">
-        <img src="./assets/ui/Obstacle.png" alt="Obstacle" />
-      </button>
-      <button className="rp-btn" onClick={handleColoredArea} title="Colored Area">
-        <img src="./assets/ui/coloredArea.svg" alt="Colored Area" />
-      </button>
+      <div className="right-panel-controls">
+        <button className="rp-btn" onClick={handleBackgroundSelection} title="Background Selection">
+          <img src="./assets/ui/backgrounds.png" alt="Background Selection" />
+        </button>
+        <button className="rp-btn" onClick={handleDrawTailLine} title="Draw Tail Line">
+          <img src="./assets/ui/drawTailLine.svg" alt="Draw Tail Line" />
+        </button>
+        <button className="rp-btn" onClick={handleUploadBackground} title="Upload Background">
+          <img src="./assets/ui/uploadBg.svg" alt="Upload Background" />
+        </button>
+        <button className="rp-btn" onClick={handleSaveProject} title="Save Project">
+          <img src="./assets/ui/save.png" alt="Save Project" />
+        </button>
+        <button className="rp-btn" onClick={handleLoadProject} title="Load Project">
+          <img src="./assets/ui/load.png" alt="Load Project" />
+        </button>
+        <button className="rp-btn" onClick={handleObstacle} title="Obstacle">
+          <img src="./assets/ui/Obstacle.png" alt="Obstacle" />
+        </button>
+        <button className="rp-btn" onClick={handleColoredArea} title="Colored Area">
+          <img src="./assets/ui/coloredArea.svg" alt="Colored Area" />
+        </button>
+      </div>
+      
+      {/* Debug: Show state */}
+      {console.log("About to render ObstacleGallery with open:", showObstacleGallery)}
+      
+      {/* Obstacle Gallery Modal */}
+      <ObstacleGallery 
+        open={showObstacleGallery} 
+        onClose={closeObstacleGallery} 
+      />
     </>
   );
 }

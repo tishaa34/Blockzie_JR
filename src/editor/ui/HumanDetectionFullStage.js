@@ -42,67 +42,71 @@ const HumanDetectionFullStage = () => {
     }
   }, []);
 
-  const ngOnInit = useCallback(async () => {
-    if (modelsInitialized.current) return;
+const ngOnInit = useCallback(async () => {
+  if (modelsInitialized.current) return;
+
+  try {
+    setLoadingStatus('Setting up TensorFlow...');
+    console.log('🔄 Setting up TensorFlow...');
 
     try {
-      setLoadingStatus('Setting up TensorFlow...');
-      console.log('🔄 Setting up TensorFlow...');
-
-      try {
-        await tf.setBackend('webgl');
-        console.log('✅ Using WebGL backend');
-      } catch (webglError) {
-        console.warn('WebGL not available, using CPU backend:', webglError);
-        await tf.setBackend('cpu');
-      }
-
-      await tf.ready();
-      console.log('✅ TensorFlow ready with backend:', tf.getBackend());
-
-      setLoadingStatus('Loading PoseNet model (ResNet50)...');
-      console.log('🔄 Loading PoseNet ResNet50 model...');
-
-      const poseModel = await posenet.load({
-        architecture: 'ResNet50',
-        outputStride: 32,
-        inputResolution: { width: 257, height: 257 },
-      });
-
-      setNet(poseModel);
-      console.log('✅ PoseNet model loaded successfully');
-
-      try {
-        setLoadingStatus('Loading Face Detection models (with age & gender)...');
-        console.log('🔄 Loading Face Detection models with age & gender...');
-
-        await faceapi.tf.setBackend(tf.getBackend());
-        await faceapi.tf.ready();
-
-        await Promise.all([
-          faceapi.nets.tinyFaceDetector.loadFromUri('/models'),
-          faceapi.nets.faceLandmark68Net.loadFromUri('/models'),
-          faceapi.nets.faceExpressionNet.loadFromUri('/models'),
-          faceapi.nets.ageGenderNet.loadFromUri('/models'),
-        ]);
-
-        setFaceNet(true);
-        console.log('✅ Face Detection models (with age & gender) loaded successfully');
-      } catch (faceError) {
-        console.warn('Face detection models failed to load:', faceError);
-        setFaceNet(false);
-      }
-
-      modelsInitialized.current = true;
-      setLoadingStatus('All models loaded successfully');
-      console.log('✅ All AI models initialized successfully');
-
-    } catch (error) {
-      console.error('❌ Model loading error:', error);
-      setLoadingStatus(`Error: ${error.message}`);
-      modelsInitialized.current = false;
+      await tf.setBackend('webgl');
+      console.log('✅ Using WebGL backend');
+    } catch (webglError) {
+      console.warn('WebGL not available, using CPU backend:', webglError);
+      await tf.setBackend('cpu');
     }
-  }, []);
+
+    await tf.ready();
+    console.log('✅ TensorFlow ready with backend:', tf.getBackend());
+
+    setLoadingStatus('Loading PoseNet model (ResNet50)...');
+    console.log('🔄 Loading PoseNet ResNet50 model...');
+
+    const poseModel = await posenet.load({
+      architecture: 'ResNet50',
+      outputStride: 32,
+      inputResolution: { width: 257, height: 257 },
+    });
+
+    setNet(poseModel);
+    console.log('✅ PoseNet model loaded successfully');
+
+    try {
+      setLoadingStatus('Loading Face Detection models (with age & gender)...');
+      console.log('🔄 Loading Face Detection models with age & gender...');
+
+      await faceapi.tf.setBackend(tf.getBackend());
+      await faceapi.tf.ready();
+
+      // UPDATED: Use HTTPS CDN instead of local models
+      const MODEL_URL = 'https://vladmandic.github.io/face-api/model';
+      
+      await Promise.all([
+        faceapi.nets.tinyFaceDetector.loadFromUri(MODEL_URL),
+        faceapi.nets.faceLandmark68Net.loadFromUri(MODEL_URL),
+        faceapi.nets.faceExpressionNet.loadFromUri(MODEL_URL),
+        faceapi.nets.ageGenderNet.loadFromUri(MODEL_URL),
+      ]);
+
+      setFaceNet(true);
+      console.log('✅ Face Detection models (with age & gender) loaded successfully');
+    } catch (faceError) {
+      console.warn('Face detection models failed to load:', faceError);
+      setFaceNet(false);
+    }
+
+    modelsInitialized.current = true;
+    setLoadingStatus('All models loaded successfully');
+    console.log('✅ All AI models initialized successfully');
+
+  } catch (error) {
+    console.error('❌ Model loading error:', error);
+    setLoadingStatus(`Error: ${error.message}`);
+    modelsInitialized.current = false;
+  }
+}, []);
+
 
   useEffect(() => {
     const initializeComponent = async () => {
@@ -252,8 +256,8 @@ const HumanDetectionFullStage = () => {
     try {
       const detections = await faceapi.detectAllFaces(
         videoElement,
-        new faceapi.TinyFaceDetectorOptions({ 
-          inputSize: 416, 
+        new faceapi.TinyFaceDetectorOptions({
+          inputSize: 416,
           scoreThreshold: 0.7 // INCREASED threshold
         })
       ).withFaceLandmarks().withFaceExpressions().withAgeAndGender();
@@ -514,16 +518,16 @@ const HumanDetectionFullStage = () => {
 
         if (faceNet && detectedPeople > 0) {
           facesFound = await checkFaceDetected(videoRef.current);
-          
+
           if (facesFound > 0) {
             const detections = await faceapi.detectAllFaces(
               videoRef.current,
               new faceapi.TinyFaceDetectorOptions({ inputSize: 416, scoreThreshold: 0.7 })
             ).withFaceExpressions();
-            
+
             if (detections.length > 0) {
               const expressions = detections[0].expressions;
-              dominantExpression = Object.keys(expressions).reduce((a, b) => 
+              dominantExpression = Object.keys(expressions).reduce((a, b) =>
                 expressions[a] > expressions[b] ? a : b
               );
             }

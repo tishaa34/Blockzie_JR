@@ -186,24 +186,27 @@ const sceneSlice = createSlice({
 
     // Obstacle actions
     addObstacle(state, action) {
-      const { obstacle } = action.payload;
+      // Change this line to handle direct obstacle data
+      const obstacle = action.payload;
       const currentScene = state.scenes[state.currentSceneIndex];
       if (currentScene) {
         if (!currentScene.obstacles) {
           currentScene.obstacles = [];
         }
         currentScene.obstacles.push({
-          id: `obstacle-${Date.now()}-${Math.random()}`,
+          id: obstacle.id || `obstacle-${Date.now()}-${Math.random()}`,
           shape: obstacle.shape,
-          x: Math.floor(Math.random() * 18) + 1, // Random position within grid
-          y: Math.floor(Math.random() * 15) + 1,
+          x: obstacle.x || Math.floor(Math.random() * 18) + 1,
+          y: obstacle.y || Math.floor(Math.random() * 15) + 1,
           ...obstacle
         });
       }
     },
 
+
     removeObstacle(state, action) {
-      const { obstacleId } = action.payload;
+      // Change to expect direct obstacleId instead of { obstacleId }
+      const obstacleId = action.payload;
       const currentScene = state.scenes[state.currentSceneIndex];
       if (currentScene && currentScene.obstacles) {
         currentScene.obstacles = currentScene.obstacles.filter(
@@ -212,14 +215,16 @@ const sceneSlice = createSlice({
       }
     },
 
+
     moveObstacle(state, action) {
-      const { obstacleId, dx, dy } = action.payload;
+      // Keep the structure but fix the property access
+      const { id, x, y } = action.payload;
       const currentScene = state.scenes[state.currentSceneIndex];
       if (currentScene && currentScene.obstacles) {
-        const obstacle = currentScene.obstacles.find(o => o.id === obstacleId);
+        const obstacle = currentScene.obstacles.find(o => o.id === id);
         if (obstacle) {
-          obstacle.x += dx;
-          obstacle.y += dy;
+          obstacle.x = x;
+          obstacle.y = y;
         }
       }
     },
@@ -412,31 +417,31 @@ const sceneSlice = createSlice({
     removeBackgroundFromGallery(state, action) {
       state.backgroundGallery = state.backgroundGallery.filter(bg => bg !== action.payload);
     },
-    
+
     // NEW REDUCER: Cycles to the next background in the gallery
     cycleNextBackground(state) {
       const scene = state.scenes[state.currentSceneIndex];
       if (!scene) return;
-    
+
       // 1. Push undo state for the scene (per-scene undo)
       scene.undoStack.push(deepClone(scene));
       if (scene.undoStack.length > 20) scene.undoStack.shift();
       scene.redoStack = [];
-    
+
       // 2. Get gallery and current background
       const gallery = state.backgroundGallery;
       const currentBg = scene.background;
-    
+
       let currentIndex = gallery.findIndex(bg => bg === currentBg);
-    
+
       // If the current background is not found in the gallery, start the cycle from the first background.
       if (currentIndex === -1) {
         currentIndex = -1;
       }
-    
+
       // 3. Calculate next index (circularly/cyclically)
       const nextIndex = (currentIndex + 1) % gallery.length;
-    
+
       // 4. Set the new background
       scene.background = gallery[nextIndex];
     },
@@ -699,7 +704,7 @@ export const {
   setBackground,
   addBackgroundToGallery,
   removeBackgroundFromGallery,
-  cycleNextBackground, // <--- NEW EXPORT
+  cycleNextBackground,
   addBlockToScript,
   clearScript,
   updateBlockCount,
