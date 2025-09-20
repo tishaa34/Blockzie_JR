@@ -7,6 +7,7 @@ import {
   uploadSimulatorBackground,
   saveProjectFromSimulator, 
   loadProjectFromSimulator,
+  cycleSimulatorRobotType // NEW IMPORT
 } from '../utils/runScript';
 import "../css/RightPanelControls.css";
 import "../css/SimulatorView.css";
@@ -20,6 +21,12 @@ export default function SimulatorControls({ onBackgroundChange }) {
   const handleBackgroundSelection = () => {
     console.log("Background selection clicked - cycling simulator background only");
     cycleSimulatorBackground();
+  };
+
+  // NEW: Handle robot selection (cycling)
+  const handleRobotSelection = () => {
+    console.log("Robot selection clicked - cycling to next robot type");
+    cycleSimulatorRobotType(dispatch);
   };
 
   const handleDrawTailLine = () => {
@@ -72,11 +79,17 @@ export default function SimulatorControls({ onBackgroundChange }) {
         <button className="rp-btn" onClick={handleBackgroundSelection} title="Background Selection">
           <img src="./assets/ui/backgrounds.png" alt="Background Selection" />
         </button>
+        
+        {/* NEW: Robot Selection Button */}
+        <button className="rp-btn" onClick={handleRobotSelection} title="Add Robot">
+          <img src="./assets/ui/robot.png" alt="Add Robot" />
+        </button>
+        
         <button className="rp-btn" onClick={handleDrawTailLine} title="Draw Tail Line">
           <img src="./assets/ui/drawTailLine.svg" alt="Draw Tail Line" />
         </button>
         <button className="rp-btn" onClick={handleUploadBackground} title="Upload Background">
-          <img src="./assets/ui/upload.png" alt="Upload Background" />
+          <img src="./assets/ui/uploadBg.svg" alt="Upload Background" />
         </button>
         <button className="rp-btn" onClick={handleSaveProject} title="Save Project">
           <img src="./assets/ui/save.png" alt="Save Project" />

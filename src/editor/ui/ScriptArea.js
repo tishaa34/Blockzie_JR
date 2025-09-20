@@ -1,23 +1,34 @@
 import React, { useState, useRef } from "react";
-import { useSelector, useDispatch, useStore} from "react-redux";
+import { useSelector, useDispatch, useStore } from "react-redux";
 import {
   addBlockToScript,
   clearScript,
   pushUndoState,
   updateBlockCount,
+  addBlockToSimulatorScript,
+  clearSimulatorScript,
+  updateSimulatorBlockCount,
+  setCameraState,
 } from "../../store/sceneSlice";
 import NumberPicker from "./NumberPicker";
 import "../../css/ScriptArea.css";
-import { setCameraState } from "../../store/sceneSlice";
 import { run } from "../../utils/runScript";
 
 export default function ScriptArea({ selectedActorId }) {
   const dispatch = useDispatch();
-  const { scenes, currentSceneIndex } = useSelector((s) => s.scene);
+  const store = useStore();
+  const { scenes, currentSceneIndex, simulatorRobots, selectedSimRobotId } = useSelector((s) => s.scene);
   const globalCameraState = useSelector((s) => s.scene.globalCameraState);
+
   const scene = scenes[currentSceneIndex];
-  const actor = scene?.actors.find((a) => a.id === selectedActorId);
-  const store = useStore(); // Initialize useStore
+  const stageActor = scene?.actors.find((a) => a.id === selectedActorId);
+
+  // If a simulator robot is selected for editing, we will edit that robot's scripts.
+  const selectedSimRobot = (simulatorRobots || []).find(r => r.id === selectedSimRobotId) || null;
+
+  // editableTarget is either a stage actor (if no sim robot selected) or the selected simulator robot
+  const editableTarget = selectedSimRobot || stageActor;
+
   const [pickerOpen, setPickerOpen] = useState(false);
   const [tapBlock, setTapBlock] = useState(null);
   const [draggedBlock, setDraggedBlock] = useState(null);
@@ -27,7 +38,7 @@ export default function ScriptArea({ selectedActorId }) {
   const onDrop = (e) => {
     e.preventDefault();
     const raw = e.dataTransfer.getData("application/block");
-    if (!raw || !actor) return;
+    if (!raw || !editableTarget) return;
     const block = JSON.parse(raw);
 
     // Set a default opacity for the new block type
@@ -35,19 +46,20 @@ export default function ScriptArea({ selectedActorId }) {
       block.opacity = 100;
     }
 
-    // Preserve camera state if it exists
-    if (block.type === 'camera_control' && block.cameraState) {
-      block.cameraState = block.cameraState;
-    }
-
     dispatch(pushUndoState());
 
-    if (block.category === "start") {
-      dispatch(addBlockToScript({ actorId: actor.id, block, index: 0 }));
-    } else if (block.category === "end") {
-      dispatch(addBlockToScript({ actorId: actor.id, block, index: actor.scripts.length }));
+    if (editableTarget.type === 'simulatorRobot') {
+      // Add block to simulator robot scripts
+      dispatch(addBlockToSimulatorScript({ robotId: editableTarget.id, block }));
     } else {
-      dispatch(addBlockToScript({ actorId: actor.id, block }));
+      // Add block to stage actor scripts
+      if (block.category === "start") {
+        dispatch(addBlockToScript({ actorId: editableTarget.id, block, index: 0 }));
+      } else if (block.category === "end") {
+        dispatch(addBlockToScript({ actorId: editableTarget.id, block, index: editableTarget.scripts.length }));
+      } else {
+        dispatch(addBlockToScript({ actorId: editableTarget.id, block }));
+      }
     }
   };
 
@@ -63,7 +75,7 @@ export default function ScriptArea({ selectedActorId }) {
 
     e.dataTransfer.setData("application/script-block", JSON.stringify({
       blockId: block.id,
-      actorId: actor.id,
+      actorId: editableTarget.id,
       index: index
     }));
     e.dataTransfer.effectAllowed = "move";
@@ -82,11 +94,19 @@ export default function ScriptArea({ selectedActorId }) {
 
       if (isOutside) {
         dispatch(pushUndoState());
-        const newScripts = actor.scripts.filter((_, i) => i !== draggedBlock.index);
-        dispatch(clearScript({ actorId: actor.id }));
-        newScripts.forEach((block) => {
-          dispatch(addBlockToScript({ actorId: actor.id, block }));
-        });
+        if (editableTarget.type === 'simulatorRobot') {
+          const newScripts = editableTarget.scripts.filter((_, i) => i !== draggedBlock.index);
+          dispatch(clearSimulatorScript({ robotId: editableTarget.id }));
+          newScripts.forEach((block) => {
+            dispatch(addBlockToSimulatorScript({ robotId: editableTarget.id, block }));
+          });
+        } else {
+          const newScripts = editableTarget.scripts.filter((_, i) => i !== draggedBlock.index);
+          dispatch(clearScript({ actorId: editableTarget.id }));
+          newScripts.forEach((block) => {
+            dispatch(addBlockToScript({ actorId: editableTarget.id, block }));
+          });
+        }
       }
     }
     setDraggedBlock(null);
@@ -102,10 +122,30 @@ export default function ScriptArea({ selectedActorId }) {
     }
   };
 
+  // Handling block clicks (configuration)
   const clickBlock = async (block) => {
+    if (!block) return;
+
     if (block.category === "start" && block.name === "Start on Green Flag") {
       try {
-        await run(actor, dispatch, scene?.sounds, actor.id, store.getState);
+        const isSimulatorVisible = document.querySelector('.simulator-robot') !== null;
+        const currentState = store.getState();
+        const simRobots = currentState.scene?.simulatorRobots || [];
+
+        if (isSimulatorVisible && simRobots.length > 0) {
+          // If simulator open, run all simulator robots (their own scripts)
+          for (const robot of simRobots) {
+            if (robot.scripts && robot.scripts.length > 0) {
+              console.log('🤖 Running simulator robot script:', robot.name);
+              await run(robot, dispatch, scene?.sounds, robot.id, store.getState);
+            } else {
+              console.warn('🤖 Simulator robot has no scripts to run:', robot.name);
+            }
+          }
+        } else if (stageActor) {
+          console.log('🎭 Running stage actor script:', stageActor.name);
+          await run(stageActor, dispatch, scene?.sounds, stageActor.id, store.getState);
+        }
       } catch (err) {
         console.error("Error while running script:", err);
       }
@@ -118,11 +158,6 @@ export default function ScriptArea({ selectedActorId }) {
     if (block.name === "Wait") {
       setTapBlock(block);
       setPickerOpen(true);
-      return;
-    }
-
-    // Stop block doesn't need configuration
-    if (block.name === "Stop") {
       return;
     }
 
@@ -143,18 +178,70 @@ export default function ScriptArea({ selectedActorId }) {
   };
 
   const setCount = (n) => {
-    if (!actor || !tapBlock) return;
+    if (!editableTarget || !tapBlock) return;
     dispatch(pushUndoState());
 
-    // Check if the block is a video transparency block and update its opacity
-    if (tapBlock.name === "Set Video Transparency") {
-      dispatch(updateBlockCount({ actorId: actor.id, blockId: tapBlock.id, newCount: n, property: 'opacity' }));
+    if (editableTarget.type === 'simulatorRobot') {
+      // Update block count for simulator robot
+      dispatch(updateSimulatorBlockCount({ robotId: editableTarget.id, blockId: tapBlock.id, newCount: n, property: tapBlock.name === "Set Video Transparency" ? 'opacity' : 'count' }));
     } else {
-      dispatch(updateBlockCount({ actorId: actor.id, blockId: tapBlock.id, newCount: n }));
+      // Update stage actor block
+      if (tapBlock.name === "Set Video Transparency") {
+        dispatch(updateBlockCount({ actorId: editableTarget.id, blockId: tapBlock.id, newCount: n, property: 'opacity' }));
+      } else {
+        dispatch(updateBlockCount({ actorId: editableTarget.id, blockId: tapBlock.id, newCount: n }));
+      }
     }
   };
 
-  if (!actor) {
+  const handleOpacityChange = (blockId, newOpacity) => {
+    if (!editableTarget) return;
+    if (editableTarget.type === 'simulatorRobot') {
+      dispatch(updateSimulatorBlockCount({ robotId: editableTarget.id, blockId, newCount: newOpacity, property: 'opacity' }));
+    } else {
+      dispatch(updateBlockCount({ actorId: editableTarget.id, blockId, newCount: newOpacity, property: 'opacity' }));
+    }
+  };
+
+  // Run button: respects either selected simulator robot (if selected) or stage actor
+  const handleRunClick = async () => {
+    try {
+      const currentState = store.getState();
+      const isSimulatorVisible = document.querySelector('.simulator-robot') !== null;
+      const simRobots = currentState.scene?.simulatorRobots || [];
+
+      if (isSimulatorVisible && simRobots.length > 0) {
+        // If a sim robot is selected for editing, run only that robot.
+        if (selectedSimRobot) {
+          if (selectedSimRobot.scripts && selectedSimRobot.scripts.length > 0) {
+            console.log('🤖 Running selected simulator robot script:', selectedSimRobot.name);
+            await run(selectedSimRobot, dispatch, scene?.sounds, selectedSimRobot.id);
+          } else {
+            console.warn('🤖 Selected simulator robot has no scripts:', selectedSimRobot);
+          }
+        } else {
+          // Otherwise run all simulator robots (that have scripts)
+          for (const robot of simRobots) {
+            if (robot.scripts && robot.scripts.length > 0) {
+              console.log('🤖 Running simulator robot script:', robot.name);
+              await run(robot, dispatch, scene?.sounds, robot.id);
+            } else {
+              console.warn('🤖 Simulator robot has no scripts to run:', robot.name);
+            }
+          }
+        }
+      } else if (stageActor) {
+        console.log('🎭 Running stage actor script:', stageActor.name);
+        await run(stageActor, dispatch, scene?.sounds, stageActor.id);
+      } else {
+        console.log('❌ No actor or robot available to run');
+      }
+    } catch (err) {
+      console.error('Error while running script:', err);
+    }
+  };
+
+  if (!editableTarget) {
     return (
       <div className="scriptarea-root">
         <div className="scriptarea-buttons">
@@ -162,30 +249,35 @@ export default function ScriptArea({ selectedActorId }) {
           <button className="s-btn clear" disabled>🗑 Clear</button>
         </div>
         <div className="scriptarea-noborder">
-          <div className="s-hint">Drop blocks here to build your script</div>
+          <div className="s-hint">Select an actor (stage) or a robot (simulator) to edit scripts</div>
         </div>
       </div>
     );
   }
 
-  const handleOpacityChange = (blockId, newOpacity) => {
-    dispatch(updateBlockCount({ actorId: actor.id, blockId, newCount: newOpacity, property: 'opacity' }));
-  };
+  const scripts = editableTarget.scripts || [];
 
   return (
     <div className="scriptarea-root">
       <div className="scriptarea-buttons">
         <button
           className="s-btn run"
-          onClick={() => run(actor, dispatch, scene?.sounds, actor.id)}
-          disabled={!actor.scripts.length}
+          onClick={handleRunClick}
+          disabled={!scripts.length}
         >
           ▶ Run
         </button>
         <button
           className="s-btn clear"
-          onClick={() => dispatch(clearScript({ actorId: actor.id }))}
-          disabled={!actor.scripts.length}
+          onClick={() => {
+            dispatch(pushUndoState());
+            if (editableTarget.type === 'simulatorRobot') {
+              dispatch(clearSimulatorScript({ robotId: editableTarget.id }));
+            } else {
+              dispatch(clearScript({ actorId: editableTarget.id }));
+            }
+          }}
+          disabled={!scripts.length}
         >
           🗑 Clear
         </button>
@@ -197,10 +289,10 @@ export default function ScriptArea({ selectedActorId }) {
         onDragOver={handleScriptAreaDragOver}
       >
         <div className="script-chain">
-          {actor.scripts.length === 0 ? (
+          {scripts.length === 0 ? (
             <div className="s-hint">Drop blocks here to build your script</div>
           ) : (
-            actor.scripts.map((b, i) => {
+            scripts.map((b, i) => {
               // Camera control block rendering
               if (b.type === 'camera_control') {
                 return (
@@ -221,10 +313,8 @@ export default function ScriptArea({ selectedActorId }) {
                         e.stopPropagation();
                         const newState = e.target.value;
 
-                        // Update global camera state in Redux
                         dispatch(setCameraState(newState));
 
-                        // Trigger camera functionality
                         if (newState === 'on') {
                           window.humanDetectionController?.startCamera();
                         } else {
@@ -232,21 +322,6 @@ export default function ScriptArea({ selectedActorId }) {
                         }
                       }}
                       onClick={(e) => e.stopPropagation()}
-                    // style={{
-                    //   position: 'absolute',
-                    //   top: '50%',
-                    //   left: '50%',
-                    //   transform: 'translate(-50%, -50%)',
-                    //   width: '50px',
-                    //   height: '24px',
-                    //   background: 'rgba(255, 255, 255, 0.9)',
-                    //   border: '1px solid rgba(0,0,0,0.3)',
-                    //   borderRadius: '4px',
-                    //   color: 'black',
-                    //   fontSize: '10px',
-                    //   zIndex: 2,
-                    //   cursor: 'pointer'
-                    // }}
                     >
                       <option value="off">off</option>
                       <option value="on">on</option>

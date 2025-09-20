@@ -10,12 +10,22 @@ import {
   addObstacle,
   removeObstacle,
   moveObstacle,
-  addColoredArea,  // Changed from addTextArea
-  removeColoredArea, // Changed from removeTextArea
-  moveColoredArea,   // Changed from moveTextArea
+  addColoredArea,
+  removeColoredArea,
+  moveColoredArea,
   setBackground,
   cycleNextBackground,
-  overwrite
+  overwrite,
+  addSimulatorRobot,
+  removeSimulatorRobot,
+  moveSimulatorRobot,
+  cycleSimulatorRobot,
+  // NEW IMPORTS: Script movement actions
+  moveSimulatorRobotFromScript,
+  rotateSimulatorRobotFromScript,
+  scaleSimulatorRobotFromScript,
+  disappearSimulatorRobot,
+  reappearSimulatorRobot,
 } from "../store/sceneSlice";
 
 // Helper for delays with speed multiplier
@@ -91,7 +101,14 @@ function getCurrentSceneData(dispatch) {
     // Method 1: Try to access store from the dispatch function context
     if (dispatch && dispatch.getState) {
       const state = dispatch.getState();
-      return state.scene?.scenes?.[state.scene?.currentSceneIndex];
+      const currentScene = state.scene?.scenes?.[state.scene?.currentSceneIndex];
+      // Include simulator robots in scene data
+      if (currentScene) {
+        return {
+          ...currentScene,
+          simulatorRobots: state.scene?.simulatorRobots || []
+        };
+      }
     }
 
     // Method 2: Try various global store access patterns
@@ -110,9 +127,13 @@ function getCurrentSceneData(dispatch) {
           console.log(`🚧 Found scene data via global store:`, {
             actors: currentScene.actors?.length || 0,
             obstacles: currentScene.obstacles?.length || 0,
-            coloredAreas: currentScene.coloredAreas?.length || 0
+            coloredAreas: currentScene.coloredAreas?.length || 0,
+            simulatorRobots: state.scene?.simulatorRobots?.length || 0
           });
-          return currentScene;
+          return {
+            ...currentScene,
+            simulatorRobots: state.scene?.simulatorRobots || []
+          };
         }
       }
     }
@@ -140,6 +161,7 @@ function checkForObstacle(actor, direction, dispatch, currentSceneData) {
       actors: currentSceneData.actors?.length || 0,
       obstacles: currentSceneData.obstacles?.length || 0,
       coloredAreas: currentSceneData.coloredAreas?.length || 0,
+      simulatorRobots: currentSceneData.simulatorRobots?.length || 0,
       background: currentSceneData.background
     });
 
@@ -264,7 +286,7 @@ export function moveObstacleInScene(obstacleId, newX, newY, dispatch) {
   }
 }
 
-// NEW: Colored Area Management Functions (NO TEXT - just colored blocks)
+// Colored Area Management Functions (NO TEXT - just colored blocks)
 export function addColoredAreaToScene(coloredAreaData, dispatch) {
   try {
     console.log('🎨 Adding colored area from simulator:', coloredAreaData);
@@ -297,6 +319,55 @@ export function moveColoredAreaInScene(coloredAreaId, newX, newY, dispatch) {
     return true;
   } catch (error) {
     console.error('❌ Error moving colored area:', error);
+    return false;
+  }
+}
+
+// NEW: Simulator Robot Management Functions
+export function addSimulatorRobotToScene(robotData, dispatch) {
+  try {
+    console.log('🤖 Adding robot to simulator:', robotData);
+    dispatch(addSimulatorRobot(robotData));
+    console.log('✅ Robot added to simulator successfully');
+    return true;
+  } catch (error) {
+    console.error('❌ Error adding robot to simulator:', error);
+    return false;
+  }
+}
+
+export function removeSimulatorRobotFromScene(robotId, dispatch) {
+  try {
+    console.log('🤖 Removing robot from simulator:', robotId);
+    dispatch(removeSimulatorRobot(robotId));
+    console.log('✅ Robot removed from simulator successfully');
+    return true;
+  } catch (error) {
+    console.error('❌ Error removing robot from simulator:', error);
+    return false;
+  }
+}
+
+export function moveSimulatorRobotInScene(robotId, newX, newY, dispatch) {
+  try {
+    console.log('🤖 Moving robot in simulator:', { robotId, newX, newY });
+    dispatch(moveSimulatorRobot({ id: robotId, x: newX, y: newY }));
+    console.log('✅ Robot moved in simulator successfully');
+    return true;
+  } catch (error) {
+    console.error('❌ Error moving robot in simulator:', error);
+    return false;
+  }
+}
+
+export function cycleSimulatorRobotType(dispatch) {
+  try {
+    console.log('🔄 Cycling to next robot type in simulator');
+    dispatch(cycleSimulatorRobot());
+    console.log('✅ Robot cycled successfully');
+    return true;
+  } catch (error) {
+    console.error('❌ Error cycling robot type:', error);
     return false;
   }
 }
@@ -494,6 +565,7 @@ export async function saveProjectFromSimulator(dispatch, getState) {
       currentSceneIndex: state.scene.currentSceneIndex,
       backgroundGallery: state.scene.backgroundGallery,
       customSounds: state.scene.customSounds,
+      simulatorRobots: state.scene.simulatorRobots, // Include simulator robots
       savedAt: new Date().toISOString()
     };
 
@@ -671,7 +743,7 @@ const isPointing = (direction) => {
   }
 };
 
-// MAIN: exported async run function with obstacle collision detection
+// MAIN: exported async run function with simulator robot support
 export async function run(actor, dispatch, sounds, selectedActorId) {
   if (!actor) {
     console.warn("run() called with no actor!");
@@ -686,10 +758,12 @@ export async function run(actor, dispatch, sounds, selectedActorId) {
   const loops = [];
   const targetActorId = selectedActorId || actor.id;
   let currentSpeedMultiplier = 1;
-  let obstacleCollisionDetected = false; // Flag to track obstacle collision
+  let obstacleCollisionDetected = false;
 
   console.log("🚀 Starting script execution with", actor.scripts.length, "blocks");
   console.log("🔊 Available sounds:", sounds);
+  console.log("🤖 Actor type:", actor.type || 'stage-actor');
+  console.log("🤖 Actor position:", { x: actor.x, y: actor.y, direction: actor.direction });
 
   // First pass: check for Stop blocks
   let stopIndex = -1;
@@ -761,11 +835,17 @@ export async function run(actor, dispatch, sounds, selectedActorId) {
                 obstacleCollisionDetected = true;
                 break;
               }
-            } else {
-              console.log(`🚧 ⚠️ Scene data not available, proceeding without obstacle check`);
             }
 
-            dispatch(moveActor({ actorId: actor.id, dx: 1, dy: 0, fromScript: true }));
+            // FIXED: Use proper Redux actions for simulator robot movement
+            if (actor.type === 'simulatorRobot') {
+              console.log(`🤖 Moving simulator robot RIGHT: ${actor.name} from (${actor.x}, ${actor.y}) to (${actor.x + 1}, ${actor.y})`);
+              dispatch(moveSimulatorRobotFromScript({ robotId: actor.id, x: actor.x + 1, y: actor.y }));
+              actor.x = Math.min(actor.x + 1, 19); // Update local reference
+            } else {
+              dispatch(moveActor({ actorId: actor.id, dx: 1, dy: 0, fromScript: true }));
+            }
+
             await delay(180, currentSpeedMultiplier);
           }
           break;
@@ -780,11 +860,16 @@ export async function run(actor, dispatch, sounds, selectedActorId) {
                 obstacleCollisionDetected = true;
                 break;
               }
-            } else {
-              console.log(`🚧 ⚠️ Scene data not available, proceeding without obstacle check`);
             }
 
-            dispatch(moveActor({ actorId: actor.id, dx: -1, dy: 0, fromScript: true }));
+            if (actor.type === 'simulatorRobot') {
+              console.log(`🤖 Moving simulator robot LEFT: ${actor.name} from (${actor.x}, ${actor.y}) to (${actor.x - 1}, ${actor.y})`);
+              dispatch(moveSimulatorRobotFromScript({ robotId: actor.id, x: actor.x - 1, y: actor.y }));
+              actor.x = Math.max(actor.x - 1, 0);
+            } else {
+              dispatch(moveActor({ actorId: actor.id, dx: -1, dy: 0, fromScript: true }));
+            }
+
             await delay(180, currentSpeedMultiplier);
           }
           break;
@@ -799,14 +884,19 @@ export async function run(actor, dispatch, sounds, selectedActorId) {
                 obstacleCollisionDetected = true;
                 break;
               }
-            } else {
-              console.log(`🚧 ⚠️ Scene data not available, proceeding without obstacle check`);
             }
 
-            dispatch(moveActor({ actorId: actor.id, dx: 0, dy: -1, fromScript: true }));
-            await delay(120, currentSpeedMultiplier);
-            dispatch(moveActor({ actorId: actor.id, dx: 0, dy: 2, fromScript: true }));
-            await delay(120, currentSpeedMultiplier);
+            if (actor.type === 'simulatorRobot') {
+              console.log(`🤖 Moving simulator robot UP: ${actor.name} from (${actor.x}, ${actor.y}) to (${actor.x}, ${actor.y - 1})`);
+              dispatch(moveSimulatorRobotFromScript({ robotId: actor.id, x: actor.x, y: actor.y - 1 }));
+              actor.y = Math.max(actor.y - 1, 0);
+            } else {
+              dispatch(moveActor({ actorId: actor.id, dx: 0, dy: -1, fromScript: true }));
+              await delay(120, currentSpeedMultiplier);
+              dispatch(moveActor({ actorId: actor.id, dx: 0, dy: 2, fromScript: true }));
+            }
+
+            await delay(180, currentSpeedMultiplier);
           }
           break;
 
@@ -820,25 +910,43 @@ export async function run(actor, dispatch, sounds, selectedActorId) {
                 obstacleCollisionDetected = true;
                 break;
               }
-            } else {
-              console.log(`🚧 ⚠️ Scene data not available, proceeding without obstacle check`);
             }
 
-            dispatch(moveActor({ actorId: actor.id, dx: 0, dy: 1, fromScript: true }));
+            if (actor.type === 'simulatorRobot') {
+              console.log(`🤖 Moving simulator robot DOWN: ${actor.name} from (${actor.x}, ${actor.y}) to (${actor.x}, ${actor.y + 1})`);
+              dispatch(moveSimulatorRobotFromScript({ robotId: actor.id, x: actor.x, y: actor.y + 1 }));
+              actor.y = Math.min(actor.y + 1, 14);
+            } else {
+              dispatch(moveActor({ actorId: actor.id, dx: 0, dy: 1, fromScript: true }));
+            }
+
             await delay(180, currentSpeedMultiplier);
           }
           break;
 
         case 'Rotate Left':
           for (let k = 0; k < c; k++) {
-            dispatch(rotateActor({ actorId: actor.id, degrees: -90, fromScript: true }));
+            if (actor.type === 'simulatorRobot') {
+              console.log(`🤖 Rotating simulator robot LEFT: ${actor.name} from ${actor.direction}° to ${(actor.direction - 90) % 360}°`);
+              dispatch(rotateSimulatorRobotFromScript({ robotId: actor.id, degrees: -90 }));
+              actor.direction = (actor.direction - 90) % 360;
+              if (actor.direction < 0) actor.direction += 360;
+            } else {
+              dispatch(rotateActor({ actorId: actor.id, degrees: -90, fromScript: true }));
+            }
             await delay(140, currentSpeedMultiplier);
           }
           break;
 
         case 'Rotate Right':
           for (let k = 0; k < c; k++) {
-            dispatch(rotateActor({ actorId: actor.id, degrees: 90, fromScript: true }));
+            if (actor.type === 'simulatorRobot') {
+              console.log(`🤖 Rotating simulator robot RIGHT: ${actor.name} from ${actor.direction}° to ${(actor.direction + 90) % 360}°`);
+              dispatch(rotateSimulatorRobotFromScript({ robotId: actor.id, degrees: 90 }));
+              actor.direction = (actor.direction + 90) % 360;
+            } else {
+              dispatch(rotateActor({ actorId: actor.id, degrees: 90, fromScript: true }));
+            }
             await delay(140, currentSpeedMultiplier);
           }
           break;
@@ -862,7 +970,12 @@ export async function run(actor, dispatch, sounds, selectedActorId) {
                 break;
               }
             }
-            dispatch(moveActor({ actorId: actor.id, dx: 0, dy: -1, fromScript: true }));
+            if (actor.type === 'simulatorRobot') {
+              dispatch(moveSimulatorRobotFromScript({ robotId: actor.id, x: actor.x, y: actor.y - 1 }));
+              actor.y = Math.max(actor.y - 1, 0);
+            } else {
+              dispatch(moveActor({ actorId: actor.id, dx: 0, dy: -1, fromScript: true }));
+            }
             await delay(180, currentSpeedMultiplier);
           }
           break;
@@ -878,7 +991,12 @@ export async function run(actor, dispatch, sounds, selectedActorId) {
                 break;
               }
             }
-            dispatch(moveActor({ actorId: actor.id, dx: 0, dy: 1, fromScript: true }));
+            if (actor.type === 'simulatorRobot') {
+              dispatch(moveSimulatorRobotFromScript({ robotId: actor.id, x: actor.x, y: actor.y + 1 }));
+              actor.y = Math.min(actor.y + 1, 14);
+            } else {
+              dispatch(moveActor({ actorId: actor.id, dx: 0, dy: 1, fromScript: true }));
+            }
             await delay(180, currentSpeedMultiplier);
           }
           break;
@@ -894,7 +1012,12 @@ export async function run(actor, dispatch, sounds, selectedActorId) {
                 break;
               }
             }
-            dispatch(moveActor({ actorId: actor.id, dx: -1, dy: 0, fromScript: true }));
+            if (actor.type === 'simulatorRobot') {
+              dispatch(moveSimulatorRobotFromScript({ robotId: actor.id, x: actor.x - 1, y: actor.y }));
+              actor.x = Math.max(actor.x - 1, 0);
+            } else {
+              dispatch(moveActor({ actorId: actor.id, dx: -1, dy: 0, fromScript: true }));
+            }
             await delay(180, currentSpeedMultiplier);
           }
           break;
@@ -910,7 +1033,12 @@ export async function run(actor, dispatch, sounds, selectedActorId) {
                 break;
               }
             }
-            dispatch(moveActor({ actorId: actor.id, dx: 1, dy: 0, fromScript: true }));
+            if (actor.type === 'simulatorRobot') {
+              dispatch(moveSimulatorRobotFromScript({ robotId: actor.id, x: actor.x + 1, y: actor.y }));
+              actor.x = Math.min(actor.x + 1, 19);
+            } else {
+              dispatch(moveActor({ actorId: actor.id, dx: 1, dy: 0, fromScript: true }));
+            }
             await delay(180, currentSpeedMultiplier);
           }
           break;
@@ -961,28 +1089,53 @@ export async function run(actor, dispatch, sounds, selectedActorId) {
 
         case 'Grow Size':
           for (let k = 0; k < c; k++) {
-            dispatch(scaleActor({ actorId: actor.id, scale: 1.2, fromScript: true }));
+            if (actor.type === 'simulatorRobot') {
+              dispatch(scaleSimulatorRobotFromScript({ robotId: actor.id, scale: 1.2 }));
+              actor.size = Math.min((actor.size || 1) * 1.2, 4.0);
+            } else {
+              dispatch(scaleActor({ actorId: actor.id, scale: 1.2, fromScript: true }));
+            }
             await delay(200, currentSpeedMultiplier);
           }
           break;
 
         case 'Shrink Size':
           for (let k = 0; k < c; k++) {
-            dispatch(scaleActor({ actorId: actor.id, scale: 0.8, fromScript: true }));
+            if (actor.type === 'simulatorRobot') {
+              dispatch(scaleSimulatorRobotFromScript({ robotId: actor.id, scale: 0.8 }));
+              actor.size = Math.max((actor.size || 1) * 0.8, 0.5);
+            } else {
+              dispatch(scaleActor({ actorId: actor.id, scale: 0.8, fromScript: true }));
+            }
             await delay(200, currentSpeedMultiplier);
           }
           break;
 
         case 'Reset Size':
-          dispatch(resetActorSize({ actorId: targetActorId, fromScript: true }));
+          if (actor.type === 'simulatorRobot') {
+            dispatch(scaleSimulatorRobotFromScript({ robotId: actor.id, scale: 1 / (actor.size || 1) }));
+            actor.size = 1;
+          } else {
+            dispatch(resetActorSize({ actorId: targetActorId, fromScript: true }));
+          }
           break;
 
         case 'Disappear':
-          dispatch(disappearActor({ actorId: targetActorId }));
+          if (actor.type === 'simulatorRobot') {
+            dispatch(disappearSimulatorRobot({ robotId: actor.id }));
+            actor.visible = false;
+          } else {
+            dispatch(disappearActor({ actorId: targetActorId }));
+          }
           break;
 
         case 'Appear':
-          dispatch(reappearActor({ actorId: targetActorId }));
+          if (actor.type === 'simulatorRobot') {
+            dispatch(reappearSimulatorRobot({ robotId: actor.id }));
+            actor.visible = true;
+          } else {
+            dispatch(reappearActor({ actorId: targetActorId }));
+          }
           break;
 
         default:
