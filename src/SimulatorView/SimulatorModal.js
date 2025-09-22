@@ -132,34 +132,38 @@ const SimulatorModal = ({ onClose, background }) => {
     };
   }, [drawLineSettings.enabled]);
 
-  // Track robot positions for drawing when they change in Redux
-  useEffect(() => {
-    if (!drawLineSettings.enabled) return;
+// Track robot positions for drawing ONLY when moved by scripts (not manual drag)
+useEffect(() => {
+  if (!drawLineSettings.enabled) return;
 
-    simulatorRobots.forEach(robot => {
-      if (robot.visible !== false) {
+  simulatorRobots.forEach(robot => {
+    if (robot.visible !== false) {
+      // ONLY add to path if robot is NOT being dragged
+      if (!draggedRobot || draggedRobot.id !== robot.id) {
         setDrawnPaths(prevPaths => {
           const newPaths = new Map(prevPaths);
           const robotPath = newPaths.get(robot.id) || [];
-
+          
           const lastPoint = robotPath[robotPath.length - 1];
           const currentPoint = { x: robot.x, y: robot.y, timestamp: Date.now() };
-
+          
           if (!lastPoint || lastPoint.x !== robot.x || lastPoint.y !== robot.y) {
             robotPath.push(currentPoint);
-
+            
             if (robotPath.length > 500) {
               robotPath.shift();
             }
-
+            
             newPaths.set(robot.id, robotPath);
           }
-
+          
           return newPaths;
         });
       }
-    });
-  }, [simulatorRobots, drawLineSettings.enabled]);
+    }
+  });
+}, [simulatorRobots, drawLineSettings.enabled, draggedRobot]); // ADD draggedRobot to dependencies
+
 
   // Clear paths when drawing is disabled
   useEffect(() => {

@@ -56,7 +56,6 @@ const blocksByCategory = {
   sound: [
     { name: "Pop", icon: "./assets/blockicons/Speaker.svg" },
     { name: "Record", icon: "./assets/blockicons/microphone.svg" },
-
   ],
   control: [
     { name: "Wait", icon: "./assets/blockicons/Wait.svg", 
@@ -132,8 +131,6 @@ const blocksByCategory = {
     { name: "Sync Actors with Faces", icon: "./assets/blockicons/person.svg", type: "sync_actors_with_faces" },
   ],
 };
-
-
 
 // Camera Control Block Component - KEEP AS IS
 function CameraControlBlock({ puzzleBg }) {
@@ -392,6 +389,7 @@ function VoiceRecordModal({ isOpen, onClose, onSave }) {
 export default function BlockPalette() {
   const dispatch = useDispatch();
   const [showVoiceModal, setShowVoiceModal] = useState(false);
+  const [showConnectionModal, setShowConnectionModal] = useState(false); // Added connection modal state
 
   const selectedBlockCategory = useSelector((s) => s.scene.selectedBlockCategory) || "motion";
   const customSounds = useSelector((s) => s.scene.customSounds) || [];
@@ -454,6 +452,8 @@ export default function BlockPalette() {
     if (block.name === "Record") {
       console.log('Opening voice modal'); // DEBUG
       setShowVoiceModal(true);
+    } else if (block.requiresConnection) { // Added device connection handling
+      setShowConnectionModal(true);
     }
   };
 
@@ -482,10 +482,11 @@ export default function BlockPalette() {
               className={`block-palette-tile ${block.type === 'custom_sound' ? 'custom-sound-block' : ''}`}
               key={(block.name || "end") + idx}
               title={block.name || "End"}
-              draggable
-              onDragStart={handleDragStart(block)}
+              draggable={!block.requiresConnection} // Modified: Only draggable if no connection required
+              onDragStart={!block.requiresConnection ? handleDragStart(block) : undefined} // Modified: Only add drag handler if draggable
               onDoubleClick={() => handleDoubleClick(block)}
               onClick={() => handleBlockClick(block)}
+              style={{ cursor: block.requiresConnection ? 'pointer' : 'grab' }} // Modified: Different cursor for connection blocks
             >
               <img className="block-bg" src={puzzleBg} alt="" draggable={false} aria-hidden="true" />
 
@@ -515,8 +516,15 @@ export default function BlockPalette() {
         onClose={() => setShowVoiceModal(false)}
         onSave={handleVoiceSave}
       />
+
+      {/* Added ConnectionModal */}
+      <ConnectionModal
+        isOpen={showConnectionModal}
+        onClose={() => setShowConnectionModal(false)}
+      />
     </>
   );
 }
 
 export { blocksByCategory };
+ 
