@@ -14,6 +14,53 @@ const delay = (ms, speedMultiplier = 1) => {
   return new Promise(res => setTimeout(res, adjustedTime));
 };
 
+// NEW: Draw line trail functionality
+export function initializeDrawLineCanvas() {
+  // This function can be called to prepare the canvas for drawing
+  console.log('✏️ Draw line canvas initialized');
+}
+
+export function clearDrawnPaths() {
+  // Clear all drawn paths
+  localStorage.removeItem('simulatorDrawnPaths');
+  window.dispatchEvent(new CustomEvent('clearDrawnPaths'));
+  console.log('✏️ All drawn paths cleared');
+}
+
+export function getDrawLineSettings() {
+  try {
+    const stored = localStorage.getItem('simulatorDrawLineSettings');
+    return stored ? JSON.parse(stored) : {
+      enabled: false,
+      thickness: 3,
+      size: 10,
+      color: '#FF0000'
+    };
+  } catch (error) {
+    console.error('Error getting draw line settings:', error);
+    return {
+      enabled: false,
+      thickness: 3,
+      size: 10,
+      color: '#FF0000'
+    };
+  }
+}
+
+export function setDrawLineSettings(settings) {
+  try {
+    localStorage.setItem('simulatorDrawLineSettings', JSON.stringify(settings));
+    window.dispatchEvent(new CustomEvent('drawLineSettingsChanged', {
+      detail: settings
+    }));
+    console.log('✏️ Draw line settings updated:', settings);
+    return true;
+  } catch (error) {
+    console.error('Error setting draw line settings:', error);
+    return false;
+  }
+}
+
 // ADD: Simulator obstacle detection function
 const checkSimulatorObstacle = (robot, targetX, targetY) => {
   console.log(`🚧 Checking simulator obstacles for robot at (${targetX}, ${targetY})`);
@@ -785,7 +832,7 @@ const isPointing = (direction) => {
   }
 };
 
-// MAIN exported async run function with simulator robot support
+// MAIN exported async run function with simulator robot support and draw line tracking
 export async function run(actor, dispatch, sounds, selectedActorId) {
   if (!actor) {
     console.warn("⚠️ run() called with no actor!");
@@ -882,6 +929,18 @@ export async function run(actor, dispatch, sounds, selectedActorId) {
               console.log(`🤖 Moving simulator robot RIGHT ${actor.name} from (${actor.x}, ${actor.y}) to (${actor.x + 1}, ${actor.y})`);
               dispatch(moveSimulatorRobotFromScript({ robotId: actor.id, x: targetX, y: actor.y }));
               actor.x = targetX; // Update local reference
+              
+              // NEW: Notify robot moved for drawing trail
+              if (actor.type === 'simulatorRobot') {
+                window.dispatchEvent(new CustomEvent('robotMoved', {
+                  detail: {
+                    robotId: actor.id,
+                    x: actor.x,
+                    y: actor.y,
+                    timestamp: Date.now()
+                  }
+                }));
+              }
             } else {
               // STAGE ACTOR obstacle detection
               if (currentScene) {
@@ -914,6 +973,18 @@ export async function run(actor, dispatch, sounds, selectedActorId) {
               console.log(`🤖 Moving simulator robot LEFT ${actor.name} from (${actor.x}, ${actor.y}) to (${actor.x - 1}, ${actor.y})`);
               dispatch(moveSimulatorRobotFromScript({ robotId: actor.id, x: targetX, y: actor.y }));
               actor.x = targetX;
+              
+              // NEW: Notify robot moved for drawing trail
+              if (actor.type === 'simulatorRobot') {
+                window.dispatchEvent(new CustomEvent('robotMoved', {
+                  detail: {
+                    robotId: actor.id,
+                    x: actor.x,
+                    y: actor.y,
+                    timestamp: Date.now()
+                  }
+                }));
+              }
             } else {
               if (currentScene) {
                 if (checkForObstacle(actor, 'left', dispatch, currentScene)) {
@@ -945,6 +1016,18 @@ export async function run(actor, dispatch, sounds, selectedActorId) {
               console.log(`🤖 Moving simulator robot UP ${actor.name} from (${actor.x}, ${actor.y}) to (${actor.x}, ${actor.y - 1})`);
               dispatch(moveSimulatorRobotFromScript({ robotId: actor.id, x: actor.x, y: targetY }));
               actor.y = targetY;
+              
+              // NEW: Notify robot moved for drawing trail
+              if (actor.type === 'simulatorRobot') {
+                window.dispatchEvent(new CustomEvent('robotMoved', {
+                  detail: {
+                    robotId: actor.id,
+                    x: actor.x,
+                    y: actor.y,
+                    timestamp: Date.now()
+                  }
+                }));
+              }
             } else {
               if (currentScene) {
                 if (checkForObstacle(actor, 'up', dispatch, currentScene)) {
@@ -976,6 +1059,18 @@ export async function run(actor, dispatch, sounds, selectedActorId) {
               console.log(`🤖 Moving simulator robot DOWN ${actor.name} from (${actor.x}, ${actor.y}) to (${actor.x}, ${actor.y + 1})`);
               dispatch(moveSimulatorRobotFromScript({ robotId: actor.id, x: actor.x, y: targetY }));
               actor.y = targetY;
+              
+              // NEW: Notify robot moved for drawing trail
+              if (actor.type === 'simulatorRobot') {
+                window.dispatchEvent(new CustomEvent('robotMoved', {
+                  detail: {
+                    robotId: actor.id,
+                    x: actor.x,
+                    y: actor.y,
+                    timestamp: Date.now()
+                  }
+                }));
+              }
             } else {
               if (currentScene) {
                 if (checkForObstacle(actor, 'down', dispatch, currentScene)) {
@@ -1040,6 +1135,18 @@ export async function run(actor, dispatch, sounds, selectedActorId) {
               }
               dispatch(moveSimulatorRobotFromScript({ robotId: actor.id, x: actor.x, y: targetY }));
               actor.y = targetY;
+              
+              // NEW: Notify robot moved for drawing trail
+              if (actor.type === 'simulatorRobot') {
+                window.dispatchEvent(new CustomEvent('robotMoved', {
+                  detail: {
+                    robotId: actor.id,
+                    x: actor.x,
+                    y: actor.y,
+                    timestamp: Date.now()
+                  }
+                }));
+              }
             } else {
               if (currentScene) {
                 if (checkForObstacle(actor, 'up', dispatch, currentScene)) {
@@ -1068,6 +1175,18 @@ export async function run(actor, dispatch, sounds, selectedActorId) {
               }
               dispatch(moveSimulatorRobotFromScript({ robotId: actor.id, x: actor.x, y: targetY }));
               actor.y = targetY;
+              
+              // NEW: Notify robot moved for drawing trail
+              if (actor.type === 'simulatorRobot') {
+                window.dispatchEvent(new CustomEvent('robotMoved', {
+                  detail: {
+                    robotId: actor.id,
+                    x: actor.x,
+                    y: actor.y,
+                    timestamp: Date.now()
+                  }
+                }));
+              }
             } else {
               if (currentScene) {
                 if (checkForObstacle(actor, 'down', dispatch, currentScene)) {
@@ -1096,6 +1215,18 @@ export async function run(actor, dispatch, sounds, selectedActorId) {
               }
               dispatch(moveSimulatorRobotFromScript({ robotId: actor.id, x: targetX, y: actor.y }));
               actor.x = targetX;
+              
+              // NEW: Notify robot moved for drawing trail
+              if (actor.type === 'simulatorRobot') {
+                window.dispatchEvent(new CustomEvent('robotMoved', {
+                  detail: {
+                    robotId: actor.id,
+                    x: actor.x,
+                    y: actor.y,
+                    timestamp: Date.now()
+                  }
+                }));
+              }
             } else {
               if (currentScene) {
                 if (checkForObstacle(actor, 'left', dispatch, currentScene)) {
@@ -1124,6 +1255,18 @@ export async function run(actor, dispatch, sounds, selectedActorId) {
               }
               dispatch(moveSimulatorRobotFromScript({ robotId: actor.id, x: targetX, y: actor.y }));
               actor.x = targetX;
+              
+              // NEW: Notify robot moved for drawing trail
+              if (actor.type === 'simulatorRobot') {
+                window.dispatchEvent(new CustomEvent('robotMoved', {
+                  detail: {
+                    robotId: actor.id,
+                    x: actor.x,
+                    y: actor.y,
+                    timestamp: Date.now()
+                  }
+                }));
+              }
             } else {
               if (currentScene) {
                 if (checkForObstacle(actor, 'right', dispatch, currentScene)) {

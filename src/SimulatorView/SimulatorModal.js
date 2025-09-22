@@ -23,7 +23,13 @@ const SimulatorModal = ({ onClose, background }) => {
   const [hoveredColoredArea, setHoveredColoredArea] = useState(null);
   const [hoveredRobot, setHoveredRobot] = useState(null);
   const [simulatorBg, setSimulatorBg] = useState(getCurrentSimulatorBackground());
-
+  const [drawLineSettings, setDrawLineSettings] = useState({
+    enabled: false,
+    thickness: 3,
+    size: 10,
+    color: '#FF0000'
+  });
+  const [drawnPaths, setDrawnPaths] = useState(new Map());
   const dispatch = useDispatch();
 
   // Get obstacles from Redux store
@@ -61,6 +67,107 @@ const SimulatorModal = ({ onClose, background }) => {
       window.removeEventListener('simulatorBackgroundChanged', handleStorageChange);
     };
   }, []);
+
+  // ADD THIS ENTIRE useEffect:
+  // Listen for draw line settings changes
+  useEffect(() => {
+    const loadDrawLineSettings = () => {
+      try {
+        const stored = localStorage.getItem('simulatorDrawLineSettings');
+        if (stored) {
+          const settings = JSON.parse(stored);
+          setDrawLineSettings(settings);
+        }
+      } catch (error) {
+        console.error('Error loading draw line settings:', error);
+      }
+    };
+
+    loadDrawLineSettings();
+
+    const handleSettingsChange = (event) => {
+      if (event.detail) {
+        setDrawLineSettings(event.detail);
+      }
+    };
+
+    const handleClearPaths = () => {
+      setDrawnPaths(new Map());
+    };
+
+    const handleRobotMoved = (event) => {
+      if (drawLineSettings.enabled && event.detail) {
+        const { robotId, x, y, timestamp } = event.detail;
+
+        setDrawnPaths(prevPaths => {
+          const newPaths = new Map(prevPaths);
+          const robotPath = newPaths.get(robotId) || [];
+
+          const lastPoint = robotPath[robotPath.length - 1];
+          const currentPoint = { x, y, timestamp };
+
+          if (!lastPoint || lastPoint.x !== x || lastPoint.y !== y) {
+            robotPath.push(currentPoint);
+
+            if (robotPath.length > 500) {
+              robotPath.shift();
+            }
+
+            newPaths.set(robotId, robotPath);
+          }
+
+          return newPaths;
+        });
+      }
+    };
+
+    window.addEventListener('drawLineSettingsChanged', handleSettingsChange);
+    window.addEventListener('clearDrawnPaths', handleClearPaths);
+    window.addEventListener('robotMoved', handleRobotMoved);
+
+    return () => {
+      window.removeEventListener('drawLineSettingsChanged', handleSettingsChange);
+      window.removeEventListener('clearDrawnPaths', handleClearPaths);
+      window.removeEventListener('robotMoved', handleRobotMoved);
+    };
+  }, [drawLineSettings.enabled]);
+
+  // Track robot positions for drawing when they change in Redux
+  useEffect(() => {
+    if (!drawLineSettings.enabled) return;
+
+    simulatorRobots.forEach(robot => {
+      if (robot.visible !== false) {
+        setDrawnPaths(prevPaths => {
+          const newPaths = new Map(prevPaths);
+          const robotPath = newPaths.get(robot.id) || [];
+
+          const lastPoint = robotPath[robotPath.length - 1];
+          const currentPoint = { x: robot.x, y: robot.y, timestamp: Date.now() };
+
+          if (!lastPoint || lastPoint.x !== robot.x || lastPoint.y !== robot.y) {
+            robotPath.push(currentPoint);
+
+            if (robotPath.length > 500) {
+              robotPath.shift();
+            }
+
+            newPaths.set(robot.id, robotPath);
+          }
+
+          return newPaths;
+        });
+      }
+    });
+  }, [simulatorRobots, drawLineSettings.enabled]);
+
+  // Clear paths when drawing is disabled
+  useEffect(() => {
+    if (!drawLineSettings.enabled) {
+      setDrawnPaths(new Map());
+    }
+  }, [drawLineSettings.enabled]);
+
 
   const updateStageRect = useCallback(() => {
     const stageElement = document.querySelector('.stage-area-section');
@@ -250,6 +357,58 @@ const SimulatorModal = ({ onClose, background }) => {
       console.log('🤖 Robot has no scripts to run:', robot.name);
     }
   };
+  // ADD THIS FUNCTION:
+  // Render drawn paths
+  const renderDrawnPaths = () => {
+    if (!drawLineSettings.enabled || drawnPaths.size === 0) {
+      return null;
+    }
+
+    return Array.from(drawnPaths.entries()).map(([robotId, pathPoints]) => {
+      if (pathPoints.length < 2) {
+        return null;
+      }
+
+      // Create SVG path string
+      let pathString = '';
+      pathPoints.forEach((point, index) => {
+        const pixelPos = gridToPixel(point.x, point.y);
+        const centerX = pixelPos.x + 25; // Center of robot
+        const centerY = pixelPos.y + 25; // Center of robot
+
+        if (index === 0) {
+          pathString += `M ${centerX} ${centerY}`;
+        } else {
+          pathString += ` L ${centerX} ${centerY}`;
+        }
+      });
+
+      return (
+        <svg
+          key={`path-${robotId}`}
+          style={{
+            position: 'absolute',
+            top: 0,
+            left: 0,
+            width: '100%',
+            height: '100%',
+            pointerEvents: 'none',
+            zIndex: 1
+          }}
+        >
+          <path
+            d={pathString}
+            stroke={drawLineSettings.color}
+            strokeWidth={drawLineSettings.thickness}
+            fill="none"
+            strokeLinecap="round"
+            strokeLinejoin="round"
+            opacity={0.8}
+          />
+        </svg>
+      );
+    });
+  };
 
   if (!stageRect) return null;
 
@@ -272,6 +431,7 @@ const SimulatorModal = ({ onClose, background }) => {
 
   return (
     <div className="simulator-modal-container" style={modalStyle}>
+      {renderDrawnPaths()}
       <button
         onClick={() => {
           // clear selection when closing simulator
