@@ -6,7 +6,6 @@ import {
   getCurrentSimulatorBackground,
   removeColoredAreaFromScene,
   moveColoredAreaInScene,
-  removeSimulatorRobotFromScene,
   moveSimulatorRobotInScene,
 } from '../utils/runScript';
 import { run } from '../utils/runScript';
@@ -68,7 +67,6 @@ const SimulatorModal = ({ onClose, background }) => {
     };
   }, []);
 
-  // ADD THIS ENTIRE useEffect:
   // Listen for draw line settings changes
   useEffect(() => {
     const loadDrawLineSettings = () => {
@@ -132,38 +130,37 @@ const SimulatorModal = ({ onClose, background }) => {
     };
   }, [drawLineSettings.enabled]);
 
-// Track robot positions for drawing ONLY when moved by scripts (not manual drag)
-useEffect(() => {
-  if (!drawLineSettings.enabled) return;
+  // Track robot positions for drawing ONLY when moved by scripts (not manual drag)
+  useEffect(() => {
+    if (!drawLineSettings.enabled) return;
 
-  simulatorRobots.forEach(robot => {
-    if (robot.visible !== false) {
-      // ONLY add to path if robot is NOT being dragged
-      if (!draggedRobot || draggedRobot.id !== robot.id) {
-        setDrawnPaths(prevPaths => {
-          const newPaths = new Map(prevPaths);
-          const robotPath = newPaths.get(robot.id) || [];
-          
-          const lastPoint = robotPath[robotPath.length - 1];
-          const currentPoint = { x: robot.x, y: robot.y, timestamp: Date.now() };
-          
-          if (!lastPoint || lastPoint.x !== robot.x || lastPoint.y !== robot.y) {
-            robotPath.push(currentPoint);
-            
-            if (robotPath.length > 500) {
-              robotPath.shift();
+    simulatorRobots.forEach(robot => {
+      if (robot.visible !== false) {
+        // ONLY add to path if robot is NOT being dragged
+        if (!draggedRobot || draggedRobot.id !== robot.id) {
+          setDrawnPaths(prevPaths => {
+            const newPaths = new Map(prevPaths);
+            const robotPath = newPaths.get(robot.id) || [];
+
+            const lastPoint = robotPath[robotPath.length - 1];
+            const currentPoint = { x: robot.x, y: robot.y, timestamp: Date.now() };
+
+            if (!lastPoint || lastPoint.x !== robot.x || lastPoint.y !== robot.y) {
+              robotPath.push(currentPoint);
+
+              if (robotPath.length > 500) {
+                robotPath.shift();
+              }
+
+              newPaths.set(robot.id, robotPath);
             }
-            
-            newPaths.set(robot.id, robotPath);
-          }
-          
-          return newPaths;
-        });
-      }
-    }
-  });
-}, [simulatorRobots, drawLineSettings.enabled, draggedRobot]); // ADD draggedRobot to dependencies
 
+            return newPaths;
+          });
+        }
+      }
+    });
+  }, [simulatorRobots, drawLineSettings.enabled, draggedRobot]);
 
   // Clear paths when drawing is disabled
   useEffect(() => {
@@ -171,7 +168,6 @@ useEffect(() => {
       setDrawnPaths(new Map());
     }
   }, [drawLineSettings.enabled]);
-
 
   const updateStageRect = useCallback(() => {
     const stageElement = document.querySelector('.stage-area-section');
@@ -185,15 +181,6 @@ useEffect(() => {
     window.addEventListener('resize', updateStageRect);
     return () => window.removeEventListener('resize', updateStageRect);
   }, [updateStageRect]);
-
-  // Force re-render when simulatorRobots change (for debug)
-  useEffect(() => {
-    // no-op other than letting React re-render and logging
-    console.log('🤖 SimulatorModal detected robot changes:', simulatorRobots.length);
-    simulatorRobots.forEach((robot, index) => {
-      console.log(`🤖 Robot ${index}: ${robot.name} at (${robot.x}, ${robot.y})`);
-    });
-  }, [simulatorRobots]);
 
   // Convert pixel coordinates to grid coordinates
   const pixelToGrid = (pixelX, pixelY) => {
@@ -361,7 +348,7 @@ useEffect(() => {
       console.log('🤖 Robot has no scripts to run:', robot.name);
     }
   };
-  // ADD THIS FUNCTION:
+
   // Render drawn paths
   const renderDrawnPaths = () => {
     if (!drawLineSettings.enabled || drawnPaths.size === 0) {
@@ -416,22 +403,34 @@ useEffect(() => {
 
   if (!stageRect) return null;
 
+  // UPDATED: Check if we're inside the sliding simulator container
+  const isInSlidingSimulator = document.querySelector('.simulator-stage-wrapper');
+
+  // UPDATED: Different modal style based on context
   const modalStyle = {
-    position: 'fixed',
-    top: `${stageRect.top}px`,
-    left: `${stageRect.left}px`,
-    width: `${stageRect.width}px`,
-    height: `${stageRect.height}px`,
-    zIndex: 10,
-    borderRadius: '12px',
+    // Remove fixed positioning when inside sliding simulator
+    position: isInSlidingSimulator ? 'relative' : 'fixed',
+    top: isInSlidingSimulator ? 'auto' : `${stageRect.top}px`,
+    left: isInSlidingSimulator ? 'auto' : `${stageRect.left}px`,
+    width: isInSlidingSimulator ? '100%' : `${stageRect.width}px`,
+    height: isInSlidingSimulator ? '100%' : `${stageRect.height}px`,
+    zIndex: isInSlidingSimulator ? 'auto' : 10,
+    borderRadius: isInSlidingSimulator ? '0' : '12px',
     overflow: 'hidden',
     display: 'flex',
     flexDirection: 'column',
+    // FIXED: Make device super small
+    backgroundImage: `url(${simulatorBg})`,
+    backgroundColor: isInSlidingSimulator ? '#f0f0f0' : 'transparent',
+    backgroundSize: isInSlidingSimulator ? '10%' : 'cover', // CHANGED: 10% instead of 30%
+    backgroundPosition: 'center',
+    backgroundRepeat: 'no-repeat',
+    // Remove margins and padding
+    margin: 0,
+    padding: 0,
+    border: 'none',
+    boxShadow: 'none'
   };
-
-  modalStyle.backgroundImage = `url(${simulatorBg})`;
-  modalStyle.backgroundSize = 'cover';
-  modalStyle.backgroundPosition = 'center';
 
   return (
     <div className="simulator-modal-container" style={modalStyle}>

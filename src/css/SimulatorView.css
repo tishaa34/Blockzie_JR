@@ -1,27 +1,28 @@
+/* Original styles preserved */
 .simulator-modal {
   position: fixed;
   top: 0;
   left: 0;
   width: 100%;
   height: 100%;
-  background-color: transparent; /* Remove dark overlay */
+  background-color: transparent;
   display: flex;
   justify-content: center;
   align-items: center;
   z-index: 200;
-  pointer-events: none; /* Allow clicks to pass through */
+  pointer-events: none;
 }
 
 .simulator-modal-content {
   position: relative;
-  width: 480px; /* Match your stage area width */
-  height: 360px; /* Match your stage area height */
-  border: 2px solid #ffd700 !important; /* Yellow border like your stage */
+  width: 480px;
+  height: 360px;
+  border: 2px solid #ffd700 !important;
   border-radius: 8px !important;
   box-shadow: 0 2px 10px rgba(0, 0, 0, 0.1) !important;
   background-color: #fff;
   overflow: hidden;
-  pointer-events: auto; /* Enable clicks within the modal content */
+  pointer-events: auto;
 }
 
 .simulator-close-btn {
@@ -40,79 +41,239 @@
   justify-content: center;
   pointer-events: auto;
   color: white;
-  font-weight: bold;
   font-size: 16px;
+  font-weight: bold;
 }
 
-.simulator-close-btn:hover {
-  background: #ff6666;
+/* Partial Coverage Sliding Simulator Styles */
+.simulator-partial-overlay {
+  position: fixed;
+  top: 0;
+  left: 300px;
+  width: calc(100% - 300px);
+  height: 100%;
+  background: rgba(0, 0, 0, 0.3);
+  z-index: 1000;
+  opacity: 0;
+  visibility: hidden;
+  transition: opacity 0.3s ease, visibility 0.3s ease;
 }
 
-.simulator-close-btn::before {
-  /* content: "×"; */
-  line-height: 1;
+.simulator-partial-overlay.active {
+  opacity: 1;
+  visibility: visible;
 }
 
-.simulator-stage-area {
+.simulator-partial-container {
+  position: fixed;
+  right: -100%;
+  top: 0;
+  left: 300px;
+  width: calc(100% - 300px);
+  height: 100%;
+  background: #f5f5f5;
+  box-shadow: -8px 0 24px rgba(0, 0, 0, 0.3);
+  transition: right 0.4s cubic-bezier(0.25, 0.46, 0.45, 0.94);
+  overflow: hidden;
+  z-index: 1001;
+}
+
+.simulator-partial-container.open {
+  right: 0;
+}
+
+.simulator-header {
+  background: #2c3e50;
+  color: white;
+  padding: 15px 20px;
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  border-bottom: 2px solid #34495e;
+}
+
+.simulator-title {
+  font-size: 18px;
+  font-weight: 600;
+  margin: 0;
+}
+
+.simulator-header .simulator-close-btn {
+  position: relative;
+  top: auto;
+  right: auto;
+  background: rgba(255, 255, 255, 0.1);
+  border: none;
+  border-radius: 6px;
+  width: 32px;
+  height: 32px;
+  color: white;
+  font-size: 18px;
+  font-weight: bold;
+  cursor: pointer;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  transition: background-color 0.2s ease;
+}
+
+.simulator-header .simulator-close-btn:hover {
+  background: rgba(255, 255, 255, 0.2);
+}
+
+/* UPDATED: Main content layout - controls on RIGHT side */
+.simulator-content {
+  display: flex;
+  height: calc(100% - 60px);
+  flex-direction: row-reverse; /* CHANGED: Reverse to put controls on right */
+}
+
+/* UPDATED: Vertical control panel - RIGHT SIDE, SMALLER, NO SCROLL */
+.simulator-controls-vertical {
+  width: 60px; /* CHANGED: Made smaller */
+  background: #34495e;
+  display: flex;
+  flex-direction: column;
+  padding: 8px 4px; /* CHANGED: Smaller padding */
+  gap: 6px; /* CHANGED: Smaller gap */
+  border-left: 2px solid #2c3e50; /* CHANGED: Left border since it's on right */
+  overflow: hidden; /* CHANGED: No scroll */
+  flex-shrink: 0; /* Prevent shrinking */
+}
+
+/* UPDATED: Smaller control buttons */
+.simulator-control-btn {
+  width: 52px; /* CHANGED: Smaller width */
+  height: 52px; /* CHANGED: Smaller height */
+  background: #fff;
+  border: 2px solid #ddd;
+  border-radius: 6px; /* CHANGED: Smaller radius */
+  cursor: pointer;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  transition: all 0.2s ease;
+  box-shadow: 0 2px 4px rgba(0, 0, 0, 0.1);
+  padding: 6px; /* CHANGED: Smaller padding */
+  box-sizing: border-box;
+  flex-shrink: 0; /* Prevent shrinking */
+}
+
+.simulator-control-btn:hover {
+  background: #f8f9fa;
+  transform: translateY(-1px);
+  box-shadow: 0 4px 8px rgba(0, 0, 0, 0.2);
+  border-color: #4A90E2;
+}
+
+.simulator-control-btn:active {
+  transform: translateY(0);
+  box-shadow: 0 1px 2px rgba(0, 0, 0, 0.1);
+}
+
+.simulator-control-btn img {
   width: 100%;
   height: 100%;
-  /* background-color: #fff;  ⛔ remove or comment this */
-  border: none !important;
-  border-radius: 0 !important;
-  box-shadow: none !important;
-  cursor: default;
+  object-fit: contain;
+  pointer-events: none;
+}
+
+/* UPDATED: Stage wrapper - proper sizing */
+.simulator-stage-wrapper {
+  flex: 1;
+  display: flex;
+  flex-direction: column;
+  margin: 0;
+  padding: 0;
+  border-radius: 0;
+  box-shadow: none;
+  overflow: hidden;
+  max-width: calc(100% - 60px); /* CHANGED: Account for control panel width */
+}
+
+/* UPDATED: Stage area - fit to container */
+.stage-area-section {
+  width: 100%;
+  height: 100%;
   position: relative;
-  pointer-events: auto;
-  background-size: cover;       /* ✅ support images */
-  background-position: center;  /* ✅ center the image */
-  background-repeat: no-repeat; /* ✅ no tiling */
+  margin: 0;
+  padding: 0;
+  border-radius: 0;
+  overflow: hidden;
 }
 
-/* Ensure actors in simulator are fully interactive */
-.simulator-stage-area .actor {
-  position: absolute;
-  cursor: grab;
-  transition: left 0.25s ease, top 0.25s ease, transform 0.25s ease;
-  z-index: 10;
-  transform: translate(-50%, -50%);
-  pointer-events: auto;
-}
-
-.simulator-stage-area .actor:hover {
-  cursor: grab;
-}
-
-.simulator-stage-area .actor:active {
-  cursor: grabbing;
-}
-
-.simulator-stage-area img {
-  cursor: grab;
-  pointer-events: auto;
-}
-
-.simulator-stage-area img:active {
-  cursor: grabbing;
-}
-
-.simulator-stage-area .stageContainer {
-  border: none !important;
+/* UPDATED: Force proper background sizing in SimulatorModal */
+.simulator-stage-wrapper .simulator-modal-container {
+  position: relative !important;
+  top: auto !important;
+  left: auto !important;
+  width: 100% !important;
+  height: 100% !important;
+  margin: 0 !important;
+  padding: 0 !important;
   border-radius: 0 !important;
   box-shadow: none !important;
-  pointer-events: auto;
+  overflow: hidden !important;
+  display: flex !important;
+  flex-direction: column !important;
+  /* CRITICAL: Proper background sizing */
+  background-size: contain !important; /* CHANGED: Use contain instead of cover */
+  background-position: center !important;
+  background-repeat: no-repeat !important;
 }
 
-/* Make sure all interactive elements work */
-.simulator-stage-area * {
-  pointer-events: auto;
+/* Override any styling from SimulatorModal */
+.simulator-stage-wrapper .simulator-modal-container > div {
+  width: 100% !important;
+  height: 100% !important;
+  margin: 0 !important;
+  padding: 0 !important;
+  border-radius: 0 !important;
+  border: none !important;
+  box-shadow: none !important;
 }
 
-/* Responsive adjustments */
+/* Hide scrollbars completely */
+.simulator-controls-vertical::-webkit-scrollbar {
+  display: none;
+}
+
+.simulator-controls-vertical {
+  -ms-overflow-style: none;  /* Internet Explorer 10+ */
+  scrollbar-width: none;  /* Firefox */
+}
+
+/* Responsive design */
+@media (max-width: 1200px) {
+  .simulator-partial-overlay {
+    left: 250px;
+    width: calc(100% - 250px);
+  }
+  
+  .simulator-partial-container {
+    left: 250px;
+    width: calc(100% - 250px);
+  }
+}
+
 @media (max-width: 768px) {
-  .simulator-modal-content {
-    width: 90vw;
-    height: calc(90vw * 3/4);
-    max-width: 480px;
-    max-height: 360px;
+  .simulator-partial-overlay {
+    left: 200px;
+    width: calc(100% - 200px);
+  }
+  
+  .simulator-partial-container {
+    left: 200px;
+    width: calc(100% - 200px);
+  }
+  
+  .simulator-controls-vertical {
+    width: 50px; /* Even smaller on mobile */
+  }
+  
+  .simulator-control-btn {
+    width: 42px;
+    height: 42px;
+    padding: 4px;
   }
 }
