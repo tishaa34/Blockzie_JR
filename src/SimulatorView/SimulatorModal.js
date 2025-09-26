@@ -12,6 +12,7 @@ import { run } from '../utils/runScript';
 import '../css/SimulatorView.css';
 import { setSelectedSimRobot, removeSimulatorRobot } from '../store/sceneSlice';
 
+
 const SimulatorModal = ({ onClose, background }) => {
   const [stageRect, setStageRect] = useState(null);
   const [draggedObstacle, setDraggedObstacle] = useState(null);
@@ -29,7 +30,12 @@ const SimulatorModal = ({ onClose, background }) => {
     color: '#FF0000'
   });
   const [drawnPaths, setDrawnPaths] = useState(new Map());
+  
+  // ADDED: Force re-render when robot positions change
+  const [tick, setTick] = useState(0);
+  
   const dispatch = useDispatch();
+
 
   // Get obstacles from Redux store
   const currentSceneIndex = useSelector(state => state.scene.currentSceneIndex);
@@ -38,11 +44,13 @@ const SimulatorModal = ({ onClose, background }) => {
     return scene?.obstacles || [];
   });
 
+
   // Get colored areas from Redux store
   const coloredAreas = useSelector(state => {
     const scene = state.scene.scenes[currentSceneIndex];
     return scene?.coloredAreas || [];
   });
+
 
   // Get simulator robots from Redux store
   const simulatorRobots = useSelector(state => state.scene.simulatorRobots || []);
@@ -52,20 +60,34 @@ const SimulatorModal = ({ onClose, background }) => {
     return scene?.sounds || { pop: './assets/sounds/pop.mp3' };
   });
 
+  // ADDED: Force re-render on script events
+  useEffect(() => {
+    const forceUpdate = () => setTick(t => t + 1);
+    window.addEventListener('robotMoved', forceUpdate);
+    window.addEventListener('simulatorStateChanged', forceUpdate);
+    return () => {
+      window.removeEventListener('robotMoved', forceUpdate);
+      window.removeEventListener('simulatorStateChanged', forceUpdate);
+    };
+  }, []);
+
   // Listen for background changes from localStorage
   useEffect(() => {
     const handleStorageChange = () => {
       setSimulatorBg(getCurrentSimulatorBackground());
     };
 
+
     window.addEventListener('storage', handleStorageChange);
     window.addEventListener('simulatorBackgroundChanged', handleStorageChange);
+
 
     return () => {
       window.removeEventListener('storage', handleStorageChange);
       window.removeEventListener('simulatorBackgroundChanged', handleStorageChange);
     };
   }, []);
+
 
   // Listen for draw line settings changes
   useEffect(() => {
@@ -81,7 +103,9 @@ const SimulatorModal = ({ onClose, background }) => {
       }
     };
 
+
     loadDrawLineSettings();
+
 
     const handleSettingsChange = (event) => {
       if (event.detail) {
@@ -89,39 +113,50 @@ const SimulatorModal = ({ onClose, background }) => {
       }
     };
 
+
     const handleClearPaths = () => {
       setDrawnPaths(new Map());
     };
+
 
     const handleRobotMoved = (event) => {
       if (drawLineSettings.enabled && event.detail) {
         const { robotId, x, y, timestamp } = event.detail;
 
+
         setDrawnPaths(prevPaths => {
           const newPaths = new Map(prevPaths);
           const robotPath = newPaths.get(robotId) || [];
 
+
           const lastPoint = robotPath[robotPath.length - 1];
           const currentPoint = { x, y, timestamp };
 
+
           if (!lastPoint || lastPoint.x !== x || lastPoint.y !== y) {
             robotPath.push(currentPoint);
+
 
             if (robotPath.length > 500) {
               robotPath.shift();
             }
 
+
             newPaths.set(robotId, robotPath);
           }
+
 
           return newPaths;
         });
       }
     };
 
+
+
     window.addEventListener('drawLineSettingsChanged', handleSettingsChange);
     window.addEventListener('clearDrawnPaths', handleClearPaths);
     window.addEventListener('robotMoved', handleRobotMoved);
+
 
     return () => {
       window.removeEventListener('drawLineSettingsChanged', handleSettingsChange);
@@ -130,9 +165,11 @@ const SimulatorModal = ({ onClose, background }) => {
     };
   }, [drawLineSettings.enabled]);
 
+
   // Track robot positions for drawing ONLY when moved by scripts (not manual drag)
   useEffect(() => {
     if (!drawLineSettings.enabled) return;
+
 
     simulatorRobots.forEach(robot => {
       if (robot.visible !== false) {
@@ -142,25 +179,34 @@ const SimulatorModal = ({ onClose, background }) => {
             const newPaths = new Map(prevPaths);
             const robotPath = newPaths.get(robot.id) || [];
 
+
             const lastPoint = robotPath[robotPath.length - 1];
             const currentPoint = { x: robot.x, y: robot.y, timestamp: Date.now() };
 
+
             if (!lastPoint || lastPoint.x !== robot.x || lastPoint.y !== robot.y) {
               robotPath.push(currentPoint);
+
 
               if (robotPath.length > 500) {
                 robotPath.shift();
               }
 
+
               newPaths.set(robot.id, robotPath);
             }
+
 
             return newPaths;
           });
         }
       }
+
+
+
     });
   }, [simulatorRobots, drawLineSettings.enabled, draggedRobot]);
+
 
   // Clear paths when drawing is disabled
   useEffect(() => {
@@ -169,6 +215,7 @@ const SimulatorModal = ({ onClose, background }) => {
     }
   }, [drawLineSettings.enabled]);
 
+
   const updateStageRect = useCallback(() => {
     const stageElement = document.querySelector('.stage-area-section');
     if (stageElement) {
@@ -176,11 +223,13 @@ const SimulatorModal = ({ onClose, background }) => {
     }
   }, []);
 
+
   useEffect(() => {
     updateStageRect();
     window.addEventListener('resize', updateStageRect);
     return () => window.removeEventListener('resize', updateStageRect);
   }, [updateStageRect]);
+
 
   // Convert pixel coordinates to grid coordinates
   const pixelToGrid = (pixelX, pixelY) => {
@@ -193,6 +242,7 @@ const SimulatorModal = ({ onClose, background }) => {
     };
   };
 
+
   // Convert grid coordinates to pixel coordinates
   const gridToPixel = (gridX, gridY) => {
     if (!stageRect) return { x: 0, y: 0 };
@@ -200,6 +250,7 @@ const SimulatorModal = ({ onClose, background }) => {
     const pixelY = (gridY / 15) * stageRect.height;
     return { x: pixelX, y: pixelY };
   };
+
 
   // Handle obstacle dragging
   const handleMouseDown = (e, obstacle) => {
@@ -213,6 +264,7 @@ const SimulatorModal = ({ onClose, background }) => {
     });
   };
 
+
   // Handle colored area dragging
   const handleColoredAreaMouseDown = (e, coloredArea) => {
     e.preventDefault();
@@ -224,6 +276,7 @@ const SimulatorModal = ({ onClose, background }) => {
       y: e.clientY - rect.top
     });
   };
+
 
   // Handle robot dragging
   const handleRobotMouseDown = (e, robot) => {
@@ -237,24 +290,30 @@ const SimulatorModal = ({ onClose, background }) => {
     });
   };
 
+
   // Improved mouse move handling with proper coordinate conversion
   const handleMouseMove = useCallback((e) => {
     if (!stageRect) return;
+
 
     if (draggedObstacle) {
       const newPixelX = e.clientX - stageRect.left - dragOffset.x;
       const newPixelY = e.clientY - stageRect.top - dragOffset.y;
 
+
       const boundedPixelX = Math.max(0, Math.min(newPixelX, stageRect.width - 50));
       const boundedPixelY = Math.max(0, Math.min(newPixelY, stageRect.height - 50));
+
 
       moveObstacleInScene(draggedObstacle.id, boundedPixelX, boundedPixelY, dispatch);
     } else if (draggedColoredArea) {
       const newPixelX = e.clientX - stageRect.left - dragOffset.x;
       const newPixelY = e.clientY - stageRect.top - dragOffset.y;
 
+
       const boundedPixelX = Math.max(0, Math.min(newPixelX, stageRect.width - 60));
       const boundedPixelY = Math.max(0, Math.min(newPixelY, stageRect.height - 60));
+
 
       moveColoredAreaInScene(draggedColoredArea.id, boundedPixelX, boundedPixelY, dispatch);
     } else if (draggedRobot) {
@@ -262,13 +321,16 @@ const SimulatorModal = ({ onClose, background }) => {
       const newPixelX = e.clientX - stageRect.left - dragOffset.x;
       const newPixelY = e.clientY - stageRect.top - dragOffset.y;
 
+
       const boundedPixelX = Math.max(0, Math.min(newPixelX, stageRect.width - 50));
       const boundedPixelY = Math.max(0, Math.min(newPixelY, stageRect.height - 50));
+
 
       const gridPos = pixelToGrid(boundedPixelX, boundedPixelY);
       moveSimulatorRobotInScene(draggedRobot.id, gridPos.x, gridPos.y, dispatch);
     }
   }, [draggedObstacle, draggedColoredArea, draggedRobot, stageRect, dragOffset, dispatch]);
+
 
   // Updated handleMouseUp
   const handleMouseUp = useCallback(() => {
@@ -278,10 +340,12 @@ const SimulatorModal = ({ onClose, background }) => {
     setDragOffset({ x: 0, y: 0 });
   }, []);
 
+
   useEffect(() => {
     if (draggedObstacle || draggedColoredArea || draggedRobot) {
       document.addEventListener('mousemove', handleMouseMove);
       document.addEventListener('mouseup', handleMouseUp);
+
 
       return () => {
         document.removeEventListener('mousemove', handleMouseMove);
@@ -290,52 +354,64 @@ const SimulatorModal = ({ onClose, background }) => {
     }
   }, [draggedObstacle, draggedColoredArea, draggedRobot, handleMouseMove, handleMouseUp]);
 
+
   const handleRemoveObstacle = (obstacleId, e) => {
     e.stopPropagation();
     removeObstacleFromScene(obstacleId, dispatch);
   };
+
 
   const handleRemoveColoredArea = (coloredAreaId, e) => {
     e.stopPropagation();
     removeColoredAreaFromScene(coloredAreaId, dispatch);
   };
 
+
   const handleRemoveRobot = (robotId, e) => {
     e.stopPropagation();
     dispatch(removeSimulatorRobot(robotId));
   };
 
+
   const handleObstacleMouseEnter = (obstacleId) => {
     setHoveredObstacle(obstacleId);
   };
+
 
   const handleObstacleMouseLeave = () => {
     setHoveredObstacle(null);
   };
 
+
   const handleColoredAreaMouseEnter = (coloredAreaId) => {
     setHoveredColoredArea(coloredAreaId);
   };
+
 
   const handleColoredAreaMouseLeave = () => {
     setHoveredColoredArea(null);
   };
 
+
   const handleRobotMouseEnter = (robotId) => {
     setHoveredRobot(robotId);
   };
 
+
   const handleRobotMouseLeave = () => {
     setHoveredRobot(null);
   };
+
 
   // When robot is clicked: set it as the selectedSimRobot (for editing in ScriptArea)
   // and also run its script (preserving previous behavior).
   const handleRobotClick = async (robot, e) => {
     e.stopPropagation();
 
+
     // select this robot for editing
     dispatch(setSelectedSimRobot(robot.id));
+
 
     if (robot.scripts && robot.scripts.length > 0) {
       console.log('🤖 Running robot script:', robot.name);
@@ -349,23 +425,27 @@ const SimulatorModal = ({ onClose, background }) => {
     }
   };
 
+
   // Render drawn paths
   const renderDrawnPaths = () => {
     if (!drawLineSettings.enabled || drawnPaths.size === 0) {
       return null;
     }
 
+
     return Array.from(drawnPaths.entries()).map(([robotId, pathPoints]) => {
       if (pathPoints.length < 2) {
         return null;
       }
 
+
       // Create SVG path string
       let pathString = '';
       pathPoints.forEach((point, index) => {
         const pixelPos = gridToPixel(point.x, point.y);
-        const centerX = pixelPos.x + 25; // Center of robot
-        const centerY = pixelPos.y + 25; // Center of robot
+        const centerX = pixelPos.x + 5; // Center of robot
+        const centerY = pixelPos.y + 5; // Center of robot
+
 
         if (index === 0) {
           pathString += `M ${centerX} ${centerY}`;
@@ -373,6 +453,7 @@ const SimulatorModal = ({ onClose, background }) => {
           pathString += ` L ${centerX} ${centerY}`;
         }
       });
+
 
       return (
         <svg
@@ -401,14 +482,17 @@ const SimulatorModal = ({ onClose, background }) => {
     });
   };
 
+
   if (!stageRect) return null;
+
 
   // UPDATED: Check if we're inside the sliding simulator container
   const isInSlidingSimulator = document.querySelector('.simulator-stage-wrapper');
 
+
   // UPDATED: Different modal style based on context
+  // Update the modalStyle in SimulatorModal.js:
   const modalStyle = {
-    // Remove fixed positioning when inside sliding simulator
     position: isInSlidingSimulator ? 'relative' : 'fixed',
     top: isInSlidingSimulator ? 'auto' : `${stageRect.top}px`,
     left: isInSlidingSimulator ? 'auto' : `${stageRect.left}px`,
@@ -419,18 +503,20 @@ const SimulatorModal = ({ onClose, background }) => {
     overflow: 'hidden',
     display: 'flex',
     flexDirection: 'column',
-    // FIXED: Make device super small
+    // ENABLE: Background image fully covered
     backgroundImage: `url(${simulatorBg})`,
-    backgroundColor: isInSlidingSimulator ? '#f0f0f0' : 'transparent',
-    backgroundSize: isInSlidingSimulator ? '10%' : 'cover', // CHANGED: 10% instead of 30%
+    backgroundColor: isInSlidingSimulator ? '#f8f8f8' : 'transparent',
+    backgroundSize: isInSlidingSimulator ? 'cover' : 'cover', // CHANGED: Full cover
     backgroundPosition: 'center',
     backgroundRepeat: 'no-repeat',
-    // Remove margins and padding
     margin: 0,
     padding: 0,
     border: 'none',
     boxShadow: 'none'
   };
+
+
+
 
   return (
     <div className="simulator-modal-container" style={modalStyle}>
@@ -458,9 +544,11 @@ const SimulatorModal = ({ onClose, background }) => {
         ×
       </button>
 
+
       {/* Obstacles */}
       {obstacles.map((obstacle) => {
         const isHovered = hoveredObstacle === obstacle.id;
+
 
         return (
           <div
@@ -470,8 +558,8 @@ const SimulatorModal = ({ onClose, background }) => {
               position: 'absolute',
               left: `${obstacle.x || 0}px`,
               top: `${obstacle.y || 0}px`,
-              width: `${obstacle.width || 50}px`,
-              height: `${obstacle.height || 50}px`,
+              width: `${(obstacle.width || 50) * 0.4}px`,
+              height: `${(obstacle.height || 50) * 0.4}px`,
               cursor: draggedObstacle?.id === obstacle.id ? 'grabbing' : 'grab',
               zIndex: 12,
               userSelect: 'none',
@@ -503,49 +591,16 @@ const SimulatorModal = ({ onClose, background }) => {
                 <div style={{
                   width: 0,
                   height: 0,
-                  borderLeft: '23px solid transparent',
-                  borderRight: '23px solid transparent',
-                  borderBottom: `40px solid ${obstacle.color || '#4A9FD7'}`,
+                  borderLeft: '16px solid transparent', // CHANGED: Made smaller to fit 35px container
+                  borderRight: '16px solid transparent', // CHANGED: Made smaller
+                  borderBottom: `28px solid ${obstacle.color || '#4A9FD7'}`, // CHANGED: Made smaller
                   position: 'absolute',
-                  top: '6px',
-                  left: '2px',
+                  top: '4px', // CHANGED: Adjusted positioning
+                  left: '2px', // CHANGED: Adjusted positioning
                   filter: 'drop-shadow(1px 1px 2px rgba(0,0,0,0.3))'
                 }} />
               )}
 
-              {obstacle.shape === 'pentagon' && (
-                <div style={{
-                  width: '100%',
-                  height: '100%',
-                  background: `linear-gradient(135deg, 
-                    ${obstacle.color || '#5BB0E8'} 0%, 
-                    ${obstacle.color || '#4A9FD7'} 50%, 
-                    ${obstacle.color || '#3A8FC7'} 100%
-                  )`,
-                  clipPath: 'polygon(50% 0%, 100% 38%, 82% 100%, 18% 100%, 0% 38%)',
-                  position: 'absolute',
-                  top: 0,
-                  left: 0,
-                  filter: 'drop-shadow(1px 1px 2px rgba(0,0,0,0.2))'
-                }} />
-              )}
-
-              {obstacle.shape === 'hexagon' && (
-                <div style={{
-                  width: '100%',
-                  height: '100%',
-                  background: `linear-gradient(135deg, 
-                    ${obstacle.color || '#5BB0E8'} 0%, 
-                    ${obstacle.color || '#4A9FD7'} 50%, 
-                    ${obstacle.color || '#3A8FC7'} 100%
-                  )`,
-                  clipPath: 'polygon(30% 0%, 70% 0%, 100% 50%, 70% 100%, 30% 100%, 0% 50%)',
-                  position: 'absolute',
-                  top: 0,
-                  left: 0,
-                  filter: 'drop-shadow(1px 1px 2px rgba(0,0,0,0.2))'
-                }} />
-              )}
 
               {isHovered && (
                 <button
@@ -559,8 +614,8 @@ const SimulatorModal = ({ onClose, background }) => {
                     color: 'white',
                     border: 'none',
                     borderRadius: '50%',
-                    width: '20px',
-                    height: '20px',
+                    width: '8px',
+                    height: '8px',
                     cursor: 'pointer',
                     fontSize: '12px',
                     display: 'flex',
@@ -580,9 +635,11 @@ const SimulatorModal = ({ onClose, background }) => {
         );
       })}
 
+
       {/* Colored areas (flat colored blocks) */}
       {coloredAreas.map((coloredArea) => {
         const isHovered = hoveredColoredArea === coloredArea.id;
+
 
         return (
           <div
@@ -592,8 +649,8 @@ const SimulatorModal = ({ onClose, background }) => {
               position: 'absolute',
               left: `${coloredArea.x || 0}px`,
               top: `${coloredArea.y || 0}px`,
-              width: `${coloredArea.width || 60}px`,
-              height: `${coloredArea.height || 60}px`,
+              width: `${(coloredArea.width || 60) * 0.4}px`,
+              height: `${(coloredArea.height || 60) * 0.4}px`,
               cursor: draggedColoredArea?.id === coloredArea.id ? 'grabbing' : 'grab',
               zIndex: 11,
               userSelect: 'none',
@@ -648,7 +705,8 @@ const SimulatorModal = ({ onClose, background }) => {
         );
       })}
 
-      {/* Simulator robots */}
+
+      {/* FIXED: Simulator robots with proper grid-to-pixel conversion and transitions */}
       {simulatorRobots.map((robot) => {
         console.log('Rendering simulator robot:', robot);
         const isHovered = hoveredRobot === robot.id;
@@ -657,18 +715,21 @@ const SimulatorModal = ({ onClose, background }) => {
 
         return (
           <div
-            key={robot.id}
+            key={`${robot.id}-${tick}`} // ADDED: Force re-render with tick
             className={`simulator-robot ${selectedSimRobotId === robot.id ? 'selected-sim-robot' : ''}`}
             style={{
               position: 'absolute',
               left: `${pixelPos.x}px`,
               top: `${pixelPos.y}px`,
-              width: '50px',
-              height: '50px',
+              width: '20px',
+              height: '20px',
               cursor: draggedRobot?.id === robot.id ? 'grabbing' : 'grab',
               zIndex: 13,
               userSelect: 'none',
-              pointerEvents: 'auto'
+              pointerEvents: 'auto',
+              // ADDED: Smooth transition for script movement
+              transition: draggedRobot?.id === robot.id ? 'none' : 'left 200ms ease, top 200ms ease',
+              willChange: 'left, top, transform'
             }}
             onMouseDown={(e) => handleRobotMouseDown(e, robot)}
             onMouseEnter={() => handleRobotMouseEnter(robot.id)}
@@ -689,6 +750,7 @@ const SimulatorModal = ({ onClose, background }) => {
               }}
               draggable={false}
             />
+
 
             {isHovered && (
               <button
@@ -724,5 +786,6 @@ const SimulatorModal = ({ onClose, background }) => {
     </div>
   );
 };
+
 
 export default SimulatorModal;

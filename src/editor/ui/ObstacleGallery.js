@@ -29,8 +29,8 @@ const ObstacleGallery = ({ open, onClose }) => {
         color: obstacle.color,
         x: Math.random() * 300 + 50,
         y: Math.random() * 200 + 50,
-        width: 50,
-        height: 50,
+        width: 20,
+        height: 20,
         type: 'obstacle'
       };
       

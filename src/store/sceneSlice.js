@@ -617,15 +617,26 @@ const sceneSlice = createSlice({
     },
 
     // NEW: Simulator robot movement from scripts
-    moveSimulatorRobotFromScript(state, action) {
-      const { robotId, x, y } = action.payload;
-      const robot = state.simulatorRobots.find(r => r.id === robotId);
-      if (robot) {
-        robot.x = Math.min(Math.max(0, x), 19);
-        robot.y = Math.min(Math.max(0, y), 14);
-        // console.log(`🤖 Robot ${robotId} moved to (${robot.x}, ${robot.y})`);
+    moveSimulatorRobotFromScript: (state, action) => {
+      const { robotId, x, y, direction } = action.payload;
+      const robotIndex = state.simulatorRobots.findIndex(robot => robot.id === robotId);
+
+      if (robotIndex !== -1) {
+        console.log(`📦 REDUX: Moving simulator robot from (${state.simulatorRobots[robotIndex].x}, ${state.simulatorRobots[robotIndex].y}) to (${x}, ${y})`);
+
+        state.simulatorRobots[robotIndex].x = x;
+        state.simulatorRobots[robotIndex].y = y;
+
+        if (direction !== undefined) {
+          state.simulatorRobots[robotIndex].direction = direction;
+        }
+
+        console.log(`📦 REDUX: Robot moved successfully to (${x}, ${y})`);
+      } else {
+        console.error(`📦 REDUX ERROR: Robot ${robotId} not found`);
       }
-    },
+    }
+    ,
 
     rotateSimulatorRobotFromScript(state, action) {
       const { robotId, degrees } = action.payload;

@@ -16,12 +16,10 @@ const delay = (ms, speedMultiplier = 1) => {
 
 // NEW: Draw line trail functionality
 export function initializeDrawLineCanvas() {
-  // This function can be called to prepare the canvas for drawing
   console.log('✏️ Draw line canvas initialized');
 }
 
 export function clearDrawnPaths() {
-  // Clear all drawn paths
   localStorage.removeItem('simulatorDrawnPaths');
   window.dispatchEvent(new CustomEvent('clearDrawnPaths'));
   console.log('✏️ All drawn paths cleared');
@@ -65,11 +63,9 @@ export function setDrawLineSettings(settings) {
 const checkSimulatorObstacle = (robot, targetX, targetY) => {
   console.log(`🚧 Checking simulator obstacles for robot at (${targetX}, ${targetY})`);
   
-  // Get all obstacle elements in the simulator
   const obstacles = document.querySelectorAll('.simulator-obstacle');
   console.log(`🚧 Found ${obstacles.length} simulator obstacles to check`);
   
-  // Get stage dimensions for coordinate conversion
   const stageElement = document.querySelector('.simulator-modal-container');
   if (!stageElement) {
     console.log('🚧 No simulator stage found - allowing movement');
@@ -77,20 +73,16 @@ const checkSimulatorObstacle = (robot, targetX, targetY) => {
   }
   
   const stageRect = stageElement.getBoundingClientRect();
-  
-  // Convert target grid coordinates to pixels for comparison
   const targetPixelX = (targetX / 20) * stageRect.width;
   const targetPixelY = (targetY / 15) * stageRect.height;
   
   console.log(`🚧 Target: Grid(${targetX}, ${targetY}) = Pixel(${targetPixelX}, ${targetPixelY})`);
   
-  // Check each obstacle
   for (let i = 0; i < obstacles.length; i++) {
     const obstacle = obstacles[i];
     const obstaclePixelX = parseInt(obstacle.style.left) || 0;
     const obstaclePixelY = parseInt(obstacle.style.top) || 0;
     
-    // Check collision with 40px tolerance
     const xDistance = Math.abs(targetPixelX - obstaclePixelX);
     const yDistance = Math.abs(targetPixelY - obstaclePixelY);
     
@@ -102,7 +94,6 @@ const checkSimulatorObstacle = (robot, targetX, targetY) => {
     }
   }
   
-  // Check boundaries
   if (targetX < 0 || targetX >= 20 || targetY < 0 || targetY >= 15) {
     console.log(`🚧 ❌ SIMULATOR BOUNDARY! Position (${targetX}, ${targetY}) out of bounds`);
     return true;
@@ -112,27 +103,23 @@ const checkSimulatorObstacle = (robot, targetX, targetY) => {
   return false;
 };
 
-// UPDATED Helper for sounds with better error handling
 async function playCustomSound(block) {
   try {
     const audio = new Audio(block.soundData?.audioURL || block.audioURL);
-    audio.volume = 0.7; // Set volume
+    audio.volume = 0.7;
     await audio.play();
   } catch (err) {
     console.error("Error playing sound:", err);
   }
 }
 
-// FIXED: Frequency sound generator that actually works
 function playFrequencySound(frequency = 440, duration = 300) {
   return new Promise((resolve) => {
     try {
       console.log(`🔊 PLAYING FREQUENCY SOUND: ${frequency}Hz for ${duration}ms`);
       
-      // Create a simple beep sound that works in all browsers
       const audioContext = new (window.AudioContext || window.webkitAudioContext)();
       
-      // Resume audio context if suspended (required by most browsers)
       if (audioContext.state === 'suspended') {
         audioContext.resume().then(() => {
           console.log('🔊 Audio context resumed');
@@ -142,27 +129,21 @@ function playFrequencySound(frequency = 440, duration = 300) {
       const oscillator = audioContext.createOscillator();
       const gainNode = audioContext.createGain();
       
-      // Connect nodes
       oscillator.connect(gainNode);
       gainNode.connect(audioContext.destination);
       
-      // Set frequency (map 1-99 to 300-1500 Hz for better hearing)
       const mappedFreq = 300 + ((frequency - 1) * 12);
       oscillator.frequency.setValueAtTime(mappedFreq, audioContext.currentTime);
       
-      // Use sine wave for clear sound
       oscillator.type = 'sine';
       
-      // Set volume envelope
       gainNode.gain.setValueAtTime(0, audioContext.currentTime);
       gainNode.gain.linearRampToValueAtTime(0.5, audioContext.currentTime + 0.01);
       gainNode.gain.exponentialRampToValueAtTime(0.01, audioContext.currentTime + (duration / 1000));
       
-      // Start and stop
       oscillator.start(audioContext.currentTime);
       oscillator.stop(audioContext.currentTime + (duration / 1000));
       
-      // Resolve promise when sound finishes
       oscillator.onended = () => {
         console.log('🔊 Frequency sound finished playing');
         resolve();
@@ -170,20 +151,17 @@ function playFrequencySound(frequency = 440, duration = 300) {
       
     } catch (err) {
       console.error('🔊 Error playing frequency sound:', err);
-      resolve(); // Don't block execution
+      resolve();
     }
   });
 }
 
-// IMPROVED: Better Redux store access for obstacle detection
 function getCurrentSceneData(dispatch) {
   try {
-    // Method 1: Try to access store from the dispatch function context
     if (dispatch && dispatch.getState) {
       const state = dispatch.getState();
       const currentScene = state.scene?.scenes?.[state.scene?.currentSceneIndex];
       
-      // Include simulator robots in scene data
       if (currentScene) {
         return {
           ...currentScene,
@@ -192,7 +170,6 @@ function getCurrentSceneData(dispatch) {
       }
     }
     
-    // Method 2: Try various global store access patterns
     const possibleStores = [
       window.__REDUX_STORE__,
       window.reduxStore,
@@ -223,13 +200,11 @@ function getCurrentSceneData(dispatch) {
   }
 }
 
-// FIXED: Predictive collision detection - prevents movement into obstacles (ignores colored areas)
 function checkForObstacle(actor, direction, dispatch, currentSceneData) {
   try {
     console.log("🚧 OBSTACLE CHECK START");
     console.log(`🚧 Actor ${actor.name} (${actor.id}) at (${actor.x}, ${actor.y}) wants to move ${direction}`);
     
-    // Use the scene data passed from the run function
     if (!currentSceneData || !currentSceneData.actors) {
       console.log("🚧 No scene data available - skipping obstacle check");
       return false;
@@ -237,11 +212,9 @@ function checkForObstacle(actor, direction, dispatch, currentSceneData) {
     
     console.log(`📦 Scene data: actors: ${currentSceneData.actors?.length || 0}, obstacles: ${currentSceneData.obstacles?.length || 0}, coloredAreas: ${currentSceneData.coloredAreas?.length || 0}, simulatorRobots: ${currentSceneData.simulatorRobots?.length || 0}, background: ${currentSceneData.background}`);
     
-    // Get current sprite position (rounded to grid)
     const currentX = Math.round(actor.x);
     const currentY = Math.round(actor.y);
     
-    // Calculate WHERE the sprite WANTS TO MOVE (next position)
     let targetX = currentX;
     let targetY = currentY;
     
@@ -263,28 +236,24 @@ function checkForObstacle(actor, direction, dispatch, currentSceneData) {
     console.log(`🚧 Current grid position: (${currentX}, ${currentY})`);
     console.log(`🚧 Target grid position: (${targetX}, ${targetY})`);
     
-    // Check boundaries (20x15 grid)
     if (targetX < 0 || targetX >= 20 || targetY < 0 || targetY >= 15) {
       console.log(`🚧 ❌ WALL/BOUNDARY! Cannot move to (${targetX},${targetY})`);
       return true;
     }
     
-    // Check if target position contains an obstacle (ignore colored areas)
     if (currentSceneData.obstacles && currentSceneData.obstacles.length > 0) {
       console.log(`🚧 Checking ${currentSceneData.obstacles.length} obstacles`);
       
       for (const obstacle of currentSceneData.obstacles) {
-        // Only check actual obstacles, not colored areas
         if (obstacle.type !== 'coloredArea' && obstacle.blocking !== false) {
           const obstacleX = Math.round(obstacle.x);
           const obstacleY = Math.round(obstacle.y);
           
           console.log(`🚧 - Obstacle ${obstacle.shape} at grid (${obstacleX}, ${obstacleY})`);
           
-          // CRITICAL: Check if target position is occupied by obstacle
           if (targetX === obstacleX && targetY === obstacleY) {
             console.log(`🚧 ❌ OBSTACLE BLOCKS MOVEMENT! ${obstacle.shape} is at target position (${targetX},${targetY})`);
-            return true; // Block movement BEFORE it happens
+            return true;
           }
         }
       }
@@ -294,13 +263,10 @@ function checkForObstacle(actor, direction, dispatch, currentSceneData) {
       console.log("🚧 No obstacles in scene");
     }
     
-    // Check coloredAreas but ignore them for collision (they are non-blocking)
     if (currentSceneData.coloredAreas && currentSceneData.coloredAreas.length > 0) {
       console.log(`🚧 Found ${currentSceneData.coloredAreas.length} colored areas - allowing movement through them`);
-      // Colored areas are non-blocking, so we don't check collision
     }
     
-    // Check for other visible actors at target position
     if (currentSceneData.actors && currentSceneData.actors.length > 0) {
       const otherActors = currentSceneData.actors.filter(a => 
         a.id !== actor.id && a.visible !== false
@@ -314,7 +280,6 @@ function checkForObstacle(actor, direction, dispatch, currentSceneData) {
         
         console.log(`🚧 - ${otherActor.name} Actor at grid (${otherX},${otherY})`);
         
-        // Check if target position is occupied by another actor
         if (targetX === otherX && targetY === otherY) {
           console.log(`🚧 ❌ ACTOR BLOCKS MOVEMENT! ${otherActor.name} Actor is at target position (${targetX},${targetY})`);
           return true;
@@ -335,7 +300,623 @@ function checkForObstacle(actor, direction, dispatch, currentSceneData) {
   }
 }
 
-// NEW: Simulator Control Functions
+function isStopBlock(block) {
+  return (
+    block?.name === 'Stop' ||
+    block?.type === 'Stop' ||
+    block?.category === 'control' && block?.name === 'Stop' ||
+    block?.type === 'Stop' ||
+    block?.name?.toLowerCase().includes('stop') ||
+    block?.type?.toLowerCase().includes('stop')
+  );
+}
+
+function isWaitBlock(block) {
+  return (
+    block?.name === 'Wait' ||
+    block?.type === 'Wait' ||
+    block?.category === 'control' && block?.name === 'Wait' ||
+    block?.type === 'Wait' ||
+    block?.name?.toLowerCase().includes('wait') ||
+    block?.type?.toLowerCase().includes('wait')
+  );
+}
+
+function isSpeedBlock(block) {
+  return (
+    block?.name === 'Speed' ||
+    block?.type === 'Speed' ||
+    block?.category === 'control' && block?.name === 'Speed' ||
+    block?.type === 'Speed' ||
+    block?.name?.toLowerCase().includes('speed') ||
+    block?.type?.toLowerCase().includes('speed')
+  );
+}
+
+function isObstacleDetectedBlock(block) {
+  return (
+    block?.name === 'Obstacle Detected' ||
+    block?.type === 'obstaclesound' ||
+    block?.name?.toLowerCase().includes('obstacle')
+  );
+}
+
+const isHappyDetected = () => {
+  return window.humanDetectionData?.dominantExpression === 'happy';
+};
+
+const isPointing = (direction) => {
+  const { leftHand, rightHand, poses } = window.humanDetectionData || {};
+  
+  if (!leftHand || !rightHand || !poses?.[0]?.keypoints) {
+    return false;
+  }
+  
+  const scoreThreshold = 0.2;
+  const noseY = poses[0].keypoints[0].position.y;
+  const hipY = poses[0].keypoints[11].position.y;
+  const leftShoulderX = poses[0].keypoints[5].position.x;
+  const rightShoulderX = poses[0].keypoints[6].position.x;
+  
+  switch (direction) {
+    case 'up':
+      return (leftHand.score > scoreThreshold && leftHand.position.y < noseY) ||
+             (rightHand.score > scoreThreshold && rightHand.position.y < noseY);
+    case 'down':
+      return (leftHand.score > scoreThreshold && leftHand.position.y > hipY) ||
+             (rightHand.score > scoreThreshold && rightHand.position.y > hipY);
+    case 'left':
+      return (rightHand.score > scoreThreshold && rightHand.position.x < rightShoulderX);
+    case 'right':
+      return (leftHand.score > scoreThreshold && leftHand.position.x > leftShoulderX);
+    default:
+      return false;
+  }
+};
+
+async function playPopSound(sounds) {
+  const popSources = [
+    sounds?.pop,
+    './assets/sounds/pop.mp3',
+    'assets/sounds/pop.mp3',
+    '/assets/sounds/pop.mp3',
+    'sounds/pop.mp3'
+  ];
+  
+  for (const src of popSources) {
+    if (src) {
+      try {
+        console.log(`🔊 Trying to play pop sound from: ${src}`);
+        const audio = new Audio(src);
+        audio.volume = 0.8;
+        
+        audio.addEventListener('canplaythrough', () => {
+          console.log(`🔊 Pop sound loaded successfully`);
+        });
+        
+        audio.addEventListener('error', (e) => {
+          console.warn(`🔊 Pop sound failed to load:`, e);
+        });
+        
+        await audio.play();
+        console.log(`🔊 Pop sound played successfully`);
+        return;
+      } catch (err) {
+        console.warn(`⚠️ Failed to play pop sound from ${src}:`, err);
+        continue;
+      }
+    }
+  }
+  
+  console.warn('⚠️ Creating synthetic beep sound');
+  await playFrequencySound(800, 200);
+}
+
+// FIXED: Universal robot movement dispatch function with detailed debugging
+function moveRobotUniversal(actor, dispatch, targetX, targetY, direction) {
+  console.log(`🔍 [UNIVERSAL DEBUG] === MOVEMENT DETAILS ===`);
+  console.log(`🔍 Actor Name: ${actor.name}`);
+  console.log(`🔍 Actor ID: ${actor.id}`);
+  console.log(`🔍 Current Position: (${actor.x}, ${actor.y})`);
+  console.log(`🔍 Target Position: (${targetX}, ${targetY})`);
+  console.log(`🔍 Direction: ${direction}`);
+  console.log(`🔍 Position Change: X(${actor.x} → ${targetX}) Y(${actor.y} → ${targetY})`);
+  
+  // Check if position is actually changing
+  if (actor.x === targetX && actor.y === targetY) {
+    console.log(`🚨 [UNIVERSAL ERROR] NO MOVEMENT! Target position is same as current position!`);
+    console.log(`🚨 This means the robot will not move visually!`);
+  } else {
+    console.log(`✅ [UNIVERSAL SUCCESS] Position WILL change from (${actor.x}, ${actor.y}) to (${targetX}, ${targetY})`);
+  }
+  
+  console.log(`🤖 [UNIVERSAL] Moving ${actor.name} from (${actor.x}, ${actor.y}) to (${targetX}, ${targetY})`);
+  
+  // Dispatch BOTH actions to handle any reducer naming
+  try {
+    dispatch(moveSimulatorRobot({ id: actor.id, x: targetX, y: targetY, direction }));
+    console.log(`📦 [REDUX] moveSimulatorRobot dispatched successfully`);
+  } catch (e) {
+    console.error(`❌ [REDUX ERROR] moveSimulatorRobot failed:`, e);
+  }
+  
+  try {
+    dispatch(moveSimulatorRobotFromScript({ robotId: actor.id, x: targetX, y: targetY, direction }));
+    console.log(`📦 [REDUX] moveSimulatorRobotFromScript dispatched successfully`);
+  } catch (e) {
+    console.log(`⚠️ [REDUX] moveSimulatorRobotFromScript action doesn't exist (this is normal)`);
+  }
+  
+  // Update local actor reference
+  const oldX = actor.x;
+  const oldY = actor.y;
+  actor.x = targetX;
+  actor.y = targetY;
+  if (typeof direction === 'number') {
+    actor.direction = direction;
+  }
+  
+  console.log(`📝 [LOCAL UPDATE] Actor reference updated from (${oldX}, ${oldY}) to (${actor.x}, ${actor.y})`);
+  
+  // Force UI update
+  window.dispatchEvent(new CustomEvent('robotMoved', {
+    detail: { robotId: actor.id, x: actor.x, y: actor.y, direction: actor.direction, timestamp: Date.now() }
+  }));
+  
+  window.dispatchEvent(new Event('simulatorStateChanged'));
+  
+  console.log(`🎉 [UNIVERSAL] Robot movement completed - events dispatched`);
+  console.log(`🔍 [UNIVERSAL DEBUG] === END MOVEMENT ===`);
+}
+
+// MAIN exported async run function with DETAILED DEBUG LOGGING
+export async function run(actor, dispatch, sounds, selectedActorId) {
+  console.log("🔍 DEBUGGING - Actor received:", actor);
+  console.log("🔍 DEBUGGING - Scripts array:", actor.scripts);
+  console.log("🔍 DEBUGGING - Scripts length:", actor.scripts?.length);
+
+  if (!actor) {
+    console.warn("⚠️ run() called with no actor!");
+    return;
+  }
+
+  if (!Array.isArray(actor.scripts) || actor.scripts.length === 0) {
+    console.log(`ℹ️ Actor has no scripts to run:`, actor);
+    return;
+  }
+
+  const loops = [];
+  const targetActorId = selectedActorId || actor.id;
+  let currentSpeedMultiplier = 1;
+  let obstacleCollisionDetected = false;
+
+  console.log(`🚀 Starting script execution with ${actor.scripts.length} blocks`);
+  console.log(`🔊 Available sounds:`, sounds);
+  console.log(`🤖 Actor type: ${actor.type || 'stage-actor'}`);
+  console.log(`📍 Actor position: x: ${actor.x}, y: ${actor.y}, direction: ${actor.direction}`);
+
+  // First pass: check for Stop blocks
+  let stopIndex = -1;
+  for (let i = 0; i < actor.scripts.length; i++) {
+    const block = actor.scripts[i];
+    if (isStopBlock(block)) {
+      stopIndex = i;
+      console.log(`🛑 STOP BLOCK FOUND at index ${i}`);
+      break;
+    }
+  }
+
+  try {
+    for (let i = 0; i < actor.scripts.length; i++) {
+      const b = actor.scripts[i];
+      
+      if (obstacleCollisionDetected) {
+        console.log('🚧 SCRIPT EXECUTION STOPPED DUE TO OBSTACLE COLLISION');
+        break;
+      }
+      
+      if (stopIndex !== -1 && i >= stopIndex) {
+        console.log(`🛑 EXECUTION STOPPED at block ${i}`);
+        return;
+      }
+
+      const c = Math.max(1, Math.min(99, b?.count || 1));
+
+      if (isSpeedBlock(b)) {
+        currentSpeedMultiplier = b?.speedMultiplier || 1.5;
+        console.log(`⚡ SPEED CHANGED to ${currentSpeedMultiplier}x`);
+        continue;
+      }
+
+      if (isWaitBlock(b)) {
+        const waitTime = (b?.count || 3) * 1000;
+        console.log(`⏳ WAITING for ${waitTime}ms`);
+        await delay(waitTime, currentSpeedMultiplier);
+        continue;
+      }
+
+      if (isObstacleDetectedBlock(b)) {
+        const lowFreq = Math.max(1, Math.min(99, b?.lowFrequency || 1));
+        const highFreq = Math.max(1, Math.min(99, b?.highFrequency || 99));
+        const alertFrequency = Math.max(lowFreq, highFreq);
+        console.log(`🚨 OBSTACLE DETECTED BLOCK - Playing ${alertFrequency}Hz sound`);
+        await playFrequencySound(alertFrequency, 500);
+        console.log(`🔊 Obstacle alert sound played at ${alertFrequency}Hz`);
+        continue;
+      }
+
+      const blockIdentifier = b?.name || b?.type;
+      console.log(`▶️ Executing ${blockIdentifier} (count: ${c})`);
+
+      switch (blockIdentifier) {
+        case 'Move Right':
+          console.log('▶️ Executing Move Right (count: 1)');
+          console.log('🔍 DEBUG - Current actor.x:', actor.x);
+          console.log('🔍 DEBUG - Current actor.y:', actor.y);
+          
+          for (let k = 0; k < c; k++) {
+            if (actor.type === 'simulatorRobot') {
+              const targetX = Math.min(actor.x + 1, 19);
+              console.log('🔍 DEBUG - Calculated targetX:', targetX);
+              console.log('🔍 DEBUG - Should move from', actor.x, 'to', targetX);
+              
+              if (targetX === actor.x) {
+                console.log('🚨 ERROR: Target X is same as current X! Robot is at right boundary (x=19)');
+                console.log('🚨 Cannot move right - robot is already at maximum X position');
+                break;
+              }
+              
+              if (checkSimulatorObstacle(actor, targetX, actor.y)) {
+                console.log('🚧 SIMULATOR OBSTACLE DETECTED! Stopping robot movement.');
+                await playFrequencySound(600, 800);
+                obstacleCollisionDetected = true;
+                break;
+              }
+              
+              console.log(`🤖 Moving simulator robot RIGHT from (${actor.x}, ${actor.y}) to (${targetX}, ${actor.y})`);
+              
+              moveRobotUniversal(actor, dispatch, targetX, actor.y);
+              
+            } else {
+              const currentScene = getCurrentSceneData(dispatch);
+              if (currentScene) {
+                if (checkForObstacle(actor, 'right', dispatch, currentScene)) {
+                  console.log('🚧 OBSTACLE DETECTED! Playing alert sound and stopping execution.');
+                  await playFrequencySound(600, 800);
+                  obstacleCollisionDetected = true;
+                  break;
+                }
+              }
+              dispatch(moveActor({ actorId: actor.id, dx: 1, dy: 0, fromScript: true }));
+            }
+            
+            await delay(200, currentSpeedMultiplier);
+          }
+          
+          console.log('✅ Move Right completed');
+          break;
+
+        case 'Move Left':
+          console.log('▶️ Executing Move Left (count: 1)');
+          console.log('🔍 DEBUG - Current actor.x:', actor.x);
+          console.log('🔍 DEBUG - Current actor.y:', actor.y);
+          
+          for (let k = 0; k < c; k++) {
+            if (actor.type === 'simulatorRobot') {
+              const targetX = Math.max(actor.x - 1, 0);
+              console.log('🔍 DEBUG - Calculated targetX:', targetX);
+              console.log('🔍 DEBUG - Should move from', actor.x, 'to', targetX);
+              
+              if (targetX === actor.x) {
+                console.log('🚨 ERROR: Target X is same as current X! Robot is at left boundary (x=0)');
+                console.log('🚨 Cannot move left - robot is already at minimum X position');
+                break;
+              }
+              
+              if (checkSimulatorObstacle(actor, targetX, actor.y)) {
+                console.log('🚧 SIMULATOR OBSTACLE DETECTED! Stopping robot movement.');
+                await playFrequencySound(600, 800);
+                obstacleCollisionDetected = true;
+                break;
+              }
+              
+              console.log(`🤖 Moving simulator robot LEFT from (${actor.x}, ${actor.y}) to (${targetX}, ${actor.y})`);
+              
+              moveRobotUniversal(actor, dispatch, targetX, actor.y, 270);
+              
+            } else {
+              const currentScene = getCurrentSceneData(dispatch);
+              if (currentScene) {
+                if (checkForObstacle(actor, 'left', dispatch, currentScene)) {
+                  console.log('🚧 OBSTACLE DETECTED! Playing alert sound and stopping execution.');
+                  await playFrequencySound(600, 800);
+                  obstacleCollisionDetected = true;
+                  break;
+                }
+              }
+              dispatch(moveActor({ actorId: actor.id, dx: -1, dy: 0, fromScript: true }));
+            }
+            
+            await delay(200, currentSpeedMultiplier);
+          }
+          
+          console.log('✅ Move Left completed');
+          break;
+
+        case 'Move Up':
+          console.log('▶️ Executing Move Up (count: 1)');
+          console.log('🔍 DEBUG - Current actor.x:', actor.x);
+          console.log('🔍 DEBUG - Current actor.y:', actor.y);
+          
+          for (let k = 0; k < c; k++) {
+            if (actor.type === 'simulatorRobot') {
+              const targetY = Math.max(actor.y - 1, 0);
+              console.log('🔍 DEBUG - Calculated targetY:', targetY);
+              console.log('🔍 DEBUG - Should move from', actor.y, 'to', targetY);
+              
+              if (targetY === actor.y) {
+                console.log('🚨 ERROR: Target Y is same as current Y! Robot is at top boundary (y=0)');
+                console.log('🚨 Cannot move up - robot is already at minimum Y position');
+                break;
+              }
+              
+              if (checkSimulatorObstacle(actor, actor.x, targetY)) {
+                console.log('🚧 SIMULATOR OBSTACLE DETECTED! Stopping robot movement.');
+                await playFrequencySound(600, 800);
+                obstacleCollisionDetected = true;
+                break;
+              }
+              
+              console.log(`🤖 Moving simulator robot UP from (${actor.x}, ${actor.y}) to (${actor.x}, ${targetY})`);
+              
+              moveRobotUniversal(actor, dispatch, actor.x, targetY, 0);
+              
+            } else {
+              const currentScene = getCurrentSceneData(dispatch);
+              if (currentScene) {
+                if (checkForObstacle(actor, 'up', dispatch, currentScene)) {
+                  console.log('🚧 OBSTACLE DETECTED! Playing alert sound and stopping execution.');
+                  await playFrequencySound(600, 800);
+                  obstacleCollisionDetected = true;
+                  break;
+                }
+              }
+              dispatch(moveActor({ actorId: actor.id, dx: 0, dy: -1, fromScript: true }));
+            }
+            
+            await delay(200, currentSpeedMultiplier);
+          }
+          
+          console.log('✅ Move Up completed');
+          break;
+
+        case 'Move Down':
+          console.log('▶️ Executing Move Down (count: 1)');
+          console.log('🔍 DEBUG - Current actor.x:', actor.x);
+          console.log('🔍 DEBUG - Current actor.y:', actor.y);
+          
+          for (let k = 0; k < c; k++) {
+            if (actor.type === 'simulatorRobot') {
+              const targetY = Math.min(actor.y + 1, 14);
+              console.log('🔍 DEBUG - Calculated targetY:', targetY);
+              console.log('🔍 DEBUG - Should move from', actor.y, 'to', targetY);
+              
+              if (targetY === actor.y) {
+                console.log('🚨 ERROR: Target Y is same as current Y! Robot is at bottom boundary (y=14)');
+                console.log('🚨 Cannot move down - robot is already at maximum Y position');
+                break;
+              }
+              
+              if (checkSimulatorObstacle(actor, actor.x, targetY)) {
+                console.log('🚧 SIMULATOR OBSTACLE DETECTED! Stopping robot movement.');
+                await playFrequencySound(600, 800);
+                obstacleCollisionDetected = true;
+                break;
+              }
+              
+              console.log(`🤖 Moving simulator robot DOWN from (${actor.x}, ${actor.y}) to (${actor.x}, ${targetY})`);
+              
+              moveRobotUniversal(actor, dispatch, actor.x, targetY, 180);
+              
+            } else {
+              const currentScene = getCurrentSceneData(dispatch);
+              if (currentScene) {
+                if (checkForObstacle(actor, 'down', dispatch, currentScene)) {
+                  console.log('🚧 OBSTACLE DETECTED! Playing alert sound and stopping execution.');
+                  await playFrequencySound(600, 800);
+                  obstacleCollisionDetected = true;
+                  break;
+                }
+              }
+              dispatch(moveActor({ actorId: actor.id, dx: 0, dy: 1, fromScript: true }));
+            }
+            
+            await delay(200, currentSpeedMultiplier);
+          }
+          
+          console.log('✅ Move Down completed');
+          break;
+          
+        case 'Rotate Left':
+          console.log('▶️ Executing Rotate Left (count: 1)');
+          console.log('🔍 DEBUG - Current direction:', actor.direction);
+          
+          for (let k = 0; k < c; k++) {
+            if (actor.type === 'simulatorRobot') {
+              const newDirection = (actor.direction - 90 + 360) % 360;
+              console.log('🔍 DEBUG - New direction:', newDirection);
+              console.log(`🤖 Rotating simulator robot LEFT from ${actor.direction}° to ${newDirection}°`);
+              
+              // FIXED: Only change direction, keep same position
+              moveRobotUniversal(actor, dispatch, actor.x, actor.y, newDirection);
+              
+            } else {
+              dispatch(rotateActor({ actorId: actor.id, degrees: -90, fromScript: true }));
+            }
+            await delay(140, currentSpeedMultiplier);
+          }
+          
+          console.log('✅ Rotate Left completed');
+          break;
+
+        case 'Rotate Right':
+          console.log('▶️ Executing Rotate Right (count: 1)');
+          console.log('🔍 DEBUG - Current direction:', actor.direction);
+          
+          for (let k = 0; k < c; k++) {
+            if (actor.type === 'simulatorRobot') {
+              const newDirection = (actor.direction + 90) % 360;
+              console.log('🔍 DEBUG - New direction:', newDirection);
+              console.log(`🤖 Rotating simulator robot RIGHT from ${actor.direction}° to ${newDirection}°`);
+              
+              // FIXED: Only change direction, keep same position
+              moveRobotUniversal(actor, dispatch, actor.x, actor.y, newDirection);
+              
+            } else {
+              dispatch(rotateActor({ actorId: actor.id, degrees: 90, fromScript: true }));
+            }
+            await delay(140, currentSpeedMultiplier);
+          }
+          
+          console.log('✅ Rotate Right completed');
+          break;
+
+        case 'Pop':
+          console.log('🎵 Executing Pop sound block');
+          await playPopSound(sounds);
+          await delay(120, currentSpeedMultiplier);
+          break;
+
+        case 'Happy Detected':
+          console.log('😊 Executing Happy Detection block');
+          if (isHappyDetected()) {
+            console.log('😊 Happy face detected! Continuing execution...');
+          } else {
+            console.log('😐 No happy face detected. Waiting...');
+            let attempts = 0;
+            while (!isHappyDetected() && attempts < 10) {
+              await delay(1000, currentSpeedMultiplier);
+              attempts++;
+            }
+            if (!isHappyDetected()) {
+              console.log('😞 Happy detection timeout. Continuing anyway...');
+            }
+          }
+          break;
+
+        case 'Pointing Up':
+          console.log('👆 Executing Pointing Up detection block');
+          if (isPointing('up')) {
+            console.log('👆 Pointing up detected! Continuing execution...');
+          } else {
+            console.log('🤷 No pointing up detected. Waiting...');
+            let attempts = 0;
+            while (!isPointing('up') && attempts < 10) {
+              await delay(1000, currentSpeedMultiplier);
+              attempts++;
+            }
+            if (!isPointing('up')) {
+              console.log('⏰ Pointing up timeout. Continuing anyway...');
+            }
+          }
+          break;
+
+        case 'Pointing Down':
+          console.log('👇 Executing Pointing Down detection block');
+          if (isPointing('down')) {
+            console.log('👇 Pointing down detected! Continuing execution...');
+          } else {
+            console.log('🤷 No pointing down detected. Waiting...');
+            let attempts = 0;
+            while (!isPointing('down') && attempts < 10) {
+              await delay(1000, currentSpeedMultiplier);
+              attempts++;
+            }
+            if (!isPointing('down')) {
+              console.log('⏰ Pointing down timeout. Continuing anyway...');
+            }
+          }
+          break;
+
+        case 'Pointing Left':
+          console.log('👈 Executing Pointing Left detection block');
+          if (isPointing('left')) {
+            console.log('👈 Pointing left detected! Continuing execution...');
+          } else {
+            console.log('🤷 No pointing left detected. Waiting...');
+            let attempts = 0;
+            while (!isPointing('left') && attempts < 10) {
+              await delay(1000, currentSpeedMultiplier);
+              attempts++;
+            }
+            if (!isPointing('left')) {
+              console.log('⏰ Pointing left timeout. Continuing anyway...');
+            }
+          }
+          break;
+
+        case 'Pointing Right':
+          console.log('👉 Executing Pointing Right detection block');
+          if (isPointing('right')) {
+            console.log('👉 Pointing right detected! Continuing execution...');
+          } else {
+            console.log('🤷 No pointing right detected. Waiting...');
+            let attempts = 0;
+            while (!isPointing('right') && attempts < 10) {
+              await delay(1000, currentSpeedMultiplier);
+              attempts++;
+            }
+            if (!isPointing('right')) {
+              console.log('⏰ Pointing right timeout. Continuing anyway...');
+            }
+          }
+          break;
+
+        case 'Sound':
+          console.log(`🎵 Executing Sound block (${b?.frequency || 440}Hz for ${b?.duration || 300}ms)`);
+          for (let k = 0; k < c; k++) {
+            const frequency = Math.max(1, Math.min(99, b?.frequency || 1));
+            const duration = Math.max(100, Math.min(2000, b?.duration || 300));
+            await playFrequencySound(frequency, duration);
+            if (k < c - 1) await delay(100, currentSpeedMultiplier);
+          }
+          await delay(120, currentSpeedMultiplier);
+          break;
+
+        default:
+          if (b?.type === 'customsound' && b.soundData?.audioURL) {
+            console.log(`🎵 Playing custom sound: ${b.name}`);
+            for (let k = 0; k < c; k++) {
+              await playCustomSound(b);
+              if (k < c - 1) await delay(200, currentSpeedMultiplier);
+            }
+            await delay(120, currentSpeedMultiplier);
+          } else if (b?.audioURL) {
+            console.log(`🎵 Playing custom sound via audioURL: ${b.name}`);
+            for (let k = 0; k < c; k++) {
+              await playCustomSound(b);
+              if (k < c - 1) await delay(200, currentSpeedMultiplier);
+            }
+            await delay(120, currentSpeedMultiplier);
+          }
+          break;
+      }
+
+      await delay(80, currentSpeedMultiplier);
+    }
+
+    if (obstacleCollisionDetected) {
+      console.log('🚧 Script execution terminated due to obstacle collision');
+    } else {
+      console.log('✅ Script execution completed normally');
+    }
+  } catch (error) {
+    console.error('❌ Script execution error:', error);
+    throw error;
+  }
+}
+
+// [All export functions remain the same...]
 export function addObstacleToScene(obstacleData, dispatch) {
   try {
     console.log('Adding obstacle from simulator:', obstacleData);
@@ -372,7 +953,6 @@ export function moveObstacleInScene(obstacleId, newX, newY, dispatch) {
   }
 }
 
-// Colored Area Management Functions (NO TEXT - just colored blocks)
 export function addColoredAreaToScene(coloredAreaData, dispatch) {
   try {
     console.log('Adding colored area from simulator:', coloredAreaData);
@@ -409,7 +989,6 @@ export function moveColoredAreaInScene(coloredAreaId, newX, newY, dispatch) {
   }
 }
 
-// NEW: Simulator Robot Management Functions
 export function addSimulatorRobotToScene(robotData, dispatch) {
   try {
     console.log('Adding robot to simulator:', robotData);
@@ -458,7 +1037,6 @@ export function cycleSimulatorRobotType(dispatch) {
   }
 }
 
-// Function to upload custom simulator background
 export async function uploadSimulatorBackground() {
   return new Promise((resolve) => {
     try {
@@ -466,7 +1044,7 @@ export async function uploadSimulatorBackground() {
       
       const input = document.createElement('input');
       input.type = 'file';
-      input.accept = 'image/*'; // Only allow image files
+      input.accept = 'image/*';
       input.multiple = false;
       
       input.onchange = (event) => {
@@ -477,7 +1055,6 @@ export async function uploadSimulatorBackground() {
           return;
         }
         
-        // Validate file type
         if (!file.type.startsWith('image/')) {
           console.error('Invalid file type. Please select an image file.');
           alert('Please select an image file (PNG, JPG, GIF, etc.)');
@@ -485,8 +1062,7 @@ export async function uploadSimulatorBackground() {
           return;
         }
         
-        // Validate file size (max 10MB)
-        const maxSize = 10 * 1024 * 1024; // 10MB in bytes
+        const maxSize = 10 * 1024 * 1024;
         if (file.size > maxSize) {
           console.error('File too large. Maximum size is 10MB.');
           alert('File too large. Please select an image smaller than 10MB.');
@@ -499,7 +1075,6 @@ export async function uploadSimulatorBackground() {
           try {
             const imageDataURL = e.target.result;
             
-            // Store the custom background
             const customBackgrounds = getCustomSimulatorBackgrounds();
             const newCustomBg = {
               id: `custom_${Date.now()}`,
@@ -510,17 +1085,13 @@ export async function uploadSimulatorBackground() {
             
             customBackgrounds.push(newCustomBg);
             
-            // Limit to 5 custom backgrounds to prevent storage overflow
             if (customBackgrounds.length > 5) {
-              customBackgrounds.shift(); // Remove oldest
+              customBackgrounds.shift();
             }
             
             localStorage.setItem('simulatorCustomBackgrounds', JSON.stringify(customBackgrounds));
-            
-            // Set as current background
             localStorage.setItem('simulatorBackground', imageDataURL);
             
-            // Dispatch event to update UI
             window.dispatchEvent(new CustomEvent('simulatorBackgroundChanged'));
             
             console.log('✅ Custom background uploaded and set:', file.name);
@@ -549,7 +1120,6 @@ export async function uploadSimulatorBackground() {
   });
 }
 
-// Function to get custom simulator backgrounds
 export function getCustomSimulatorBackgrounds() {
   try {
     const stored = localStorage.getItem('simulatorCustomBackgrounds');
@@ -560,7 +1130,6 @@ export function getCustomSimulatorBackgrounds() {
   }
 }
 
-// Function to get all available simulator backgrounds (built-in + custom)
 export function getAllSimulatorBackgrounds() {
   const builtInBackgrounds = [
     './assets/backgrounds/bg1.svg',
@@ -575,46 +1144,37 @@ export function getAllSimulatorBackgrounds() {
   return [...builtInBackgrounds, ...customDataURLs];
 }
 
-// Function to cycle simulator background (now includes custom backgrounds)
 export function cycleSimulatorBackground() {
   const allBackgrounds = getAllSimulatorBackgrounds();
   
-  // Get current simulator background from localStorage (or default to bg1)
   const currentBg = localStorage.getItem('simulatorBackground') || allBackgrounds[0];
   
   let currentIndex = allBackgrounds.findIndex(bg => bg === currentBg);
   if (currentIndex === -1) currentIndex = -1;
   
-  // Get next background
   const nextIndex = (currentIndex + 1) % allBackgrounds.length;
   const nextBackground = allBackgrounds[nextIndex];
   
-  // Store in localStorage (not Redux)
   localStorage.setItem('simulatorBackground', nextBackground);
   
-  // Dispatch custom event to notify SimulatorModal
   window.dispatchEvent(new CustomEvent('simulatorBackgroundChanged'));
   
   console.log('🔄 Cycling simulator background to:', nextBackground.substring(0, 50) + '...');
   return nextBackground;
 }
 
-// Function to get current simulator background (handles custom backgrounds)
 export function getCurrentSimulatorBackground() {
   const stored = localStorage.getItem('simulatorBackground');
   if (stored) {
     return stored;
   }
-  // Default to bg1
   return './assets/backgrounds/bg1.png';
 }
 
-// Function to clear all custom backgrounds
 export function clearCustomSimulatorBackgrounds() {
   try {
     localStorage.removeItem('simulatorCustomBackgrounds');
     
-    // Reset to bg1 if current background was custom
     const currentBg = getCurrentSimulatorBackground();
     if (currentBg.startsWith('data:')) {
       localStorage.setItem('simulatorBackground', './assets/backgrounds/bg1.png');
@@ -650,11 +1210,10 @@ export async function saveProjectFromSimulator(dispatch, getState) {
       currentSceneIndex: state.scene.currentSceneIndex,
       backgroundGallery: state.scene.backgroundGallery,
       customSounds: state.scene.customSounds,
-      simulatorRobots: state.scene.simulatorRobots, // Include simulator robots
+      simulatorRobots: state.scene.simulatorRobots,
       savedAt: new Date().toISOString()
     };
     
-    // Create and download file
     const dataStr = JSON.stringify(projectData, null, 2);
     const dataBlob = new Blob([dataStr], { type: 'application/json' });
     
@@ -709,704 +1268,4 @@ export async function loadProjectFromSimulator(dispatch) {
       resolve(false);
     }
   });
-}
-
-// UPDATED: Helper for Pop sound with multiple fallbacks
-async function playPopSound(sounds) {
-  const popSources = [
-    sounds?.pop,
-    './assets/sounds/pop.mp3',
-    'assets/sounds/pop.mp3',
-    '/assets/sounds/pop.mp3',
-    'sounds/pop.mp3'
-  ];
-  
-  for (const src of popSources) {
-    if (src) {
-      try {
-        console.log(`🔊 Trying to play pop sound from: ${src}`);
-        const audio = new Audio(src);
-        audio.volume = 0.8; // Higher volume for pop sound
-        
-        // Add event listeners for debugging
-        audio.addEventListener('canplaythrough', () => {
-          console.log(`🔊 Pop sound loaded successfully`);
-        });
-        
-        audio.addEventListener('error', (e) => {
-          console.warn(`🔊 Pop sound failed to load:`, e);
-        });
-        
-        await audio.play();
-        console.log(`🔊 Pop sound played successfully`);
-        return; // Success, exit
-      } catch (err) {
-        console.warn(`⚠️ Failed to play pop sound from ${src}:`, err);
-        continue; // Try next source
-      }
-    }
-  }
-  
-  // If all sources fail, create a synthetic beep
-  console.warn('⚠️ Creating synthetic beep sound');
-  await playFrequencySound(800, 200);
-}
-
-// Helper function to check if a block is a "Stop" block
-function isStopBlock(block) {
-  return (
-    block?.name === 'Stop' ||
-    block?.type === 'Stop' ||
-    block?.category === 'control' && block?.name === 'Stop' ||
-    block?.type === 'Stop' ||
-    block?.name?.toLowerCase().includes('stop') ||
-    block?.type?.toLowerCase().includes('stop')
-  );
-}
-
-// Helper function to check if a block is a "Wait" block
-function isWaitBlock(block) {
-  return (
-    block?.name === 'Wait' ||
-    block?.type === 'Wait' ||
-    block?.category === 'control' && block?.name === 'Wait' ||
-    block?.type === 'Wait' ||
-    block?.name?.toLowerCase().includes('wait') ||
-    block?.type?.toLowerCase().includes('wait')
-  );
-}
-
-// Helper function to check if a block is a "Speed" block
-function isSpeedBlock(block) {
-  return (
-    block?.name === 'Speed' ||
-    block?.type === 'Speed' ||
-    block?.category === 'control' && block?.name === 'Speed' ||
-    block?.type === 'Speed' ||
-    block?.name?.toLowerCase().includes('speed') ||
-    block?.type?.toLowerCase().includes('speed')
-  );
-}
-
-// Helper function to check if a block is an "Obstacle Detected" block
-function isObstacleDetectedBlock(block) {
-  return (
-    block?.name === 'Obstacle Detected' ||
-    block?.type === 'obstaclesound' ||
-    block?.name?.toLowerCase().includes('obstacle')
-  );
-}
-
-// Helper function to check for happy emotion
-const isHappyDetected = () => {
-  return window.humanDetectionData?.dominantExpression === 'happy';
-};
-
-// Helper function for pointing detection
-const isPointing = (direction) => {
-  const { leftHand, rightHand, poses } = window.humanDetectionData || {};
-  
-  if (!leftHand || !rightHand || !poses?.[0]?.keypoints) {
-    return false;
-  }
-  
-  const scoreThreshold = 0.2;
-  const noseY = poses[0].keypoints[0].position.y;
-  const hipY = poses[0].keypoints[11].position.y;
-  const leftShoulderX = poses[0].keypoints[5].position.x;
-  const rightShoulderX = poses[0].keypoints[6].position.x;
-  
-  switch (direction) {
-    case 'up':
-      return (leftHand.score > scoreThreshold && leftHand.position.y < noseY) ||
-             (rightHand.score > scoreThreshold && rightHand.position.y < noseY);
-    case 'down':
-      return (leftHand.score > scoreThreshold && leftHand.position.y > hipY) ||
-             (rightHand.score > scoreThreshold && rightHand.position.y > hipY);
-    case 'left':
-      return (rightHand.score > scoreThreshold && rightHand.position.x < rightShoulderX);
-    case 'right':
-      return (leftHand.score > scoreThreshold && leftHand.position.x > leftShoulderX);
-    default:
-      return false;
-  }
-};
-
-// MAIN exported async run function with simulator robot support and draw line tracking
-export async function run(actor, dispatch, sounds, selectedActorId) {
-  if (!actor) {
-    console.warn("⚠️ run() called with no actor!");
-    return;
-  }
-
-  if (!Array.isArray(actor.scripts) || actor.scripts.length === 0) {
-    console.log(`ℹ️ Actor has no scripts to run:`, actor);
-    return;
-  }
-
-  const loops = [];
-  const targetActorId = selectedActorId || actor.id;
-  let currentSpeedMultiplier = 1;
-  let obstacleCollisionDetected = false;
-
-  console.log(`🚀 Starting script execution with ${actor.scripts.length} blocks`);
-  console.log(`🔊 Available sounds:`, sounds);
-  console.log(`🤖 Actor type: ${actor.type || 'stage-actor'}`);
-  console.log(`📍 Actor position: x: ${actor.x}, y: ${actor.y}, direction: ${actor.direction}`);
-
-  // First pass: check for Stop blocks
-  let stopIndex = -1;
-  for (let i = 0; i < actor.scripts.length; i++) {
-    const block = actor.scripts[i];
-    if (isStopBlock(block)) {
-      stopIndex = i;
-      console.log(`🛑 STOP BLOCK FOUND at index ${i}`);
-      break;
-    }
-  }
-
-  try {
-    for (let i = 0; i < actor.scripts.length; i++) {
-      const b = actor.scripts[i];
-      
-      // Check if obstacle collision was detected and stop execution
-      if (obstacleCollisionDetected) {
-        console.log('🚧 SCRIPT EXECUTION STOPPED DUE TO OBSTACLE COLLISION');
-        break;
-      }
-      
-      if (stopIndex !== -1 && i >= stopIndex) {
-        console.log(`🛑 EXECUTION STOPPED at block ${i}`);
-        return;
-      }
-
-      const c = Math.max(1, Math.min(99, b?.count || 1));
-
-      // Handle Speed block
-      if (isSpeedBlock(b)) {
-        currentSpeedMultiplier = b?.speedMultiplier || 1.5;
-        console.log(`⚡ SPEED CHANGED to ${currentSpeedMultiplier}x`);
-        continue;
-      }
-
-      // Handle Wait block
-      if (isWaitBlock(b)) {
-        const waitTime = (b?.count || 3) * 1000;
-        console.log(`⏳ WAITING for ${waitTime}ms`);
-        await delay(waitTime, currentSpeedMultiplier);
-        continue;
-      }
-
-      // Handle Obstacle Detected block
-      if (isObstacleDetectedBlock(b)) {
-        const lowFreq = Math.max(1, Math.min(99, b?.lowFrequency || 1));
-        const highFreq = Math.max(1, Math.min(99, b?.highFrequency || 99));
-        const alertFrequency = Math.max(lowFreq, highFreq);
-        console.log(`🚨 OBSTACLE DETECTED BLOCK - Playing ${alertFrequency}Hz sound`);
-        await playFrequencySound(alertFrequency, 500);
-        console.log(`🔊 Obstacle alert sound played at ${alertFrequency}Hz`);
-        continue;
-      }
-
-      const blockIdentifier = b?.name || b?.type;
-      console.log(`▶️ Executing ${blockIdentifier} (count: ${c})`);
-
-      switch (blockIdentifier) {
-        case 'Move Right':
-          for (let k = 0; k < c; k++) {
-            // Check for obstacles BEFORE moving (stage actors)
-            const currentScene = getCurrentSceneData(dispatch);
-            
-            if (actor.type === 'simulatorRobot') {
-              // SIMULATOR ROBOT obstacle detection
-              const targetX = Math.min(actor.x + 1, 19);
-              if (checkSimulatorObstacle(actor, targetX, actor.y)) {
-                console.log('🚧 SIMULATOR OBSTACLE DETECTED! Stopping robot movement.');
-                await playFrequencySound(600, 800);
-                obstacleCollisionDetected = true;
-                break;
-              }
-              console.log(`🤖 Moving simulator robot RIGHT ${actor.name} from (${actor.x}, ${actor.y}) to (${actor.x + 1}, ${actor.y})`);
-              dispatch(moveSimulatorRobotFromScript({ robotId: actor.id, x: targetX, y: actor.y }));
-              actor.x = targetX; // Update local reference
-              
-              // NEW: Notify robot moved for drawing trail
-              if (actor.type === 'simulatorRobot') {
-                window.dispatchEvent(new CustomEvent('robotMoved', {
-                  detail: {
-                    robotId: actor.id,
-                    x: actor.x,
-                    y: actor.y,
-                    timestamp: Date.now()
-                  }
-                }));
-              }
-            } else {
-              // STAGE ACTOR obstacle detection
-              if (currentScene) {
-                if (checkForObstacle(actor, 'right', dispatch, currentScene)) {
-                  console.log('🚧 OBSTACLE DETECTED! Playing alert sound and stopping execution.');
-                  await playFrequencySound(600, 800);
-                  obstacleCollisionDetected = true;
-                  break;
-                }
-              }
-              dispatch(moveActor({ actorId: actor.id, dx: 1, dy: 0, fromScript: true }));
-            }
-            
-            await delay(180, currentSpeedMultiplier);
-          }
-          break;
-
-        case 'Move Left':
-          for (let k = 0; k < c; k++) {
-            const currentScene = getCurrentSceneData(dispatch);
-            
-            if (actor.type === 'simulatorRobot') {
-              const targetX = Math.max(actor.x - 1, 0);
-              if (checkSimulatorObstacle(actor, targetX, actor.y)) {
-                console.log('🚧 SIMULATOR OBSTACLE DETECTED! Stopping robot movement.');
-                await playFrequencySound(600, 800);
-                obstacleCollisionDetected = true;
-                break;
-              }
-              console.log(`🤖 Moving simulator robot LEFT ${actor.name} from (${actor.x}, ${actor.y}) to (${actor.x - 1}, ${actor.y})`);
-              dispatch(moveSimulatorRobotFromScript({ robotId: actor.id, x: targetX, y: actor.y }));
-              actor.x = targetX;
-              
-              // NEW: Notify robot moved for drawing trail
-              if (actor.type === 'simulatorRobot') {
-                window.dispatchEvent(new CustomEvent('robotMoved', {
-                  detail: {
-                    robotId: actor.id,
-                    x: actor.x,
-                    y: actor.y,
-                    timestamp: Date.now()
-                  }
-                }));
-              }
-            } else {
-              if (currentScene) {
-                if (checkForObstacle(actor, 'left', dispatch, currentScene)) {
-                  console.log('🚧 OBSTACLE DETECTED! Playing alert sound and stopping execution.');
-                  await playFrequencySound(600, 800);
-                  obstacleCollisionDetected = true;
-                  break;
-                }
-              }
-              dispatch(moveActor({ actorId: actor.id, dx: -1, dy: 0, fromScript: true }));
-            }
-            
-            await delay(180, currentSpeedMultiplier);
-          }
-          break;
-
-        case 'Move Up':
-          for (let k = 0; k < c; k++) {
-            const currentScene = getCurrentSceneData(dispatch);
-            
-            if (actor.type === 'simulatorRobot') {
-              const targetY = Math.max(actor.y - 1, 0);
-              if (checkSimulatorObstacle(actor, actor.x, targetY)) {
-                console.log('🚧 SIMULATOR OBSTACLE DETECTED! Stopping robot movement.');
-                await playFrequencySound(600, 800);
-                obstacleCollisionDetected = true;
-                break;
-              }
-              console.log(`🤖 Moving simulator robot UP ${actor.name} from (${actor.x}, ${actor.y}) to (${actor.x}, ${actor.y - 1})`);
-              dispatch(moveSimulatorRobotFromScript({ robotId: actor.id, x: actor.x, y: targetY }));
-              actor.y = targetY;
-              
-              // NEW: Notify robot moved for drawing trail
-              if (actor.type === 'simulatorRobot') {
-                window.dispatchEvent(new CustomEvent('robotMoved', {
-                  detail: {
-                    robotId: actor.id,
-                    x: actor.x,
-                    y: actor.y,
-                    timestamp: Date.now()
-                  }
-                }));
-              }
-            } else {
-              if (currentScene) {
-                if (checkForObstacle(actor, 'up', dispatch, currentScene)) {
-                  console.log('🚧 OBSTACLE DETECTED! Playing alert sound and stopping execution.');
-                  await playFrequencySound(600, 800);
-                  obstacleCollisionDetected = true;
-                  break;
-                }
-              }
-              dispatch(moveActor({ actorId: actor.id, dx: 0, dy: -1, fromScript: true }));
-            }
-            
-            await delay(180, currentSpeedMultiplier);
-          }
-          break;
-
-        case 'Move Down':
-          for (let k = 0; k < c; k++) {
-            const currentScene = getCurrentSceneData(dispatch);
-            
-            if (actor.type === 'simulatorRobot') {
-              const targetY = Math.min(actor.y + 1, 14);
-              if (checkSimulatorObstacle(actor, actor.x, targetY)) {
-                console.log('🚧 SIMULATOR OBSTACLE DETECTED! Stopping robot movement.');
-                await playFrequencySound(600, 800);
-                obstacleCollisionDetected = true;
-                break;
-              }
-              console.log(`🤖 Moving simulator robot DOWN ${actor.name} from (${actor.x}, ${actor.y}) to (${actor.x}, ${actor.y + 1})`);
-              dispatch(moveSimulatorRobotFromScript({ robotId: actor.id, x: actor.x, y: targetY }));
-              actor.y = targetY;
-              
-              // NEW: Notify robot moved for drawing trail
-              if (actor.type === 'simulatorRobot') {
-                window.dispatchEvent(new CustomEvent('robotMoved', {
-                  detail: {
-                    robotId: actor.id,
-                    x: actor.x,
-                    y: actor.y,
-                    timestamp: Date.now()
-                  }
-                }));
-              }
-            } else {
-              if (currentScene) {
-                if (checkForObstacle(actor, 'down', dispatch, currentScene)) {
-                  console.log('🚧 OBSTACLE DETECTED! Playing alert sound and stopping execution.');
-                  await playFrequencySound(600, 800);
-                  obstacleCollisionDetected = true;
-                  break;
-                }
-              }
-              dispatch(moveActor({ actorId: actor.id, dx: 0, dy: 1, fromScript: true }));
-            }
-            
-            await delay(180, currentSpeedMultiplier);
-          }
-          break;
-
-        case 'Rotate Left':
-          for (let k = 0; k < c; k++) {
-            if (actor.type === 'simulatorRobot') {
-              console.log(`🤖 Rotating simulator robot LEFT ${actor.name} from ${actor.direction}° to ${(actor.direction - 90 + 360) % 360}°`);
-              dispatch(rotateSimulatorRobotFromScript({ robotId: actor.id, degrees: -90 }));
-              actor.direction = (actor.direction - 90 + 360) % 360;
-              if (actor.direction < 0) actor.direction += 360;
-            } else {
-              dispatch(rotateActor({ actorId: actor.id, degrees: -90, fromScript: true }));
-            }
-            await delay(140, currentSpeedMultiplier);
-          }
-          break;
-
-        case 'Rotate Right':
-          for (let k = 0; k < c; k++) {
-            if (actor.type === 'simulatorRobot') {
-              console.log(`🤖 Rotating simulator robot RIGHT ${actor.name} from ${actor.direction}° to ${(actor.direction + 90) % 360}°`);
-              dispatch(rotateSimulatorRobotFromScript({ robotId: actor.id, degrees: 90 }));
-              actor.direction = (actor.direction + 90) % 360;
-            } else {
-              dispatch(rotateActor({ actorId: actor.id, degrees: 90, fromScript: true }));
-            }
-            await delay(140, currentSpeedMultiplier);
-          }
-          break;
-
-        case 'Happy Detected':
-          if (isHappyDetected()) {
-            // Continue to next block
-          } else {
-            i++; // Skip next block
-          }
-          break;
-
-        case 'Pointing Up':
-          if (isPointing('up')) {
-            const currentScene = getCurrentSceneData(dispatch);
-            if (actor.type === 'simulatorRobot') {
-              const targetY = Math.max(actor.y - 1, 0);
-              if (checkSimulatorObstacle(actor, actor.x, targetY)) {
-                console.log('🚧 SIMULATOR OBSTACLE DETECTED! Stopping robot movement.');
-                await playFrequencySound(600, 800);
-                obstacleCollisionDetected = true;
-                break;
-              }
-              dispatch(moveSimulatorRobotFromScript({ robotId: actor.id, x: actor.x, y: targetY }));
-              actor.y = targetY;
-              
-              // NEW: Notify robot moved for drawing trail
-              if (actor.type === 'simulatorRobot') {
-                window.dispatchEvent(new CustomEvent('robotMoved', {
-                  detail: {
-                    robotId: actor.id,
-                    x: actor.x,
-                    y: actor.y,
-                    timestamp: Date.now()
-                  }
-                }));
-              }
-            } else {
-              if (currentScene) {
-                if (checkForObstacle(actor, 'up', dispatch, currentScene)) {
-                  console.log('🚧 OBSTACLE DETECTED! Playing alert sound and stopping execution.');
-                  await playFrequencySound(600, 800);
-                  obstacleCollisionDetected = true;
-                  break;
-                }
-              }
-              dispatch(moveActor({ actorId: actor.id, dx: 0, dy: -1, fromScript: true }));
-            }
-            await delay(180, currentSpeedMultiplier);
-          }
-          break;
-
-        case 'Pointing Down':
-          if (isPointing('down')) {
-            const currentScene = getCurrentSceneData(dispatch);
-            if (actor.type === 'simulatorRobot') {
-              const targetY = Math.min(actor.y + 1, 14);
-              if (checkSimulatorObstacle(actor, actor.x, targetY)) {
-                console.log('🚧 SIMULATOR OBSTACLE DETECTED! Stopping robot movement.');
-                await playFrequencySound(600, 800);
-                obstacleCollisionDetected = true;
-                break;
-              }
-              dispatch(moveSimulatorRobotFromScript({ robotId: actor.id, x: actor.x, y: targetY }));
-              actor.y = targetY;
-              
-              // NEW: Notify robot moved for drawing trail
-              if (actor.type === 'simulatorRobot') {
-                window.dispatchEvent(new CustomEvent('robotMoved', {
-                  detail: {
-                    robotId: actor.id,
-                    x: actor.x,
-                    y: actor.y,
-                    timestamp: Date.now()
-                  }
-                }));
-              }
-            } else {
-              if (currentScene) {
-                if (checkForObstacle(actor, 'down', dispatch, currentScene)) {
-                  console.log('🚧 OBSTACLE DETECTED! Playing alert sound and stopping execution.');
-                  await playFrequencySound(600, 800);
-                  obstacleCollisionDetected = true;
-                  break;
-                }
-              }
-              dispatch(moveActor({ actorId: actor.id, dx: 0, dy: 1, fromScript: true }));
-            }
-            await delay(180, currentSpeedMultiplier);
-          }
-          break;
-
-        case 'Pointing Left':
-          if (isPointing('left')) {
-            const currentScene = getCurrentSceneData(dispatch);
-            if (actor.type === 'simulatorRobot') {
-              const targetX = Math.max(actor.x - 1, 0);
-              if (checkSimulatorObstacle(actor, targetX, actor.y)) {
-                console.log('🚧 SIMULATOR OBSTACLE DETECTED! Stopping robot movement.');
-                await playFrequencySound(600, 800);
-                obstacleCollisionDetected = true;
-                break;
-              }
-              dispatch(moveSimulatorRobotFromScript({ robotId: actor.id, x: targetX, y: actor.y }));
-              actor.x = targetX;
-              
-              // NEW: Notify robot moved for drawing trail
-              if (actor.type === 'simulatorRobot') {
-                window.dispatchEvent(new CustomEvent('robotMoved', {
-                  detail: {
-                    robotId: actor.id,
-                    x: actor.x,
-                    y: actor.y,
-                    timestamp: Date.now()
-                  }
-                }));
-              }
-            } else {
-              if (currentScene) {
-                if (checkForObstacle(actor, 'left', dispatch, currentScene)) {
-                  console.log('🚧 OBSTACLE DETECTED! Playing alert sound and stopping execution.');
-                  await playFrequencySound(600, 800);
-                  obstacleCollisionDetected = true;
-                  break;
-                }
-              }
-              dispatch(moveActor({ actorId: actor.id, dx: -1, dy: 0, fromScript: true }));
-            }
-            await delay(180, currentSpeedMultiplier);
-          }
-          break;
-
-        case 'Pointing Right':
-          if (isPointing('right')) {
-            const currentScene = getCurrentSceneData(dispatch);
-            if (actor.type === 'simulatorRobot') {
-              const targetX = Math.min(actor.x + 1, 19);
-              if (checkSimulatorObstacle(actor, targetX, actor.y)) {
-                console.log('🚧 SIMULATOR OBSTACLE DETECTED! Stopping robot movement.');
-                await playFrequencySound(600, 800);
-                obstacleCollisionDetected = true;
-                break;
-              }
-              dispatch(moveSimulatorRobotFromScript({ robotId: actor.id, x: targetX, y: actor.y }));
-              actor.x = targetX;
-              
-              // NEW: Notify robot moved for drawing trail
-              if (actor.type === 'simulatorRobot') {
-                window.dispatchEvent(new CustomEvent('robotMoved', {
-                  detail: {
-                    robotId: actor.id,
-                    x: actor.x,
-                    y: actor.y,
-                    timestamp: Date.now()
-                  }
-                }));
-              }
-            } else {
-              if (currentScene) {
-                if (checkForObstacle(actor, 'right', dispatch, currentScene)) {
-                  console.log('🚧 OBSTACLE DETECTED! Playing alert sound and stopping execution.');
-                  await playFrequencySound(600, 800);
-                  obstacleCollisionDetected = true;
-                  break;
-                }
-              }
-              dispatch(moveActor({ actorId: actor.id, dx: 1, dy: 0, fromScript: true }));
-            }
-            await delay(180, currentSpeedMultiplier);
-          }
-          break;
-
-        case 'Set Video Transparency':
-          const newOpacity = b.opacity;
-          if (newOpacity !== undefined) {
-            dispatch(setVideoOpacity(newOpacity));
-            console.log(`📹 Setting video opacity to ${newOpacity}`);
-          }
-          await delay(50, currentSpeedMultiplier);
-          break;
-
-        case 'Sync Actors with Faces':
-          const facesDetected = window.humanDetectionData?.faceCount > 0;
-          dispatch(syncActorsWithFaces(facesDetected));
-          console.log(`👥 Syncing actors with ${facesDetected} faces detected`);
-          await delay(100, currentSpeedMultiplier);
-          break;
-
-        case 'Pop':
-          console.log('🎵 Executing Pop sound block');
-          await playPopSound(sounds);
-          await delay(120, currentSpeedMultiplier);
-          break;
-
-        case 'Record':
-          // Reserved for future use
-          break;
-
-        case 'loop':
-          loops.push({ start: i + 1, left: c });
-          break;
-
-        case 'end':
-        case 'endLoop':
-          if (loops.length) {
-            const L = loops[loops.length - 1];
-            L.left -= 1;
-            if (L.left > 0) {
-              i = L.start - 1;
-              continue;
-            } else {
-              loops.pop();
-            }
-          }
-          break;
-
-        case 'Grow Size':
-          for (let k = 0; k < c; k++) {
-            if (actor.type === 'simulatorRobot') {
-              dispatch(scaleSimulatorRobotFromScript({ robotId: actor.id, scale: 1.2 }));
-              actor.size = Math.min((actor.size || 1) * 1.2, 4.0);
-            } else {
-              dispatch(scaleActor({ actorId: actor.id, scale: 1.2, fromScript: true }));
-            }
-            await delay(200, currentSpeedMultiplier);
-          }
-          break;
-
-        case 'Shrink Size':
-          for (let k = 0; k < c; k++) {
-            if (actor.type === 'simulatorRobot') {
-              dispatch(scaleSimulatorRobotFromScript({ robotId: actor.id, scale: 0.8 }));
-              actor.size = Math.max((actor.size || 1) * 0.8, 0.5);
-            } else {
-              dispatch(scaleActor({ actorId: actor.id, scale: 0.8, fromScript: true }));
-            }
-            await delay(200, currentSpeedMultiplier);
-          }
-          break;
-
-        case 'Reset Size':
-          if (actor.type === 'simulatorRobot') {
-            dispatch(scaleSimulatorRobotFromScript({ robotId: actor.id, scale: 1 }));
-            actor.size = 1;
-          } else {
-            dispatch(resetActorSize({ actorId: targetActorId, fromScript: true }));
-          }
-          break;
-
-        case 'Disappear':
-          if (actor.type === 'simulatorRobot') {
-            dispatch(disappearSimulatorRobot({ robotId: actor.id }));
-            actor.visible = false;
-          } else {
-            dispatch(disappearActor({ actorId: targetActorId }));
-          }
-          break;
-
-        case 'Appear':
-          if (actor.type === 'simulatorRobot') {
-            dispatch(reappearSimulatorRobot({ robotId: actor.id }));
-            actor.visible = true;
-          } else {
-            dispatch(reappearActor({ actorId: targetActorId }));
-          }
-          break;
-
-        default:
-          // Handle custom sounds
-          if (b?.type === 'customsound' && b.soundData?.audioURL) {
-            console.log(`🎵 Playing custom sound: ${b.name}`);
-            for (let k = 0; k < c; k++) {
-              await playCustomSound(b);
-              if (k < c - 1) await delay(200, currentSpeedMultiplier);
-            }
-            await delay(120, currentSpeedMultiplier);
-          } else if (b?.audioURL) {
-            console.log(`🎵 Playing custom sound via audioURL: ${b.name}`);
-            for (let k = 0; k < c; k++) {
-              await playCustomSound(b);
-              if (k < c - 1) await delay(200, currentSpeedMultiplier);
-            }
-            await delay(120, currentSpeedMultiplier);
-          }
-          break;
-      }
-
-      await delay(80, currentSpeedMultiplier);
-    }
-
-    if (obstacleCollisionDetected) {
-      console.log('🚧 Script execution terminated due to obstacle collision');
-    } else {
-      console.log('✅ Script execution completed normally');
-    }
-  } catch (error) {
-    console.error('❌ Script execution error:', error);
-    throw error;
-  }
 }

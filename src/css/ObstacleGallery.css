@@ -119,20 +119,6 @@
   border-radius: 4px;
 }
 
-.obstacle-shape.pentagon {
-  width: 50px;
-  height: 50px;
-  background: #ffeaa7 !important;
-  clip-path: polygon(50% 0%, 100% 38%, 82% 100%, 18% 100%, 0% 38%);
-}
-
-.obstacle-shape.hexagon {
-  width: 50px;
-  height: 50px;
-  background: #dda0dd !important;
-  clip-path: polygon(30% 0%, 70% 0%, 100% 50%, 70% 100%, 30% 100%, 0% 50%);
-}
-
 .obstacle-name {
   font-size: 14px;
   color: #666;
