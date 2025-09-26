@@ -437,30 +437,25 @@ function moveRobotUniversal(actor, dispatch, targetX, targetY, direction) {
     dispatch(moveSimulatorRobot({ id: actor.id, x: targetX, y: targetY, direction }));
     console.log(`📦 [REDUX] moveSimulatorRobot dispatched successfully`);
   } catch (e) {
-    console.error(`❌ [REDUX ERROR] moveSimulatorRobot failed:`, e);
+    console.error(`❌ [REDUX ERROR] moveSimulatorRobot failed:, e`);
   }
   
   try {
     dispatch(moveSimulatorRobotFromScript({ robotId: actor.id, x: targetX, y: targetY, direction }));
     console.log(`📦 [REDUX] moveSimulatorRobotFromScript dispatched successfully`);
   } catch (e) {
-    console.log(`⚠️ [REDUX] moveSimulatorRobotFromScript action doesn't exist (this is normal)`);
+    console.log(`⚠ [REDUX] moveSimulatorRobotFromScript action doesn't exist (this is normal)`);
   }
   
-  // Update local actor reference
-  const oldX = actor.x;
-  const oldY = actor.y;
-  actor.x = targetX;
-  actor.y = targetY;
-  if (typeof direction === 'number') {
-    actor.direction = direction;
-  }
+  // REMOVED: Direct mutation of actor object
+  // The Redux state will be updated by the reducers, and components will re-render
+  // with the new state values
   
-  console.log(`📝 [LOCAL UPDATE] Actor reference updated from (${oldX}, ${oldY}) to (${actor.x}, ${actor.y})`);
+  console.log(`📝 [LOCAL UPDATE] Redux dispatchers called - state will update through reducers`);
   
   // Force UI update
   window.dispatchEvent(new CustomEvent('robotMoved', {
-    detail: { robotId: actor.id, x: actor.x, y: actor.y, direction: actor.direction, timestamp: Date.now() }
+    detail: { robotId: actor.id, x: targetX, y: targetY, direction: direction, timestamp: Date.now() }
   }));
   
   window.dispatchEvent(new Event('simulatorStateChanged'));
