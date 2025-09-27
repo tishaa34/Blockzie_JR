@@ -1,12 +1,15 @@
 import { createSlice, nanoid } from '@reduxjs/toolkit';
 
+
 // Grid constants must match Stage.js
 const GRID_WIDTH = 20;
 const GRID_HEIGHT = 15;
 
+
 // Center indices are integer grid cells (Stage places at (x+0.5, y+0.5) cells)
 const CENTER_X = Math.floor(GRID_WIDTH / 2);
 const CENTER_Y = Math.floor(GRID_HEIGHT / 2);
+
 
 // Default starter actor
 const makeDefaultstem = () => ({
@@ -22,6 +25,7 @@ const makeDefaultstem = () => ({
   visible: true,
 });
 
+
 // Default scene
 const makeDefaultScene = () => ({
   id: nanoid(),
@@ -32,6 +36,7 @@ const makeDefaultScene = () => ({
   undoStack: [],
   redoStack: [],
 });
+
 
 const initialState = {
   scenes: [makeDefaultScene()],
@@ -57,8 +62,10 @@ const initialState = {
   selectedSimRobotId: null,
 };
 
+
 // Safe deep clone for undo
 const deepClone = (obj) => JSON.parse(JSON.stringify(obj));
+
 
 const sceneSlice = createSlice({
   name: 'scene',
@@ -74,6 +81,7 @@ const sceneSlice = createSlice({
       state.sceneRedoStack = [];
     },
 
+
     undoSceneAction(state) {
       if (!state.sceneUndoStack.length) return;
       const prev = state.sceneUndoStack.pop();
@@ -84,6 +92,7 @@ const sceneSlice = createSlice({
       state.scenes = prev.scenes;
       state.currentSceneIndex = prev.currentSceneIndex;
     },
+
 
     redoSceneAction(state) {
       if (!state.sceneRedoStack.length) return;
@@ -96,14 +105,24 @@ const sceneSlice = createSlice({
       state.currentSceneIndex = next.currentSceneIndex;
     },
 
-    // UI state
+
+    // UI state - 🛤️ UPDATED: Accept 'sensors' category
     setSelectedBlockCategory(state, action) {
-      state.selectedBlockCategory = action.payload;
+      const validCategories = [
+        'start', 'motion', 'looks', 'sound', 'control', 
+        'sensors', 'device', 'humandetection', 'end'
+      ];
+      
+      if (validCategories.includes(action.payload)) {
+        state.selectedBlockCategory = action.payload;
+      }
     },
+
 
     toggleCategoryPanel(state) {
       state.categoryPanelOpen = !state.categoryPanelOpen;
     },
+
 
     // Per-scene undo/redo (actors/background changes)
     pushUndoState(state) {
@@ -113,6 +132,7 @@ const sceneSlice = createSlice({
       if (scene.undoStack.length > 20) scene.undoStack.shift();
       scene.redoStack = [];
     },
+
 
     undoLastAction(state) {
       const scene = state.scenes[state.currentSceneIndex];
@@ -125,6 +145,7 @@ const sceneSlice = createSlice({
       scene.coloredAreas = previous.coloredAreas || [];
     },
 
+
     redoLastAction(state) {
       const scene = state.scenes[state.currentSceneIndex];
       if (!scene?.redoStack?.length) return;
@@ -136,22 +157,26 @@ const sceneSlice = createSlice({
       scene.coloredAreas = next.coloredAreas || [];
     },
 
+
     // Scene CRUD
     addScene(state) {
       state.scenes.push(makeDefaultScene());
       state.currentSceneIndex = state.scenes.length - 1;
     },
 
+
     removeScene(state, action) {
       const idx = action.payload;
       if (state.scenes.length <= 1) return;
       if (idx < 0 || idx >= state.scenes.length) return;
+
 
       state.sceneUndoStack.push({
         scenes: deepClone(state.scenes),
         currentSceneIndex: state.currentSceneIndex,
       });
       state.sceneRedoStack = [];
+
 
       state.scenes.splice(idx, 1);
       if (state.currentSceneIndex >= state.scenes.length) {
@@ -161,12 +186,14 @@ const sceneSlice = createSlice({
       }
     },
 
+
     switchScene(state, action) {
       const idx = action.payload;
       if (idx >= 0 && idx < state.scenes.length) {
         state.currentSceneIndex = idx;
       }
     },
+
 
     // Obstacles
     addObstacle(state, action) {
@@ -184,6 +211,7 @@ const sceneSlice = createSlice({
       }
     },
 
+
     removeObstacle(state, action) {
       const obstacleId = action.payload;
       const currentScene = state.scenes[state.currentSceneIndex];
@@ -191,6 +219,7 @@ const sceneSlice = createSlice({
         currentScene.obstacles = currentScene.obstacles.filter(o => o.id !== obstacleId);
       }
     },
+
 
     moveObstacle(state, action) {
       const { id, x, y } = action.payload;
@@ -203,6 +232,7 @@ const sceneSlice = createSlice({
         }
       }
     },
+
 
     // Colored areas (non-blocking)
     addColoredArea(state, action) {
@@ -223,6 +253,7 @@ const sceneSlice = createSlice({
       }
     },
 
+
     removeColoredArea(state, action) {
       const coloredAreaId = action.payload;
       const currentScene = state.scenes[state.currentSceneIndex];
@@ -230,6 +261,7 @@ const sceneSlice = createSlice({
         currentScene.coloredAreas = currentScene.coloredAreas.filter(c => c.id !== coloredAreaId);
       }
     },
+
 
     moveColoredArea(state, action) {
       const { id, x, y } = action.payload;
@@ -243,17 +275,21 @@ const sceneSlice = createSlice({
       }
     },
 
+
     // Actors (stage)
     addActor(state, action) {
       const scene = state.scenes[state.currentSceneIndex];
       if (!scene) return;
 
+
       scene.undoStack.push(deepClone(scene));
       scene.redoStack = [];
+
 
       const {
         id, name, image, x, y, direction = 0, width, height, scripts,
       } = action.payload || {};
+
 
       const actor = {
         id: id ?? nanoid(),
@@ -268,68 +304,84 @@ const sceneSlice = createSlice({
         visible: true,
       };
 
+
       scene.actors.push(actor);
     },
+
 
     removeActor(state, action) {
       const scene = state.scenes[state.currentSceneIndex];
       if (!scene) return;
       if (scene.actors.length <= 1) return;
 
+
       scene.undoStack.push(deepClone(scene));
       scene.redoStack = [];
+
 
       const targetId = action.payload.actorId;
       scene.actors = scene.actors.filter(a => a.id !== targetId);
     },
+
 
     moveActor(state, action) {
       const { actorId, dx, dy, fromScript } = action.payload;
       const scene = state.scenes[state.currentSceneIndex];
       if (!scene) return;
 
+
       const actor = scene.actors.find(a => a.id === actorId);
       if (!actor) return;
+
 
       if (!fromScript) {
         scene.undoStack.push(deepClone(scene));
         scene.redoStack = [];
       }
 
+
       actor.x = Math.min(Math.max(0, actor.x + dx), GRID_WIDTH - 1);
       actor.y = Math.min(Math.max(0, actor.y + dy), GRID_HEIGHT - 1);
     },
+
 
     rotateActor(state, action) {
       const { actorId, degrees, fromScript } = action.payload;
       const scene = state.scenes[state.currentSceneIndex];
       if (!scene) return;
 
+
       const actor = scene.actors.find(a => a.id === actorId);
       if (!actor) return;
+
 
       if (!fromScript) {
         scene.undoStack.push(deepClone(scene));
         scene.redoStack = [];
       }
+
 
       let newDir = (actor.direction + degrees) % 360;
       if (newDir < 0) newDir += 360;
       actor.direction = newDir;
     },
 
+
     scaleActor(state, action) {
       const { actorId, scale, fromScript } = action.payload;
       const scene = state.scenes[state.currentSceneIndex];
       if (!scene) return;
 
+
       const actor = scene.actors.find(a => a.id === actorId);
       if (!actor) return;
+
 
       if (!fromScript) {
         scene.undoStack.push(deepClone(scene));
         scene.redoStack = [];
       }
+
 
       const newSize = (actor.size || 1) * scale;
       const minSize = 0.5;
@@ -337,25 +389,31 @@ const sceneSlice = createSlice({
       actor.size = Math.min(Math.max(newSize, minSize), maxSize);
     },
 
+
     resetActorSize(state, action) {
       const { actorId, fromScript } = action.payload;
       const scene = state.scenes[state.currentSceneIndex];
       if (!scene) return;
 
+
       const actor = scene.actors.find(a => a.id === actorId);
       if (!actor) return;
+
 
       if (!fromScript) {
         scene.undoStack.push(deepClone(scene));
         scene.redoStack = [];
       }
 
+
       actor.size = 1;
     },
+
 
     disappearActor(state, action) {
       const scene = state.scenes[state.currentSceneIndex];
       if (!scene) return;
+
 
       const actor = scene.actors.find((a) => a.id === action.payload.actorId);
       if (actor) {
@@ -363,15 +421,18 @@ const sceneSlice = createSlice({
       }
     },
 
+
     reappearActor(state, action) {
       const scene = state.scenes[state.currentSceneIndex];
       if (!scene) return;
+
 
       const actor = scene.actors.find((a) => a.id === action.payload.actorId);
       if (actor) {
         actor.visible = true;
       }
     },
+
 
     // Background
     setBackground(state, action) {
@@ -381,6 +442,7 @@ const sceneSlice = createSlice({
       }
     },
 
+
     addBackgroundToGallery(state, action) {
       const url = action.payload;
       if (!state.backgroundGallery.includes(url)) {
@@ -388,42 +450,52 @@ const sceneSlice = createSlice({
       }
     },
 
+
     removeBackgroundFromGallery(state, action) {
       state.backgroundGallery = state.backgroundGallery.filter(bg => bg !== action.payload);
     },
+
 
     cycleNextBackground(state) {
       const scene = state.scenes[state.currentSceneIndex];
       if (!scene) return;
 
+
       scene.undoStack.push(deepClone(scene));
       if (scene.undoStack.length > 20) scene.undoStack.shift();
       scene.redoStack = [];
 
+
       const gallery = state.backgroundGallery;
       const currentBg = scene.background;
 
+
       let currentIndex = gallery.findIndex(bg => bg === currentBg);
       if (currentIndex === -1) currentIndex = -1;
+
 
       const nextIndex = (currentIndex + 1) % gallery.length;
       scene.background = gallery[nextIndex];
     },
 
-    // Scripts (stage)
+
+    // Scripts (stage) - 🛤️ UPDATED: Handle sensors category blocks
     addBlockToScript(state, action) {
       const { actorId, block } = action.payload;
       const scene = state.scenes[state.currentSceneIndex];
       const actor = scene?.actors.find(a => a.id === actorId);
       if (!actor) return;
 
+
       if (block.category === 'start') {
         actor.scripts = actor.scripts.filter(b => b.category !== 'start');
       }
 
+
       if (block.category === 'end') {
         actor.scripts = actor.scripts.filter(b => b.category !== 'end');
       }
+
 
       const newBlock = {
         id: nanoid(),
@@ -436,7 +508,11 @@ const sceneSlice = createSlice({
         audioURL: block.soundData?.audioURL || null,
         lowFrequency: block.type === 'obstacle_sound' ? (block.lowFrequency ?? 1) : undefined,
         highFrequency: block.type === 'obstacle_sound' ? (block.highFrequency ?? 99) : undefined,
+        // 🛤️ ADDED: Handle path following block properties
+        pathColor: block.pathColor || (block.type === 'setPathColor' ? '#000000' : undefined),
+        maxSteps: block.maxSteps || (block.type === 'followPath' ? 50 : undefined),
       };
+
 
       if (block.category === 'start') {
         actor.scripts.unshift(newBlock);
@@ -446,6 +522,7 @@ const sceneSlice = createSlice({
         const startIndex = actor.scripts.findIndex(b => b.category === 'start');
         const endIndex = actor.scripts.findIndex(b => b.category === 'end');
 
+
         if (startIndex !== -1 && endIndex !== -1) {
           actor.scripts.splice(endIndex, 0, newBlock);
         } else {
@@ -454,15 +531,18 @@ const sceneSlice = createSlice({
       }
     },
 
+
     clearScript(state, action) {
       const scene = state.scenes[state.currentSceneIndex];
       const actor = scene?.actors.find(a => a.id === action.payload.actorId);
       if (!actor) return;
 
+
       scene.undoStack.push(deepClone(scene));
       scene.redoStack = [];
       actor.scripts = [];
     },
+
 
     updateBlockCount(state, action) {
       const { actorId, blockId, newCount, property = 'count' } = action.payload;
@@ -470,17 +550,20 @@ const sceneSlice = createSlice({
       const actor = scene?.actors.find(a => a.id === actorId);
       if (!actor) return;
 
+
       const block = actor.scripts.find(b => b.id === blockId);
       if (block) {
         block[property] = Math.min(Math.max(0, newCount), 100);
       }
     },
 
+
     updateObstacleFrequency(state, action) {
       const { actorId, blockId, lowFrequency, highFrequency } = action.payload;
       const scene = state.scenes[state.currentSceneIndex];
       const actor = scene?.actors.find(a => a.id === actorId);
       if (!actor) return;
+
 
       const block = actor.scripts.find(b => b.id === blockId);
       if (block) {
@@ -492,6 +575,7 @@ const sceneSlice = createSlice({
         }
       }
     },
+
 
     updateCameraState(state, action) {
       const { actorId, blockId, cameraState } = action.payload;
@@ -505,9 +589,11 @@ const sceneSlice = createSlice({
       }
     },
 
+
     setCameraState(state, action) {
       state.globalCameraState = action.payload;
     },
+
 
     // Custom sounds
     addCustomSound(state, action) {
@@ -521,6 +607,7 @@ const sceneSlice = createSlice({
       };
       state.customSounds.push(customSound);
 
+
       if (state.customSounds.length > 10) {
         const removedSound = state.customSounds.shift();
         if (removedSound.audioURL) {
@@ -528,6 +615,7 @@ const sceneSlice = createSlice({
         }
       }
     },
+
 
     removeCustomSound(state, action) {
       const soundId = action.payload;
@@ -541,6 +629,7 @@ const sceneSlice = createSlice({
       }
     },
 
+
     clearAllCustomSounds(state) {
       state.customSounds.forEach(sound => {
         if (sound.audioURL) {
@@ -550,22 +639,27 @@ const sceneSlice = createSlice({
       state.customSounds = [];
     },
 
+
     updateCustomSoundName(state, action) {
       const { soundId, newName } = action.payload;
       const sound = state.customSounds.find(s => s.id === soundId);
       if (sound) sound.name = newName;
     },
 
+
     setShowHumanDetection(state, action) {
       state.showHumanDetection = action.payload;
     },
+
 
     syncActorsWithFaces(state, action) {
       const faceCount = action.payload;
       const scene = state.scenes[state.currentSceneIndex];
       if (!scene) return;
 
+
       const currentActorCount = scene.actors.length;
+
 
       if (faceCount > currentActorCount) {
         for (let i = 0; i < faceCount - currentActorCount; i++) {
@@ -578,9 +672,11 @@ const sceneSlice = createSlice({
       }
     },
 
+
     setVideoOpacity(state, action) {
       state.videoOpacity = Math.min(Math.max(0, action.payload), 100);
     },
+
 
     // NEW: Simulator robot management
     addSimulatorRobot(state, action) {
@@ -600,6 +696,7 @@ const sceneSlice = createSlice({
       });
     },
 
+
     removeSimulatorRobot(state, action) {
       const robotId = action.payload;
       state.simulatorRobots = state.simulatorRobots.filter(r => r.id !== robotId);
@@ -607,29 +704,38 @@ const sceneSlice = createSlice({
       if (state.selectedSimRobotId === robotId) state.selectedSimRobotId = null;
     },
 
+
     moveSimulatorRobot(state, action) {
-      const { id, x, y } = action.payload;
+      const { id, x, y, direction } = action.payload;
       const robot = state.simulatorRobots.find(r => r.id === id);
       if (robot) {
         robot.x = Math.max(0, Math.min(x, GRID_WIDTH - 1));
         robot.y = Math.max(0, Math.min(y, GRID_HEIGHT - 1));
+        if (direction !== undefined && direction !== null) {
+          robot.direction = direction;
+        }
       }
     },
+
 
     // NEW: Simulator robot movement from scripts
     moveSimulatorRobotFromScript: (state, action) => {
       const { robotId, x, y, direction } = action.payload;
       const robotIndex = state.simulatorRobots.findIndex(robot => robot.id === robotId);
 
+
       if (robotIndex !== -1) {
         console.log(`📦 REDUX: Moving simulator robot from (${state.simulatorRobots[robotIndex].x}, ${state.simulatorRobots[robotIndex].y}) to (${x}, ${y})`);
+
 
         state.simulatorRobots[robotIndex].x = x;
         state.simulatorRobots[robotIndex].y = y;
 
+
         if (direction !== undefined) {
           state.simulatorRobots[robotIndex].direction = direction;
         }
+
 
         console.log(`📦 REDUX: Robot moved successfully to (${x}, ${y})`);
       } else {
@@ -637,6 +743,7 @@ const sceneSlice = createSlice({
       }
     }
     ,
+
 
     rotateSimulatorRobotFromScript(state, action) {
       const { robotId, degrees } = action.payload;
@@ -649,6 +756,7 @@ const sceneSlice = createSlice({
       }
     },
 
+
     scaleSimulatorRobotFromScript(state, action) {
       const { robotId, scale } = action.payload;
       const robot = state.simulatorRobots.find(r => r.id === robotId);
@@ -659,6 +767,7 @@ const sceneSlice = createSlice({
       }
     },
 
+
     disappearSimulatorRobot(state, action) {
       const { robotId } = action.payload;
       const robot = state.simulatorRobots.find(r => r.id === robotId);
@@ -667,6 +776,7 @@ const sceneSlice = createSlice({
         // console.log(`🤖 Robot ${robotId} disappeared`);
       }
     },
+
 
     reappearSimulatorRobot(state, action) {
       const { robotId } = action.payload;
@@ -677,20 +787,24 @@ const sceneSlice = createSlice({
       }
     },
 
-    // NEW: Reducers to manage simulator robot scripts (editor)
+
+    // NEW: Reducers to manage simulator robot scripts (editor) - 🛤️ UPDATED: Handle sensors category
     addBlockToSimulatorScript(state, action) {
       // payload: { robotId, block, index? }
       const { robotId, block } = action.payload;
       const robot = state.simulatorRobots.find(r => r.id === robotId);
       if (!robot) return;
 
+
       if (block.category === 'start') {
         robot.scripts = robot.scripts.filter(b => b.category !== 'start');
       }
 
+
       if (block.category === 'end') {
         robot.scripts = robot.scripts.filter(b => b.category !== 'end');
       }
+
 
       const newBlock = {
         id: nanoid(),
@@ -703,7 +817,11 @@ const sceneSlice = createSlice({
         audioURL: block.soundData?.audioURL || null,
         lowFrequency: block.type === 'obstacle_sound' ? (block.lowFrequency ?? 1) : undefined,
         highFrequency: block.type === 'obstacle_sound' ? (block.highFrequency ?? 99) : undefined,
+        // 🛤️ ADDED: Handle path following block properties for simulator robots too
+        pathColor: block.pathColor || (block.type === 'setPathColor' ? '#000000' : undefined),
+        maxSteps: block.maxSteps || (block.type === 'followPath' ? 50 : undefined),
       };
+
 
       if (block.category === 'start') {
         robot.scripts.unshift(newBlock);
@@ -713,6 +831,7 @@ const sceneSlice = createSlice({
         const startIndex = robot.scripts.findIndex(b => b.category === 'start');
         const endIndex = robot.scripts.findIndex(b => b.category === 'end');
 
+
         if (startIndex !== -1 && endIndex !== -1) {
           robot.scripts.splice(endIndex, 0, newBlock);
         } else {
@@ -721,25 +840,30 @@ const sceneSlice = createSlice({
       }
     },
 
+
     clearSimulatorScript(state, action) {
       const robotId = action.payload.robotId;
       const robot = state.simulatorRobots.find(r => r.id === robotId);
       if (!robot) return;
 
+
       // Note: no per-robot undo handled here to keep changes minimal
       robot.scripts = [];
     },
+
 
     updateSimulatorBlockCount(state, action) {
       const { robotId, blockId, newCount, property = 'count' } = action.payload;
       const robot = state.simulatorRobots.find(r => r.id === robotId);
       if (!robot) return;
 
+
       const block = robot.scripts.find(b => b.id === blockId);
       if (block) {
         block[property] = Math.min(Math.max(0, newCount), 100);
       }
     },
+
 
     // REPLACE this reducer in your sceneSlice.js:
     cycleSimulatorRobot(state) {
@@ -751,6 +875,7 @@ const sceneSlice = createSlice({
         // Add more robot types as needed 
       ];
 
+
       // Preserve position & direction from the previous robot if any
       const prevRobot = state.simulatorRobots[0];
       const prevX = prevRobot?.x ?? Math.floor(Math.random() * 18) + 1;
@@ -758,16 +883,21 @@ const sceneSlice = createSlice({
       const prevDir = prevRobot?.direction ?? 0;
       const prevSize = prevRobot?.size ?? 1;
 
+
       // CLEAR existing robots first (only one robot allowed)
       state.simulatorRobots = [];
+
 
       state.currentSimulatorRobotIndex =
         (state.currentSimulatorRobotIndex + 1) % library.length;
 
+
       const scene = state.scenes[state.currentSceneIndex];
+
 
       // DON'T copy stage actor scripts — keep simulator robots independent.
       const next = library[state.currentSimulatorRobotIndex];
+
 
       // ADD only one robot (replacing any previous robot) with its own empty scripts
       state.simulatorRobots.push({
@@ -783,14 +913,17 @@ const sceneSlice = createSlice({
         type: 'simulatorRobot'
       });
 
+
       // if previously selected robot existed, update selection to the new robot
       state.selectedSimRobotId = state.simulatorRobots[0]?.id ?? null;
     },
+
 
     // allow externally setting selected sim robot for editing
     setSelectedSimRobot(state, action) {
       state.selectedSimRobotId = action.payload ?? null;
     },
+
 
     overwrite(state, action) {
       const newState = action.payload;
@@ -810,15 +943,18 @@ const sceneSlice = createSlice({
       state.customSounds = newState.customSounds || [];
       state.videoOpacity = newState.videoOpacity !== undefined ? newState.videoOpacity : 100;
 
+
       // NEW: restore simulator robots if present
       state.simulatorRobots = newState.simulatorRobots || [];
       state.currentSimulatorRobotIndex = newState.currentSimulatorRobotIndex || 0;
+
 
       // restore selected sim robot id if present
       state.selectedSimRobotId = newState.selectedSimRobotId ?? null;
     },
   },
 });
+
 
 export const {
   undoSceneAction,
@@ -881,5 +1017,6 @@ export const {
   // NEW: selection
   setSelectedSimRobot,
 } = sceneSlice.actions;
+
 
 export default sceneSlice.reducer;

@@ -4,6 +4,7 @@ import { useDispatch, useSelector } from "react-redux";
 import { addBlockToScript, addCustomSound, setCameraState } from "../../store/sceneSlice";
 import ConnectionModal from "../ui/ConnectionModal";
 
+
 // Puzzle backgrounds per category
 const puzzleBgByCategory = {
   start: "./assets/blocks/start.svg",
@@ -14,7 +15,9 @@ const puzzleBgByCategory = {
   device: "./assets/blocks/blueCmd.svg",
   end: "./assets/blocks/endshort.svg",
   humandetection: "./assets/blocks/looks.svg",
+  sensors: "./assets/blocks/looks.svg", // 🛤️ ADDED: Path following category
 };
+
 
 // Bar color per category for seamless effect
 const barColorByCategory = {
@@ -26,7 +29,9 @@ const barColorByCategory = {
   device: "#68acfc",
   end: "#e84141",
   humandetection: "#4CAF50",
+  sensors: "#FF9800", // 🛤️ ADDED: Path following category color
 };
+
 
 // All blocks per category
 const blocksByCategory = {
@@ -130,13 +135,46 @@ const blocksByCategory = {
     { name: "Set Video Transparency", icon: "./assets/blockicons/opacity.svg", type: "video_transparency", options: [100, 75, 50, 25, 0] },
     { name: "Sync Actors with Faces", icon: "./assets/blockicons/person.svg", type: "sync_actors_with_faces" },
   ],
+  // 🛤️ ADDED: New sensors category for path following
+  sensors: [
+    { 
+      name: "Follow Path", 
+      icon: "./assets/blockicons/Right.svg", // Using existing icon 
+      type: "followPath",
+      execute: () => {
+        // Path following logic handled in runScript.js
+        return true;
+      }
+    },
+    { 
+      name: "Path Detected", 
+      icon: "./assets/blockicons/Smile.svg", // Using existing icon
+      type: "pathDetected", 
+      execute: () => {
+        // Path detection logic handled in runScript.js
+        return true;
+      }
+    },
+    { 
+      name: "Set Path Color", 
+      icon: "./assets/blockicons/Say.svg", // Using existing icon
+      type: "setPathColor",
+      pathColor: "#000000", // Default black path
+      execute: () => {
+        // Color setting logic handled in runScript.js
+        return true;
+      }
+    },
+  ],
 };
+
 
 // Camera Control Block Component - KEEP AS IS
 function CameraControlBlock({ puzzleBg }) {
   const dispatch = useDispatch();
   const globalCameraState = useSelector((s) => s.scene.globalCameraState);
   const [showDropdown, setShowDropdown] = useState(false);
+
 
   const handleCameraToggle = (newState) => {
     dispatch(setCameraState(newState));
@@ -148,11 +186,13 @@ function CameraControlBlock({ puzzleBg }) {
     setShowDropdown(false);
   };
 
+
   const handleArrowClick = (e) => {
     e.preventDefault();
     e.stopPropagation();
     setShowDropdown((prev) => !prev);
   };
+
 
   const handleDragStart = (event) => {
     setShowDropdown(false);
@@ -165,6 +205,7 @@ function CameraControlBlock({ puzzleBg }) {
     };
     event.dataTransfer.setData("application/block", JSON.stringify(blockData));
   };
+
 
   return (
     <div 
@@ -206,6 +247,95 @@ function CameraControlBlock({ puzzleBg }) {
   );
 }
 
+// 🛤️ ADDED: Path Color Block Component with color picker
+function PathColorBlock({ block, puzzleBg, onDragStart, onDoubleClick }) {
+  const [showColorPicker, setShowColorPicker] = useState(false);
+  const [selectedColor, setSelectedColor] = useState(block.pathColor || "#000000");
+
+  const handleColorChange = (color) => {
+    setSelectedColor(color);
+    // Update block data
+    block.pathColor = color;
+    setShowColorPicker(false);
+  };
+
+  const handleColorClick = (e) => {
+    e.preventDefault();
+    e.stopPropagation();
+    setShowColorPicker(!showColorPicker);
+  };
+
+  const colors = ["#000000", "#FF0000", "#00FF00", "#0000FF", "#FFFF00", "#FF00FF", "#00FFFF"];
+
+  return (
+    <div
+      className="path-color-block block-palette-tile"
+      draggable
+      onDragStart={(e) => onDragStart({...block, pathColor: selectedColor})(e)}
+      onDoubleClick={() => onDoubleClick({...block, pathColor: selectedColor})}
+    >
+      <img className="block-bg" src={puzzleBg} alt="" draggable={false} />
+      <img
+        className="block-icon"
+        src={block.icon}
+        alt={block.name}
+        draggable={false}
+      />
+      <div 
+        className="color-indicator" 
+        onClick={handleColorClick}
+        style={{
+          position: 'absolute',
+          right: '8px',
+          top: '50%',
+          transform: 'translateY(-50%)',
+          width: '16px',
+          height: '16px',
+          borderRadius: '50%',
+          backgroundColor: selectedColor,
+          border: '2px solid white',
+          cursor: 'pointer',
+          zIndex: 10
+        }}
+      />
+      {showColorPicker && (
+        <div 
+          className="color-picker-dropdown"
+          style={{
+            position: 'absolute',
+            top: '100%',
+            right: '0',
+            background: 'white',
+            border: '1px solid #ddd',
+            borderRadius: '4px',
+            padding: '8px',
+            display: 'flex',
+            gap: '4px',
+            zIndex: 20,
+            boxShadow: '0 2px 8px rgba(0,0,0,0.2)'
+          }}
+        >
+          {colors.map(color => (
+            <div
+              key={color}
+              onClick={() => handleColorChange(color)}
+              style={{
+                width: '20px',
+                height: '20px',
+                borderRadius: '50%',
+                backgroundColor: color,
+                border: selectedColor === color ? '3px solid #333' : '1px solid #ccc',
+                cursor: 'pointer'
+              }}
+            />
+          ))}
+        </div>
+      )}
+    </div>
+  );
+}
+
+
 // Voice Recording Modal Component - KEEP AS IS
 function VoiceRecordModal({ isOpen, onClose, onSave }) {
   const [isRecording, setIsRecording] = useState(false);
@@ -218,15 +348,18 @@ function VoiceRecordModal({ isOpen, onClose, onSave }) {
   const timerRef = useRef(null);
   const audioRef = useRef(null);
 
+
   const startRecording = async () => {
     try {
       const stream = await navigator.mediaDevices.getUserMedia({ audio: true });
       mediaRecorderRef.current = new MediaRecorder(stream);
       audioChunksRef.current = [];
 
+
       mediaRecorderRef.current.ondataavailable = (event) => {
         audioChunksRef.current.push(event.data);
       };
+
 
       mediaRecorderRef.current.onstop = () => {
         const blob = new Blob(audioChunksRef.current, { type: 'audio/wav' });
@@ -236,6 +369,7 @@ function VoiceRecordModal({ isOpen, onClose, onSave }) {
         stream.getTracks().forEach(track => track.stop());
       };
 
+
       mediaRecorderRef.current.start();
       setIsRecording(true);
       setRecordingTime(0);
@@ -244,11 +378,13 @@ function VoiceRecordModal({ isOpen, onClose, onSave }) {
         setRecordingTime(prev => prev + 1);
       }, 1000);
 
+
     } catch (error) {
       console.error('Error accessing microphone:', error);
       alert('Could not access microphone. Please check permissions.');
     }
   };
+
 
   const stopRecording = () => {
     if (mediaRecorderRef.current && isRecording) {
@@ -257,6 +393,7 @@ function VoiceRecordModal({ isOpen, onClose, onSave }) {
       clearInterval(timerRef.current);
     }
   };
+
 
   const playRecording = () => {
     if (audioURL && !isPlaying) {
@@ -267,6 +404,7 @@ function VoiceRecordModal({ isOpen, onClose, onSave }) {
     }
   };
 
+
   const stopPlayback = () => {
     if (audioRef.current && isPlaying) {
       audioRef.current.pause();
@@ -274,6 +412,7 @@ function VoiceRecordModal({ isOpen, onClose, onSave }) {
       setIsPlaying(false);
     }
   };
+
 
   const saveRecording = () => {
     if (audioURL && audioBlob) {
@@ -289,6 +428,7 @@ function VoiceRecordModal({ isOpen, onClose, onSave }) {
       onClose();
     }
   };
+
 
   const handleClose = () => {
     if (isRecording) {
@@ -307,13 +447,16 @@ function VoiceRecordModal({ isOpen, onClose, onSave }) {
     onClose();
   };
 
+
   const formatTime = (seconds) => {
     const mins = Math.floor(seconds / 60);
     const secs = seconds % 60;
     return `${mins.toString().padStart(2, '0')}:${secs.toString().padStart(2, '0')}`;
   };
 
+
   if (!isOpen) return null;
+
 
   return (
     <div className="voice-modal-overlay">
@@ -386,13 +529,16 @@ function VoiceRecordModal({ isOpen, onClose, onSave }) {
   );
 }
 
+
 export default function BlockPalette() {
   const dispatch = useDispatch();
   const [showVoiceModal, setShowVoiceModal] = useState(false);
   const [showConnectionModal, setShowConnectionModal] = useState(false); // Added connection modal state
 
+
   const selectedBlockCategory = useSelector((s) => s.scene.selectedBlockCategory) || "motion";
   const customSounds = useSelector((s) => s.scene.customSounds) || [];
+
 
   // Get blocks and add custom sound blocks if in sound category
   const getBlocks = () => {
@@ -411,9 +557,11 @@ export default function BlockPalette() {
     return baseBlocks;
   };
 
+
   const blocks = getBlocks();
   const puzzleBg = puzzleBgByCategory[selectedBlockCategory] || "./assets/blocks/blueCmd.svg";
   const barColor = barColorByCategory[selectedBlockCategory] || "#3291d7";
+
 
   const handleDoubleClick = (block) => {
     // FIXED: Add proper category to blocks
@@ -422,6 +570,7 @@ export default function BlockPalette() {
       category: selectedBlockCategory,
       puzzleBg: puzzleBg
     };
+
 
     // Add execution data for custom sounds
     if (block.type === 'custom_sound') {
@@ -438,6 +587,7 @@ export default function BlockPalette() {
     }
   };
 
+
   const handleDragStart = (block) => (event) => {
     const data = {
       ...block,
@@ -446,6 +596,7 @@ export default function BlockPalette() {
     };
     event.dataTransfer.setData("application/block", JSON.stringify(data));
   };
+
 
   const handleBlockClick = (block) => {
     console.log('Block clicked:', block.name); // DEBUG
@@ -457,10 +608,12 @@ export default function BlockPalette() {
     }
   };
 
+
   const handleVoiceSave = (customSoundData) => {
     dispatch(addCustomSound(customSoundData));
     console.log('Custom sound saved:', customSoundData);
   };
+
 
   return (
     <>
@@ -477,6 +630,20 @@ export default function BlockPalette() {
             return <CameraControlBlock key={idx} puzzleBg={puzzleBg} />;
           }
 
+          // 🛤️ ADDED: Special handling for path color blocks
+          if (block.type === "setPathColor") {
+            return (
+              <PathColorBlock
+                key={idx}
+                block={block}
+                puzzleBg={puzzleBg}
+                onDragStart={handleDragStart}
+                onDoubleClick={handleDoubleClick}
+              />
+            );
+          }
+
+
           return (
             <div
               className={`block-palette-tile ${block.type === 'custom_sound' ? 'custom-sound-block' : ''}`}
@@ -490,6 +657,7 @@ export default function BlockPalette() {
             >
               <img className="block-bg" src={puzzleBg} alt="" draggable={false} aria-hidden="true" />
 
+
               {block.icon && (
                 <img
                   className="block-icon"
@@ -499,23 +667,42 @@ export default function BlockPalette() {
                 />
               )}
 
+
               {typeof block.label === "string" && block.label.trim() !== "" && (
                 <span className="block-label">{block.label}</span>
               )}
 
+
               {block.type === 'custom_sound' && (
                 <div className="custom-sound-indicator">🎤</div>
+              )}
+
+              {/* 🛤️ ADDED: Special indicators for path following blocks */}
+              {block.type === 'followPath' && (
+                <div className="path-follow-indicator" style={{
+                  position: 'absolute', bottom: '4px', right: '4px',
+                  fontSize: '12px', color: 'white'
+                }}>🛤️</div>
+              )}
+              
+              {block.type === 'pathDetected' && (
+                <div className="path-detect-indicator" style={{
+                  position: 'absolute', bottom: '4px', right: '4px', 
+                  fontSize: '12px', color: 'white'
+                }}>🔍</div>
               )}
             </div>
           );
         })}
       </div>
 
+
       <VoiceRecordModal
         isOpen={showVoiceModal}
         onClose={() => setShowVoiceModal(false)}
         onSave={handleVoiceSave}
       />
+
 
       {/* Added ConnectionModal */}
       <ConnectionModal
@@ -526,5 +713,5 @@ export default function BlockPalette() {
   );
 }
 
+
 export { blocksByCategory };
- 

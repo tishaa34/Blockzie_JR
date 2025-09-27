@@ -16,6 +16,7 @@
     "@vladmandic/human": "^3.3.6",
     "cors": "^2.8.5",
     "express": "^5.1.0",
+    "html2canvas": "^1.4.1",
     "jszip": "^3.10.1",
     "node-wifi": "^2.0.16",
     "react": "^18.3.1",
