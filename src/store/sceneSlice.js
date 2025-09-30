@@ -1020,3 +1020,191 @@ export const {
 
 
 export default sceneSlice.reducer;
+// ========== Open Roberta JSON compatibility (non-breaking additions) ==========
+// These helpers DO NOT modify existing reducers or UI. They are pure helpers
+// and optional thunks that operate on the existing scene state and actions.
+
+//
+// Coordinate normalization helpers (grid cells <-> unit [0..1])
+//
+const __ORL_GRID_W__ = typeof GRID_WIDTH === 'number' ? GRID_WIDTH : 20;
+const __ORL_GRID_H__ = typeof GRID_HEIGHT === 'number' ? GRID_HEIGHT : 15;
+
+const __toUnit__ = (v, max) => {
+  const n = Number(v);
+  if (!Number.isFinite(n)) return 0;
+  return Math.max(0, Math.min(1, n / max));
+};
+
+const __fromUnit__ = (v, max) => {
+  const n = Number(v);
+  if (!Number.isFinite(n)) return 0;
+  return Math.round(Math.max(0, Math.min(1, n)) * max);
+};
+
+//
+// Build Open Roberta Lab simulation configuration (NEPOprog-sim_configuration.json style)
+// Structure:
+// {
+//   robotPoses: [ [ { x, y, theta }, ... ] ],
+//   obstacles: [ { x, y, w, h, theta, color, form, type } ],
+//   colorAreas: [ ... ],
+//   marker: [ ... ]
+// }
+//
+export function toOpenRobertaSimConfig(sceneSliceState) {
+  try {
+    const currentScene = sceneSliceState?.scenes?.[sceneSliceState?.currentSceneIndex] || {};
+    const robots = sceneSliceState?.simulatorRobots || [];
+
+    // robotPoses: one inner array per scene; here we export the current scene’s robots
+    const robotPosesInner = robots.map(r => ({
+      x: __toUnit__(r?.x ?? 0, __ORL_GRID_W__),
+      y: __toUnit__(r?.y ?? 0, __ORL_GRID_H__),
+      theta: Number.isFinite(r?.direction) ? r.direction : 0
+    }));
+
+    // obstacles: normalize coords and sizes; accept w/h or width/height
+    const obstacles = (currentScene?.obstacles || []).map(obs => {
+      const wCells = Number.isFinite(obs?.w) ? obs.w
+                  : (Number.isFinite(obs?.width) ? obs.width : 1);
+      const hCells = Number.isFinite(obs?.h) ? obs.h
+                  : (Number.isFinite(obs?.height) ? obs.height : 1);
+
+      return {
+        x: __toUnit__(obs?.x ?? 0, __ORL_GRID_W__),
+        y: __toUnit__(obs?.y ?? 0, __ORL_GRID_H__),
+        w: __toUnit__(wCells, __ORL_GRID_W__),
+        h: __toUnit__(hCells, __ORL_GRID_H__),
+        theta: Number.isFinite(obs?.theta) ? obs.theta : (Number.isFinite(obs?.rotation) ? obs.rotation : 0),
+        color: obs?.color || '#33B8CA',
+        form: obs?.form || obs?.shape || 'RECTANGLE',
+        type: obs?.type || 'OBSTACLE'
+      };
+    });
+
+    // colorAreas -> optional; normalize best-effort; defaults if sizes are missing
+    const colorAreas = (currentScene?.coloredAreas || []).map(area => {
+      const wCells = Number.isFinite(area?.w) ? area.w
+                  : (Number.isFinite(area?.width) ? area.width : 1);
+      const hCells = Number.isFinite(area?.h) ? area.h
+                  : (Number.isFinite(area?.height) ? area.height : 1);
+      return {
+        x: __toUnit__(area?.x ?? 0, __ORL_GRID_W__),
+        y: __toUnit__(area?.y ?? 0, __ORL_GRID_H__),
+        w: __toUnit__(wCells, __ORL_GRID_W__),
+        h: __toUnit__(hCells, __ORL_GRID_H__),
+        color: area?.color || '#000000',
+        type: area?.type || 'COLOR_AREA'
+      };
+    });
+
+    // marker: keep empty unless used
+    const marker = [];
+
+    return {
+      robotPoses: [robotPosesInner],
+      obstacles,
+      colorAreas,
+      marker
+    };
+  } catch (e) {
+    console.error('toOpenRobertaSimConfig error:', e);
+    return { robotPoses: [[]], obstacles: [], colorAreas: [], marker: [] };
+  }
+}
+
+/**
+ * Thunk: Apply an Open Roberta-style config back into current scene using existing actions.
+ * - Adds/overwrites obstacles using addObstacle (non-destructive to existing UI).
+ * - Positions first simulator robot (creates one if none) to the first pose.
+ * This is optional and does not change any existing reducers or UI code.
+ */
+export const applyOpenRobertaSimConfigThunk = (openRobertaConfig) => (dispatch, getState) => {
+  try {
+    if (!openRobertaConfig || typeof openRobertaConfig !== 'object') return;
+
+    const state = getState();
+    const sceneState = state?.scene;
+    if (!sceneState) return;
+
+    const gridW = __ORL_GRID_W__;
+    const gridH = __ORL_GRID_H__;
+
+    // 1) Obstacles
+    const obs = Array.isArray(openRobertaConfig.obstacles) ? openRobertaConfig.obstacles : [];
+    for (const o of obs) {
+      const cellX = __fromUnit__(o?.x ?? 0, gridW);
+      const cellY = __fromUnit__(o?.y ?? 0, gridH);
+      const cellW = Math.max(1, __fromUnit__(o?.w ?? 0, gridW));
+      const cellH = Math.max(1, __fromUnit__(o?.h ?? 0, gridH));
+
+      dispatch(addObstacle({
+        id: `orl-${Date.now()}-${Math.random()}`,
+        x: cellX,
+        y: cellY,
+        w: cellW,
+        h: cellH,
+        theta: Number.isFinite(o?.theta) ? o.theta : 0,
+        rotation: Number.isFinite(o?.theta) ? o.theta : 0,
+        color: o?.color || '#33B8CA',
+        shape: o?.form || 'RECTANGLE',
+        form: o?.form || 'RECTANGLE',
+        type: o?.type || 'OBSTACLE'
+      }));
+    }
+
+    // 2) Color areas (optional)
+    const areas = Array.isArray(openRobertaConfig.colorAreas) ? openRobertaConfig.colorAreas : [];
+    for (const a of areas) {
+      const cellX = __fromUnit__(a?.x ?? 0, gridW);
+      const cellY = __fromUnit__(a?.y ?? 0, gridH);
+      const cellW = Math.max(1, __fromUnit__(a?.w ?? 0, gridW));
+      const cellH = Math.max(1, __fromUnit__(a?.h ?? 0, gridH));
+
+      dispatch(addColoredArea({
+        id: `orl-color-${Date.now()}-${Math.random()}`,
+        x: cellX,
+        y: cellY,
+        width: cellW,
+        height: cellH,
+        color: a?.color || '#000000',
+        type: 'coloredArea',
+        blocking: false
+      }));
+    }
+
+    // 3) Robot pose (first only by convention)
+    const firstPose = Array.isArray(openRobertaConfig.robotPoses)
+      && Array.isArray(openRobertaConfig.robotPoses[0])
+      && openRobertaConfig.robotPoses[0][0]
+      ? openRobertaConfig.robotPoses[0][0]
+      : null;
+
+    if (firstPose) {
+      const posX = __fromUnit__(firstPose.x ?? 0, gridW);
+      const posY = __fromUnit__(firstPose.y ?? 0, gridH);
+      const theta = Number.isFinite(firstPose.theta) ? firstPose.theta : 0;
+
+      const currentRobots = sceneState.simulatorRobots || [];
+      if (currentRobots.length === 0) {
+        dispatch(addSimulatorRobot({
+          name: 'Robot',
+          x: posX,
+          y: posY,
+          direction: theta,
+          image: './assets/characters/stembot.svg'
+        }));
+      } else {
+        dispatch(moveSimulatorRobot({
+          id: currentRobots[0].id,
+          x: posX,
+          y: posY,
+          direction: theta
+        }));
+      }
+    }
+  } catch (e) {
+    console.error('applyOpenRobertaSimConfigThunk error:', e);
+  }
+};

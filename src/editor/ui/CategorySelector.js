@@ -8,10 +8,10 @@ const categories = [
   { id: "motion", imgOff: "./assets/categories/MotionOff.svg", imgOn: "./assets/categories/MotionOn.svg", alt: "Motion" },
   { id: "looks", imgOff: "./assets/categories/LooksOff.svg", imgOn: "./assets/categories/LooksOn.svg", alt: "Looks" },
   { id: "sound", imgOff: "./assets/categories/SoundOff.svg", imgOn: "./assets/categories/SoundOn.svg", alt: "Sound" },
-  { id: 'sensors', name: 'Sensors', icon: '🛤️', color: '#FF9800' },
   { id: "control", imgOff: "./assets/categories/FlowOff.svg", imgOn: "./assets/categories/FlowOn.svg", alt: "Control" },
   { id: "device", imgOff: "./assets/categories/DeviceOff.png", imgOn: "./assets/categories/DeviceOff.png", alt: "Device" }, // Make sure this line exists
   { id: "humandetection", imgOff: "./assets/ui/HumanDetection.png", imgOn: "./assets/ui/HumanDetection.png", alt: "Human Detection" }, // Always visible now
+  { id: 'sensors', imgOff: "./assets/categories/Sensor.png", imgOn: "./assets/categories/Sensor.png", alt: "Sensor" },
   { id: "end", imgOff: "./assets/categories/StopOff.svg", imgOn: "./assets/categories/StopOn.svg", alt: "End" },
 ];
 

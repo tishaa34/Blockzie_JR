@@ -15,7 +15,7 @@ const puzzleBgByCategory = {
   device: "./assets/blocks/blueCmd.svg",
   end: "./assets/blocks/endshort.svg",
   humandetection: "./assets/blocks/looks.svg",
-  sensors: "./assets/blocks/looks.svg", // 🛤️ ADDED: Path following category
+  sensors: "./assets/blocks/flow.svg", // 🛤️ ADDED: Path following category
 };
 
 
@@ -28,8 +28,8 @@ const barColorByCategory = {
   control: "#ffc862",
   device: "#68acfc",
   end: "#e84141",
-  humandetection: "#4CAF50",
-  sensors: "#FF9800", // 🛤️ ADDED: Path following category color
+  humandetection: "#eb7dfa",
+  sensors: "#ffc862", // 🛤️ ADDED: Path following category color
 };
 
 
@@ -86,7 +86,7 @@ const blocksByCategory = {
     { name: "Repeat Forever", icon: "./assets/blockicons/Forever.svg" },
   ],
   humandetection: [
-    { name: "Camera Control", icon: "./assets/ui/camera.png", type: "camera_control" },
+    { name: "Camera Control", icon: "./assets/ui/image.png", type: "camera" },
     { name: "Happy Detected", icon: "./assets/blockicons/Smile.svg", type: "boolean",
       execute: () => {
         return window.humanDetectionData?.dominantExpression === 'happy';
@@ -133,7 +133,7 @@ const blocksByCategory = {
       } 
     },
     { name: "Set Video Transparency", icon: "./assets/blockicons/opacity.svg", type: "video_transparency", options: [100, 75, 50, 25, 0] },
-    { name: "Sync Actors with Faces", icon: "./assets/blockicons/person.svg", type: "sync_actors_with_faces" },
+    { name: "Sync Actors with Faces", icon: "./assets/blockicons/actor.svg", type: "sync_actors_with_faces" },
   ],
   // 🛤️ ADDED: New sensors category for path following
   sensors: [

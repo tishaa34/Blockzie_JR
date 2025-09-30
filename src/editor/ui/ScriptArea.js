@@ -294,7 +294,7 @@ export default function ScriptArea({ selectedActorId }) {
           ) : (
             scripts.map((b, i) => {
               // Camera control block rendering
-              if (b.type === 'camera_control') {
+              if (b.type === 'camera') {
                 return (
                   <div
                     key={b.id}
