@@ -611,6 +611,13 @@ const HumanDetectionFullStage = () => {
   }, [startCamera, stopCamera, cameraStarted]);
 
   useEffect(() => {
+    if (videoRef.current?.parentElement) {
+      videoRef.current.parentElement.style.opacity = videoOpacity / 100;
+    }
+  }, [videoOpacity]);
+
+
+  useEffect(() => {
     return () => {
       detectionActive.current = false;
       if (streamRef.current) {

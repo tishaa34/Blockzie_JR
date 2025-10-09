@@ -6,6 +6,43 @@ import {
   moveSimulatorRobotFromScript, rotateSimulatorRobotFromScript, scaleSimulatorRobotFromScript,
   disappearSimulatorRobot, reappearSimulatorRobot,
 } from '../store/sceneSlice';
+import { sendCommand, isConnected } from "../utils/deviceConnectionManager";
+
+// ✅ CRITICAL - Ensure Redux store is globally accessible
+if (typeof window !== 'undefined') {
+  // Hook into React DevTools or find store from DOM
+  const tryFindStore = () => {
+    // Try React DevTools hook
+    if (window.__REACT_DEVTOOLS_GLOBAL_HOOK__) {
+      const hook = window.__REACT_DEVTOOLS_GLOBAL_HOOK__;
+      if (hook.renderers && hook.renderers.size > 0) {
+        for (let renderer of hook.renderers.values()) {
+          if (renderer.getCurrentFiber) {
+            const fiber = renderer.getCurrentFiber();
+            if (fiber && fiber.stateNode && fiber.stateNode.store) {
+              return fiber.stateNode.store;
+            }
+          }
+        }
+      }
+    }
+
+    // Try Redux DevTools Extension
+    if (window.__REDUX_DEVTOOLS_EXTENSION__) {
+      const stores = window.__REDUX_DEVTOOLS_EXTENSION__.stores;
+      if (stores && stores.length > 0) {
+        return stores[0];
+      }
+    }
+
+    return null;
+  };
+
+  // Set store reference
+  if (!window.store) {
+    window.store = tryFindStore();
+  }
+}
 
 // Helper for delays with speed multiplier
 const delay = (ms, speedMultiplier = 1) => {
@@ -77,6 +114,17 @@ window.pathFollowerSystem = PathFollowingSystem;
 console.log('🛤️ Dynamic PathFollower system initialized and made globally accessible');
 console.log('🛤️ This system can follow ANY track color and shape!');
 
+// <-- INSERTION: expose global Redux store aliases for obstacle detection and other helpers
+if (typeof window !== 'undefined') {
+  window.store = window.store || window.__REDUX_STORE__ || window.reduxStore || window.__store || window.__REDUX_STORE__;
+  // Mirror common globals used elsewhere
+  window.__REDUX_STORE__ = window.__REDUX_STORE__ || window.store;
+  window.reduxStore = window.reduxStore || window.store;
+  window.__store = window.__store || window.store;
+  console.log('🔗 Global Redux store aliases set:', !!window.store);
+}
+// <-- END INSERTION
+
 // 🚀 SMOOTH MOVEMENT SYSTEM
 async function smoothMove(actor, dispatch, targetX, targetY, steps = 5, speedMultiplier = 1) {
   console.log(`🚀 SMOOTH MOVE from (${actor.x}, ${actor.y}) to (${targetX}, ${targetY}) in ${steps} steps`);
@@ -103,41 +151,93 @@ async function smoothMove(actor, dispatch, targetX, targetY, steps = 5, speedMul
   console.log(`🚀 Smooth move completed to (${targetX}, ${targetY})`);
 }
 
-// 🚧 ENHANCED: Obstacle detection function
+// ✅ COMPLETELY FIXED - Proper Pixel to Grid Conversion for Obstacles
 const checkSimulatorObstacle = (robot, targetX, targetY) => {
+  console.log(`🔍 CHECKING OBSTACLE for robot at (${robot.x}, ${robot.y}) moving to (${targetX}, ${targetY})`);
+
   // Boundary check
-  if (targetX < 0 || targetX >= 20 || targetY < 0 || targetY >= 15) {
-    console.log(`🚧 ❌ BOUNDARY! Position (${targetX}, ${targetY}) out of bounds`);
+  if (targetX < 0 || targetX > 19 || targetY < 0 || targetY > 14) {
+    console.log('🚧 BOUNDARY! Position (' + targetX + ', ' + targetY + ') out of bounds');
     return true;
   }
 
-  // Check for DOM obstacles
-  const obstacles = document.querySelectorAll('.simulator-obstacle');
-  const stageElement = document.querySelector('.simulator-modal-container');
+  try {
+    let state = null;
 
-  if (stageElement && obstacles.length > 0) {
-    const stageRect = stageElement.getBoundingClientRect();
-    const targetPixelX = (targetX / 20) * stageRect.width;
-    const targetPixelY = (targetY / 15) * stageRect.height;
+    // Get Redux state
+    if (window.store && typeof window.store.getState === 'function') {
+      state = window.store.getState();
+    } else if (window.__REDUX_STORE__ && typeof window.__REDUX_STORE__.getState === 'function') {
+      state = window.__REDUX_STORE__.getState();
+    } else if (window.reduxStore && typeof window.reduxStore.getState === 'function') {
+      state = window.reduxStore.getState();
+    }
 
-    for (let i = 0; i < obstacles.length; i++) {
-      const obstacle = obstacles[i];
-      const obstaclePixelX = parseInt(obstacle.style.left) || 0;
-      const obstaclePixelY = parseInt(obstacle.style.top) || 0;
+    if (!state || !state.scene) {
+      console.log('⚠️ No Redux state found - allowing movement');
+      return false;
+    }
 
-      const xDistance = Math.abs(targetPixelX - obstaclePixelX);
-      const yDistance = Math.abs(targetPixelY - obstaclePixelY);
+    const currentSceneIndex = state.scene.currentSceneIndex;
+    const currentScene = state.scene.scenes[currentSceneIndex];
 
-      if (xDistance < 40 && yDistance < 40) {
-        console.log(`🚧 ❌ OBSTACLE COLLISION! Would hit obstacle ${i}`);
-        return true;
+    if (!currentScene) {
+      console.log('⚠️ No current scene found - allowing movement');
+      return false;
+    }
+
+    console.log(`📊 Checking scene ${currentSceneIndex} with ${currentScene.obstacles?.length || 0} obstacles`);
+
+    // ✅ CRITICAL FIX - Convert obstacle pixel coordinates to grid coordinates
+    if (currentScene.obstacles && currentScene.obstacles.length > 0) {
+      for (let i = 0; i < currentScene.obstacles.length; i++) {
+        const obstacle = currentScene.obstacles[i];
+
+        // ✅ FIXED - Convert pixel coordinates to grid coordinates
+        // Simulator stage is 832x460 pixels = 20x15 grid
+        const obstacleGridX = Math.round((obstacle.x || 0) / (832 / 20));
+        const obstacleGridY = Math.round((obstacle.y || 0) / (460 / 15));
+
+        console.log(`🧱 Obstacle ${i}: PIXEL (${obstacle.x}, ${obstacle.y}) → GRID (${obstacleGridX}, ${obstacleGridY})`);
+        console.log(`🤖 Robot target: GRID (${targetX}, ${targetY})`);
+
+        // Check direct collision
+        if (targetX === obstacleGridX && targetY === obstacleGridY) {
+          console.log('🚨 DIRECT COLLISION! Robot would hit obstacle!');
+          return true;
+        }
+
+        // Check adjacent collision (within 1 grid cell)
+        if (Math.abs(targetX - obstacleGridX) <= 1 && Math.abs(targetY - obstacleGridY) <= 1) {
+          console.log('🚨 ADJACENT COLLISION! Robot too close to obstacle!');
+          return true;
+        }
       }
     }
-  }
 
-  console.log(`🚧 ✅ Path clear to (${targetX}, ${targetY})`);
-  return false;
+    // Check simulator robot collisions
+    if (state.scene.simulatorRobots && state.scene.simulatorRobots.length > 0) {
+      for (const otherRobot of state.scene.simulatorRobots) {
+        if (otherRobot.id !== robot.id && otherRobot.visible !== false) {
+          if (Math.abs(targetX - otherRobot.x) < 1 && Math.abs(targetY - otherRobot.y) < 1) {
+            console.log('🚨 ROBOT-TO-ROBOT COLLISION! Would hit robot at (' + otherRobot.x + ', ' + otherRobot.y + ')');
+            return true;
+          }
+        }
+      }
+    }
+
+    console.log('🚧 ✅ Path clear to (' + targetX + ', ' + targetY + ')');
+    return false;
+
+  } catch (error) {
+    console.error('❌ Error in obstacle detection:', error);
+    return false;
+  }
 };
+
+
+
 
 // 🤖 ENHANCED: Universal robot movement function
 function moveRobotUniversal(actor, dispatch, targetX, targetY, direction) {
@@ -462,6 +562,19 @@ export async function run(actor, dispatch, sounds, selectedActorId) {
 
       const c = Math.max(1, Math.min(99, b?.count || 1));
 
+      // <-- INSERTION: handle Set Video Transparency early in the main loop
+      if (b?.name === 'Set Video Transparency' || b?.type === 'videotransparency') {
+        const opacity = Math.max(0, Math.min(100, b?.opacity || 100));
+        console.log(`🎬 SETTING VIDEO TRANSPARENCY to ${opacity}%`);
+        dispatch(setVideoOpacity(opacity));
+        if (window.humanDetectionData) {
+          window.humanDetectionData.videoOpacity = opacity;
+        }
+        await delay(100, currentSpeedMultiplier);
+        continue;
+      }
+      // <-- END INSERTION
+
       if (isSpeedBlock(b)) {
         currentSpeedMultiplier = b?.speedMultiplier || 1.5;
         console.log(`⚡ SPEED CHANGED to ${currentSpeedMultiplier}x`);
@@ -518,60 +631,60 @@ export async function run(actor, dispatch, sounds, selectedActorId) {
       // }
 
       // 🛤️ FIXED: NON-FLICKERING PATH FOLLOWING
-if (isPathFollowingBlock(b)) {
-  console.log('🛤️ STARTING FIXED PATH FOLLOWING');
-  if (actor.type === 'simulatorRobot') {
-    console.log('🤖 Starting FIXED robot movement');
-    
-    // PREDEFINED PATH - No detection needed!
-    const trackPath = [
-      // Start at top, go around clockwise
-      {x: 1, y: 1}, {x: 2, y: 1}, {x: 3, y: 1}, {x: 4, y: 1}, {x: 5, y: 1}, {x: 6, y: 1}, {x: 7, y: 1}, {x: 8, y: 1}, {x: 9, y: 1}, {x: 10, y: 1}, {x: 11, y: 1}, {x: 12, y: 1}, {x: 13, y: 1}, {x: 14, y: 1}, {x: 15, y: 1}, {x: 16, y: 1}, {x: 17, y: 1}, {x: 18, y: 1}, // Top edge
-      {x: 18, y: 2}, {x: 18, y: 3}, {x: 18, y: 4}, {x: 18, y: 5}, {x: 18, y: 6}, {x: 18, y: 7}, {x: 18, y: 8}, {x: 18, y: 9}, {x: 18, y: 10}, {x: 18, y: 11}, {x: 18, y: 12}, {x: 18, y: 13}, // Right edge
-      {x: 17, y: 13}, {x: 16, y: 13}, {x: 15, y: 13}, {x: 14, y: 13}, {x: 13, y: 13}, {x: 12, y: 13}, {x: 11, y: 13}, {x: 10, y: 13}, {x: 9, y: 13}, {x: 8, y: 13}, {x: 7, y: 13}, {x: 6, y: 13}, {x: 5, y: 13}, {x: 4, y: 13}, {x: 3, y: 13}, {x: 2, y: 13}, {x: 1, y: 13}, // Bottom edge
-      {x: 1, y: 12}, {x: 1, y: 11}, {x: 1, y: 10}, {x: 1, y: 9}, {x: 1, y: 8}, {x: 1, y: 7}, {x: 1, y: 6}, {x: 1, y: 5}, {x: 1, y: 4}, {x: 1, y: 3}, {x: 1, y: 2} // Left edge back to start
-    ];
-    
-    // Find closest point on path to current robot position
-    let startIndex = 0;
-    let minDistance = Infinity;
-    
-    for (let i = 0; i < trackPath.length; i++) {
-      const point = trackPath[i];
-      const distance = Math.abs(point.x - actor.x) + Math.abs(point.y - actor.y);
-      if (distance < minDistance) {
-        minDistance = distance;
-        startIndex = i;
+      if (isPathFollowingBlock(b)) {
+        console.log('🛤️ STARTING FIXED PATH FOLLOWING');
+        if (actor.type === 'simulatorRobot') {
+          console.log('🤖 Starting FIXED robot movement');
+
+          // PREDEFINED PATH - No detection needed!
+          const trackPath = [
+            // Start at top, go around clockwise
+            { x: 1, y: 1 }, { x: 2, y: 1 }, { x: 3, y: 1 }, { x: 4, y: 1 }, { x: 5, y: 1 }, { x: 6, y: 1 }, { x: 7, y: 1 }, { x: 8, y: 1 }, { x: 9, y: 1 }, { x: 10, y: 1 }, { x: 11, y: 1 }, { x: 12, y: 1 }, { x: 13, y: 1 }, { x: 14, y: 1 }, { x: 15, y: 1 }, { x: 16, y: 1 }, { x: 17, y: 1 }, { x: 18, y: 1 }, // Top edge
+            { x: 18, y: 2 }, { x: 18, y: 3 }, { x: 18, y: 4 }, { x: 18, y: 5 }, { x: 18, y: 6 }, { x: 18, y: 7 }, { x: 18, y: 8 }, { x: 18, y: 9 }, { x: 18, y: 10 }, { x: 18, y: 11 }, { x: 18, y: 12 }, { x: 18, y: 13 }, // Right edge
+            { x: 17, y: 13 }, { x: 16, y: 13 }, { x: 15, y: 13 }, { x: 14, y: 13 }, { x: 13, y: 13 }, { x: 12, y: 13 }, { x: 11, y: 13 }, { x: 10, y: 13 }, { x: 9, y: 13 }, { x: 8, y: 13 }, { x: 7, y: 13 }, { x: 6, y: 13 }, { x: 5, y: 13 }, { x: 4, y: 13 }, { x: 3, y: 13 }, { x: 2, y: 13 }, { x: 1, y: 13 }, // Bottom edge
+            { x: 1, y: 12 }, { x: 1, y: 11 }, { x: 1, y: 10 }, { x: 1, y: 9 }, { x: 1, y: 8 }, { x: 1, y: 7 }, { x: 1, y: 6 }, { x: 1, y: 5 }, { x: 1, y: 4 }, { x: 1, y: 3 }, { x: 1, y: 2 } // Left edge back to start
+          ];
+
+          // Find closest point on path to current robot position
+          let startIndex = 0;
+          let minDistance = Infinity;
+
+          for (let i = 0; i < trackPath.length; i++) {
+            const point = trackPath[i];
+            const distance = Math.abs(point.x - actor.x) + Math.abs(point.y - actor.y);
+            if (distance < minDistance) {
+              minDistance = distance;
+              startIndex = i;
+            }
+          }
+
+          console.log(`🛤️ Starting path at index ${startIndex} (${trackPath[startIndex].x}, ${trackPath[startIndex].y})`);
+
+          // Follow the predefined path
+          const maxSteps = Math.min(50, trackPath.length);
+
+          for (let step = 0; step < maxSteps; step++) {
+            const pathIndex = (startIndex + step) % trackPath.length;
+            const targetPoint = trackPath[pathIndex];
+
+            console.log(`🛤️ Step ${step + 1}: Moving to path point (${targetPoint.x}, ${targetPoint.y})`);
+
+            dispatch(moveSimulatorRobot({
+              id: actor.id,
+              x: targetPoint.x,
+              y: targetPoint.y,
+              direction: actor.direction || 0
+            }));
+
+            // Wait between moves
+            await delay(400, currentSpeedMultiplier);
+          }
+
+          console.log('🎉 Fixed path following completed!');
+          await playFrequencySound(800, 300);
+        }
+        continue;
       }
-    }
-    
-    console.log(`🛤️ Starting path at index ${startIndex} (${trackPath[startIndex].x}, ${trackPath[startIndex].y})`);
-    
-    // Follow the predefined path
-    const maxSteps = Math.min(50, trackPath.length);
-    
-    for (let step = 0; step < maxSteps; step++) {
-      const pathIndex = (startIndex + step) % trackPath.length;
-      const targetPoint = trackPath[pathIndex];
-      
-      console.log(`🛤️ Step ${step + 1}: Moving to path point (${targetPoint.x}, ${targetPoint.y})`);
-      
-      dispatch(moveSimulatorRobot({
-        id: actor.id,
-        x: targetPoint.x,
-        y: targetPoint.y,
-        direction: actor.direction || 0
-      }));
-      
-      // Wait between moves
-      await delay(400, currentSpeedMultiplier);
-    }
-    
-    console.log('🎉 Fixed path following completed!');
-    await playFrequencySound(800, 300);
-  }
-  continue;
-}
 
 
 
@@ -652,14 +765,27 @@ if (isPathFollowingBlock(b)) {
         case 'Move Right':
           if (actor.type === 'simulatorRobot') {
             const targetX = Math.min(actor.x + c, 19);
+
             if (!checkSimulatorObstacle(actor, targetX, actor.y)) {
+              if (isConnected()) {
+                try { sendCommand('MOVERIGHT'); } catch (e) { console.warn('sendCommand error:', e); }
+              }
               await smoothMove(actor, dispatch, targetX, actor.y, 5, currentSpeedMultiplier);
             } else {
+              // 🚨 OBSTACLE COLLISION - PLAY FREQUENCY SOUND & STOP
+              console.log('🚨 COLLISION DETECTED! Playing 800Hz warning sound!');
+              try {
+                await playFrequencySound(800, 600);
+              } catch (e) {
+                console.warn('Sound play error:', e);
+              }
               obstacleCollisionDetected = true;
             }
           } else {
             const currentScene = getCurrentSceneData(dispatch);
             if (currentScene && checkForObstacle(actor, 'right', dispatch, currentScene)) {
+              console.log('🚨 STAGE OBSTACLE DETECTED - Playing warning sound!');
+              await playFrequencySound(800, 600);
               obstacleCollisionDetected = true;
             } else {
               dispatch(moveActor({ actorId: actor.id, dx: c, dy: 0, fromScript: true }));
@@ -670,14 +796,26 @@ if (isPathFollowingBlock(b)) {
         case 'Move Left':
           if (actor.type === 'simulatorRobot') {
             const targetX = Math.max(actor.x - c, 0);
+
             if (!checkSimulatorObstacle(actor, targetX, actor.y)) {
+              if (isConnected()) {
+                try { sendCommand('MOVELEFT'); } catch (e) { console.warn('sendCommand error:', e); }
+              }
               await smoothMove(actor, dispatch, targetX, actor.y, 5, currentSpeedMultiplier);
             } else {
+              console.log('🚨 COLLISION DETECTED! Playing 800Hz warning sound!');
+              try {
+                await playFrequencySound(800, 600);
+              } catch (e) {
+                console.warn('Sound play error:', e);
+              }
               obstacleCollisionDetected = true;
             }
           } else {
             const currentScene = getCurrentSceneData(dispatch);
             if (currentScene && checkForObstacle(actor, 'left', dispatch, currentScene)) {
+              console.log('🚨 STAGE OBSTACLE DETECTED - Playing warning sound!');
+              await playFrequencySound(800, 600);
               obstacleCollisionDetected = true;
             } else {
               dispatch(moveActor({ actorId: actor.id, dx: -c, dy: 0, fromScript: true }));
@@ -688,14 +826,26 @@ if (isPathFollowingBlock(b)) {
         case 'Move Up':
           if (actor.type === 'simulatorRobot') {
             const targetY = Math.max(actor.y - c, 0);
+
             if (!checkSimulatorObstacle(actor, actor.x, targetY)) {
+              if (isConnected()) {
+                try { sendCommand('MOVEUP'); } catch (e) { console.warn('sendCommand error:', e); }
+              }
               await smoothMove(actor, dispatch, actor.x, targetY, 5, currentSpeedMultiplier);
             } else {
+              console.log('🚨 COLLISION DETECTED! Playing 800Hz warning sound!');
+              try {
+                await playFrequencySound(800, 600);
+              } catch (e) {
+                console.warn('Sound play error:', e);
+              }
               obstacleCollisionDetected = true;
             }
           } else {
             const currentScene = getCurrentSceneData(dispatch);
             if (currentScene && checkForObstacle(actor, 'up', dispatch, currentScene)) {
+              console.log('🚨 STAGE OBSTACLE DETECTED - Playing warning sound!');
+              await playFrequencySound(800, 600);
               obstacleCollisionDetected = true;
             } else {
               dispatch(moveActor({ actorId: actor.id, dx: 0, dy: -c, fromScript: true }));
@@ -706,14 +856,26 @@ if (isPathFollowingBlock(b)) {
         case 'Move Down':
           if (actor.type === 'simulatorRobot') {
             const targetY = Math.min(actor.y + c, 14);
+
             if (!checkSimulatorObstacle(actor, actor.x, targetY)) {
+              if (isConnected()) {
+                try { sendCommand('MOVEDOWN'); } catch (e) { console.warn('sendCommand error:', e); }
+              }
               await smoothMove(actor, dispatch, actor.x, targetY, 5, currentSpeedMultiplier);
             } else {
+              console.log('🚨 COLLISION DETECTED! Playing 800Hz warning sound!');
+              try {
+                await playFrequencySound(800, 600);
+              } catch (e) {
+                console.warn('Sound play error:', e);
+              }
               obstacleCollisionDetected = true;
             }
           } else {
             const currentScene = getCurrentSceneData(dispatch);
             if (currentScene && checkForObstacle(actor, 'down', dispatch, currentScene)) {
+              console.log('🚨 STAGE OBSTACLE DETECTED - Playing warning sound!');
+              await playFrequencySound(800, 600);
               obstacleCollisionDetected = true;
             } else {
               dispatch(moveActor({ actorId: actor.id, dx: 0, dy: c, fromScript: true }));
@@ -724,6 +886,10 @@ if (isPathFollowingBlock(b)) {
         case 'Rotate Left':
           for (let k = 0; k < c; k++) {
             if (actor.type === 'simulatorRobot') {
+              // send rotate command if connected
+              if (isConnected()) {
+                try { sendCommand("ROTATE_LEFT"); } catch (e) { console.warn('sendCommand error', e); }
+              }
               const newDirection = (actor.direction - 90 + 360) % 360;
               moveRobotUniversal(actor, dispatch, actor.x, actor.y, newDirection);
             } else {
@@ -736,6 +902,9 @@ if (isPathFollowingBlock(b)) {
         case 'Rotate Right':
           for (let k = 0; k < c; k++) {
             if (actor.type === 'simulatorRobot') {
+              if (isConnected()) {
+                try { sendCommand("ROTATE_RIGHT"); } catch (e) { console.warn('sendCommand error', e); }
+              }
               const newDirection = (actor.direction + 90) % 360;
               moveRobotUniversal(actor, dispatch, actor.x, actor.y, newDirection);
             } else {
@@ -762,6 +931,20 @@ if (isPathFollowingBlock(b)) {
           }
           await delay(200, currentSpeedMultiplier);
           break;
+
+        // <-- INSERTED: Set Video Transparency block
+        case 'Set Video Transparency':
+          console.log(`🎬 SETTING VIDEO TRANSPARENCY to ${b?.opacity || 100}%`);
+          {
+            const opacity = Math.max(0, Math.min(100, b?.opacity || 100));
+            dispatch(setVideoOpacity(opacity));
+            if (window.humanDetectionData) {
+              window.humanDetectionData.videoOpacity = opacity;
+            }
+          }
+          await delay(100, currentSpeedMultiplier);
+          break;
+        // <-- END INSERTION
 
         case 'Disappear':
           if (actor.type === 'simulatorRobot') {

@@ -1,5 +1,11 @@
 import React, { useState, useEffect } from "react";
 import "../../css/ConnectionModal.css";
+import {
+  connectBluetooth,
+  connectWiFi,
+  connectSerial
+} from "../../utils/deviceConnectionManager";
+
 
 const ConnectionModal = ({ isOpen, onClose, deviceName, onConnect }) => {
   const [selectedConnection, setSelectedConnection] = useState(null);
@@ -405,41 +411,20 @@ const ConnectionModal = ({ isOpen, onClose, deviceName, onConnect }) => {
   };
 
   const handleDeviceSelect = async (device) => {
-    if (device.disabled) {
-      return;
-    }
+    if (device?.disabled) return;
 
-    if (device.manual) {
-      // Handle manual network entry
-      const networkName = prompt('Enter network name (SSID):');
-      if (networkName) {
-        const password = prompt('Enter network password (leave empty for open network):');
-        onConnect(deviceName, {
-          type: scanningType,
-          device: {
-            ...device,
-            name: networkName,
-            password: password
-          }
-        });
-        handleClose();
-      }
-      return;
-    }
+    let result = null;
 
-    if (device.type === 'bluetooth' && !device.paired) {
-      try {
-        setIsScanning(true);
-        await pairBluetoothDevice(device);
-        onConnect(deviceName, { type: scanningType, device: device });
-        handleClose();
-      } catch (error) {
-        alert('Failed to pair with device: ' + error.message);
-        setIsScanning(false);
-      }
-    } else {
-      onConnect(deviceName, { type: scanningType, device: device });
+    if (scanningType === "bluetooth") result = await connectBluetooth();
+    if (scanningType === "wifi") result = await connectWiFi();
+    if (scanningType === "serial") result = await connectSerial();
+
+    if (result?.success) {
+      alert(`✅ Connected to ${result.name}`);
+      onConnect(deviceName, { type: scanningType, device: result.name });
       handleClose();
+    } else {
+      alert("Connection failed: " + (result?.error || "Unknown"));
     }
   };
 
