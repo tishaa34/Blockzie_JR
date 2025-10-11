@@ -1359,7 +1359,7 @@ export function getCurrentSimulatorBackground() {
   if (stored) {
     return stored;
   }
-  return './assets/backgrounds/bg1.png';
+  return './assets/backgrounds/bg1.svg';
 }
 
 export function clearCustomSimulatorBackgrounds() {
@@ -1368,7 +1368,7 @@ export function clearCustomSimulatorBackgrounds() {
 
     const currentBg = getCurrentSimulatorBackground();
     if (currentBg.startsWith('data:')) {
-      localStorage.setItem('simulatorBackground', './assets/backgrounds/bg1.png');
+      localStorage.setItem('simulatorBackground', './assets/backgrounds/bg1.svg');
       window.dispatchEvent(new CustomEvent('simulatorBackgroundChanged'));
     }
 
