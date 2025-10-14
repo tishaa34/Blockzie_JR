@@ -1,7 +1,7 @@
 {
   "homepage": "./",
   "name": "Blockzie-Jr",
-  "version": "0.1.0",
+  "version": "1.0.0",
   "private": true,
   "dependencies": {
     "@reduxjs/toolkit": "^2.9.0",
@@ -30,7 +30,9 @@
     "start": "react-scripts start",
     "build": "react-scripts build",
     "test": "react-scripts test",
-    "eject": "react-scripts eject"
+    "eject": "react-scripts eject",
+    "start-python": "cd python-backend && python perfect_detector.py",
+    "dev": "concurrently \"npm run start-python\" \"npm run start\" --names \"PYTHON,REACT\" --prefix-colors \"yellow,cyan\""
   },
   "eslintConfig": {
     "extends": [
@@ -52,6 +54,7 @@
   },
   "devDependencies": {
     "ajv": "^7.2.4",
+    "concurrently": "^9.2.1",
     "terser-brunch": "^4.1.0"
   }
 }
