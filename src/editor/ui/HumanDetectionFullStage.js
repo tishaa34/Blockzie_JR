@@ -4,6 +4,7 @@ import { moveActor } from '../../store/sceneSlice';
 import * as posenet from '@tensorflow-models/posenet';
 import * as tf from '@tensorflow/tfjs';
 import * as faceapi from '@vladmandic/face-api';
+import { getPointingDirection } from '../../utils/HandDetection';
 
 // Throttle time in milliseconds to prevent sprite from moving too fast
 const MOVE_COOLDOWN = 200;
@@ -39,164 +40,6 @@ const HumanDetectionFullStage = () => {
   const [stageRect, setStageRect] = useState({ top: 110, left: 380, width: 830, height: 460 });
   const [loadingStatus, setLoadingStatus] = useState('Initializing...');
   const [detectionStatus, setDetectionStatus] = useState('Not started');
-
-  // Replace your detectFingerPointingDirection function with this improved version
-  const detectFingerPointingDirection = useCallback((poses) => {
-    if (!poses || poses.length === 0) return null;
-
-    const pose = poses[0];
-    if (!pose || pose.score < 0.2) return null;
-
-    // Get video element for coordinate scaling
-    const video = videoRef.current;
-    if (!video) return null;
-
-    const leftWrist = pose.keypoints[9];
-    const rightWrist = pose.keypoints[10];
-    const leftShoulder = pose.keypoints[5];
-    const rightShoulder = pose.keypoints[6];
-    const nose = pose.keypoints[0];
-
-    console.log('🎥 Video dimensions:', {
-      width: video.videoWidth,
-      height: video.videoHeight,
-      displayWidth: video.offsetWidth,
-      displayHeight: video.offsetHeight
-    });
-
-    // FIXED coordinate extraction with video scaling
-    const getScaledCoords = (keypoint) => {
-      if (!keypoint || !keypoint.position) return { x: 0, y: 0 };
-
-      // Get raw position
-      const rawX = keypoint.position.x;
-      const rawY = keypoint.position.y;
-
-      // Scale to video dimensions if coordinates are normalized (0-1)
-      let scaledX = rawX;
-      let scaledY = rawY;
-
-      if (rawX >= 0 && rawX <= 1 && rawY >= 0 && rawY <= 1) {
-        // Coordinates are normalized, scale to video size
-        scaledX = rawX * video.videoWidth;
-        scaledY = rawY * video.videoHeight;
-      } else if (rawX === 0 && rawY === 0) {
-        // Try getting coordinates directly from TensorFlow tensor
-        // This is a fallback for when PoseNet returns 0,0
-        return { x: 0, y: 0 };
-      }
-
-      return { x: scaledX, y: scaledY };
-    };
-
-    const leftWristPos = getScaledCoords(leftWrist);
-    const rightWristPos = getScaledCoords(rightWrist);
-    const leftShoulderPos = getScaledCoords(leftShoulder);
-    const rightShoulderPos = getScaledCoords(rightShoulder);
-    const nosePos = getScaledCoords(nose);
-
-    console.log('📍 SCALED COORDINATES:', {
-      leftWrist: leftWristPos,
-      rightWrist: rightWristPos,
-      leftShoulder: leftShoulderPos,
-      rightShoulder: rightShoulderPos,
-      nose: nosePos,
-      scores: {
-        leftWrist: leftWrist?.score,
-        rightWrist: rightWrist?.score,
-        leftShoulder: leftShoulder?.score,
-        rightShoulder: rightShoulder?.score,
-        nose: nose?.score
-      }
-    });
-
-    let pointingDirection = null;
-    let confidence = 0.8;
-    let detectedHand = null;
-
-    // ALTERNATIVE APPROACH: Use score differences instead of coordinates
-    // Since coordinates are failing, let's use a different method
-
-    // Check if hands are detected with good scores
-    const leftWristScore = leftWrist?.score || 0;
-    const rightWristScore = rightWrist?.score || 0;
-    const noseScore = nose?.score || 0;
-    const leftShoulderScore = leftShoulder?.score || 0;
-    const rightShoulderScore = rightShoulder?.score || 0;
-
-    console.log('🏆 DETECTION SCORES:', {
-      leftWrist: leftWristScore,
-      rightWrist: rightWristScore,
-      nose: noseScore,
-      leftShoulder: leftShoulderScore,
-      rightShoulder: rightShoulderScore
-    });
-
-    // SIMPLIFIED DETECTION: Use high wrist scores to infer pointing
-    if (leftWristScore > 0.5 || rightWristScore > 0.5) {
-
-      // If coordinates are still 0, use score-based inference
-      if (leftWristPos.x === 0 && leftWristPos.y === 0 && rightWristPos.x === 0 && rightWristPos.y === 0) {
-        console.log('🎯 Using SCORE-BASED detection (coordinates unavailable)');
-
-        // Use the hand with highest score
-        const useLeftHand = leftWristScore > rightWristScore;
-        detectedHand = useLeftHand ? 'left' : 'right';
-
-        // Simple rotation detection based on which blocks you use
-        // This is a fallback method when coordinates fail
-        const currentTime = Date.now();
-        const direction = ['up', 'right', 'down', 'left'][Math.floor(currentTime / 2000) % 4];
-
-        pointingDirection = direction;
-        console.log(`🎲 FALLBACK: Cycling through directions - ${direction}`);
-
-      } else {
-        // Use coordinate-based detection
-        console.log('📏 Using COORDINATE-BASED detection');
-
-        const useLeftHand = leftWristScore > 0.5 && leftWristPos.x > 0;
-        const useRightHand = rightWristScore > 0.5 && rightWristPos.x > 0;
-
-        if (useLeftHand || useRightHand) {
-          const wristPos = useLeftHand ? leftWristPos : rightWristPos;
-          const shoulderPos = useLeftHand ? leftShoulderPos : rightShoulderPos;
-          detectedHand = useLeftHand ? 'left' : 'right';
-
-          console.log('📊 Position comparison:', { wristPos, shoulderPos, nosePos });
-
-          // Determine direction
-          if (wristPos.y < nosePos.y - 30) {
-            pointingDirection = 'up';
-            console.log('🎉 UP detected');
-          } else if (wristPos.x < shoulderPos.x - 60) {
-            pointingDirection = 'left';
-            console.log('🎉 LEFT detected');
-          } else if (wristPos.x > shoulderPos.x + 60) {
-            pointingDirection = 'right';
-            console.log('🎉 RIGHT detected');
-          } else if (wristPos.y > shoulderPos.y + 80) {
-            pointingDirection = 'down';
-            console.log('🎉 DOWN detected');
-          }
-        }
-      }
-    }
-
-    const result = pointingDirection ? {
-      direction: pointingDirection,
-      confidence: confidence,
-      hand: detectedHand
-    } : null;
-
-    if (result) {
-      console.log('🚀 🚀 🚀 POINTING DETECTED:', result);
-    } else {
-      console.log('❌ No pointing detected');
-    }
-
-    return result;
-  }, []);
 
   // Enhanced sprite movement based on finger pointing direction
   const handleSpriteMovement = useCallback((pointingData) => {
@@ -766,7 +609,6 @@ const HumanDetectionFullStage = () => {
         drawAIKeypoints(ctx, pose.keypoints, color);
         drawAISkeleton(ctx, pose.keypoints, color);
         drawPersonBoundingBox(ctx, pose.keypoints, color, personIndex);
-        drawHandRadiatingLines(ctx, pose.keypoints);
       }
     });
 
@@ -829,12 +671,6 @@ const HumanDetectionFullStage = () => {
           facesFound = await checkFaceDetected(videoRef.current);
         }
 
-        // NEW: Finger pointing direction detection
-        const pointingData = detectFingerPointingDirection(poses);
-        if (pointingData) {
-          handleSpriteMovement(pointingData);
-        }
-
         let dominantExpression = null;
         let leftHand = null;
         let rightHand = null;
@@ -871,7 +707,7 @@ const HumanDetectionFullStage = () => {
 
         // Draw visualization only for valid poses
         const validPoses = poses.filter(pose => pose.score > 0.2);
-        await drawAISkeletonVisualization(validPoses.slice(0, 1), pointingData);
+        await drawAISkeletonVisualization(validPoses.slice(0, 1), );
 
         // Update global data with pointing information
         window.humanDetectionData = {
@@ -884,18 +720,12 @@ const HumanDetectionFullStage = () => {
           dominantExpression: dominantExpression,
           leftHand: leftHand,
           rightHand: rightHand,
-          pointingDirection: pointingData?.direction || null,
-          pointingConfidence: pointingData?.confidence || 0,
           videoOpacity: window.humanDetectionData?.videoOpacity !== undefined ? window.humanDetectionData.videoOpacity : 100,
         };
 
         // Debug logging
         if (detectedPeople > 0 || handsFound > 0 || facesFound > 0) {
           console.log(`🤖 Independent Detection: ${detectedPeople} people, ${handsFound} hands, ${facesFound} faces`);
-        }
-
-        if (pointingData) {
-          console.log(`👉 Pointing ${pointingData.direction} (confidence: ${pointingData.confidence.toFixed(2)})`);
         }
 
       } catch (error) {
@@ -909,7 +739,7 @@ const HumanDetectionFullStage = () => {
     };
 
     detect();
-  }, [net, cameraStarted, checkHandDetected, faceNet, drawAISkeletonVisualization, detectFingerPointingDirection, handleSpriteMovement]);
+  }, [net, cameraStarted, checkHandDetected, faceNet, drawAISkeletonVisualization, handleSpriteMovement]);
 
   useEffect(() => {
     if (cameraStarted && net) {

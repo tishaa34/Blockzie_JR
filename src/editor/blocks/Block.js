@@ -95,48 +95,10 @@ const blocksByCategory = {
       }
     },
     {
-      name: "Pointing Up", icon: "./assets/blockicons/Up.svg",
-      execute: () => {
-        const data = window.humanDetectionData;
-        const noseY = data.poses?.[0]?.keypoints[0]?.position.y;
-        const leftHand = data.leftHand;
-        const rightHand = data.rightHand;
-        const scoreThreshold = 0.2;
-        return (leftHand?.score > scoreThreshold && leftHand.position.y < noseY) ||
-          (rightHand?.score > scoreThreshold && rightHand.position.y < noseY);
-      }
-    },
-    {
-      name: "Pointing Down", icon: "./assets/blockicons/Down.svg",
-      execute: () => {
-        const data = window.humanDetectionData;
-        const hipY = data.poses?.[0]?.keypoints[11]?.position.y;
-        const leftHand = data.leftHand;
-        const rightHand = data.rightHand;
-        const scoreThreshold = 0.2;
-        return (leftHand?.score > scoreThreshold && leftHand.position.y > hipY) ||
-          (rightHand?.score > scoreThreshold && rightHand.position.y > hipY);
-      }
-    },
-    {
-      name: "Pointing Left", icon: "./assets/blockicons/Left.svg",
-      execute: () => {
-        const data = window.humanDetectionData;
-        const rightShoulderX = data.poses?.[0]?.keypoints[6]?.position.x;
-        const rightHand = data.rightHand;
-        const scoreThreshold = 0.2;
-        return rightHand?.score > scoreThreshold && rightHand.position.x > rightShoulderX;
-      }
-    },
-    {
-      name: "Pointing Right", icon: "./assets/blockicons/Right.svg",
-      execute: () => {
-        const data = window.humanDetectionData;
-        const leftShoulderX = data.poses?.[0]?.keypoints[5]?.position.x;
-        const leftHand = data.leftHand;
-        const scoreThreshold = 0.2;
-        return leftHand?.score > scoreThreshold && leftHand.position.x < leftShoulderX;
-      }
+      name: "Move With Hand Detection",
+      icon: "./assets/blockicons/Right.png",
+      type: "moveWithHandDetection",
+      execute: async () => true,
     },
     { name: "Set Video Transparency", icon: "./assets/blockicons/opacity.svg", type: "video_transparency", options: [100, 75, 50, 25, 0] },
     { name: "Sync Actors with Faces", icon: "./assets/blockicons/actor.svg", type: "sync_actors_with_faces" },

@@ -981,53 +981,23 @@ export async function run(actor, dispatch, sounds, selectedActorId) {
           }
           break;
 
-        case 'Pointing Up':
-          if (isPointing('up')) {
-            console.log('👆 Pointing up detected!');
-          } else {
-            let attempts = 0;
-            while (!isPointing('up') && attempts < 10) {
-              await delay(1000, currentSpeedMultiplier);
-              attempts++;
-            }
+        case "moveWithHandDetection":
+        case "Move With Hand Detection": {
+          console.log("Move With Hand Detection block running for actor", actor.id);
+          const dir = window.handDetectionData?.direction;
+          if (!dir) {
+            await delay(100);
+            break;
           }
+          let dx = 0, dy = 0;
+          if (dir === "up") dy = -1;
+          if (dir === "down") dy = 1;
+          if (dir === "left") dx = -1;
+          if (dir === "right") dx = 1;
+          dispatch(moveActor({ actorId: actor.id, dx, dy, fromScript: true }));
+          await delay(100); // Debounce movement for smoothness
           break;
-
-        case 'Pointing Down':
-          if (isPointing('down')) {
-            console.log('👇 Pointing down detected!');
-          } else {
-            let attempts = 0;
-            while (!isPointing('down') && attempts < 10) {
-              await delay(1000, currentSpeedMultiplier);
-              attempts++;
-            }
-          }
-          break;
-
-        case 'Pointing Left':
-          if (isPointing('left')) {
-            console.log('👈 Pointing left detected!');
-          } else {
-            let attempts = 0;
-            while (!isPointing('left') && attempts < 10) {
-              await delay(1000, currentSpeedMultiplier);
-              attempts++;
-            }
-          }
-          break;
-
-        case 'Pointing Right':
-          if (isPointing('right')) {
-            console.log('👉 Pointing right detected!');
-          } else {
-            let attempts = 0;
-            while (!isPointing('right') && attempts < 10) {
-              await delay(1000, currentSpeedMultiplier);
-              attempts++;
-            }
-          }
-          break;
+        }
 
         case 'Sound':
           for (let k = 0; k < c; k++) {

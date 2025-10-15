@@ -18,6 +18,8 @@ import HumanDetectionFullStage from './editor/ui/HumanDetectionFullStage';
 import SimulatorModal from '../src/SimulatorView/SimulatorModal';
 import SimulatorControls from '../src/SimulatorView/SimulatorControl';
 import { clearScript, setShowHumanDetection } from './store/sceneSlice';
+import HandControl from './editor/ui/HandControl';
+
 
 import './App.css';
 
@@ -43,6 +45,16 @@ function BlockzieJrShell() {
   const showHumanDetection = useSelector(s => s.scene.showHumanDetection);
   const actorIdFromScene = scenes[currentSceneIndex]?.actors?.[0]?.id;
   const store = useStore();
+
+  // Expose Redux store globally for runScript and other utilities
+  useEffect(() => {
+    if (typeof window !== 'undefined') {
+      window.store = store;
+      window.__REDUX_STORE__ = store;
+      console.log('🚧 Redux store made globally accessible as window.store and window.__REDUX_STORE__');
+    }
+  }, [store]);
+
   const [selectedActorId, setSelectedActorId] = useState(actorIdFromScene || demoActors[0]?.id);
   const [bgModalOpen, setBgModalOpen] = useState(false);
   const [heading, setHeading] = useState({ text: "", color: "#222", size: 38 });
@@ -81,6 +93,7 @@ function BlockzieJrShell() {
   useEffect(() => {
     // Make Redux store globally accessible for runScript
     window.__REDUX_STORE__ = store;
+    window.__REDUX_STORE__ = store; // best to expose both
     console.log('🚧 Redux store made globally accessible');
   }, [store]);
 
@@ -467,6 +480,7 @@ function BlockzieJrShell() {
   };
 
   const handleGreenFlag = () => {
+    dispatch(setShowHumanDetection(true)); // PATCH: always enable detection
     if (!selectedActorId) return;
     const currentScene = scenes[currentSceneIndex];
     if (!currentScene) return;
@@ -516,11 +530,12 @@ function BlockzieJrShell() {
         />
       </header>
 
-      {/* Human Detection Full Stage Modal */}
+      {/* --- KEY: Both overlays are rendered together and only when Human Detection is ON --- */}
       <HumanDetectionFullStage
         isOpen={showHumanDetection}
         onClose={() => dispatch(setShowHumanDetection(false))}
       />
+      {showHumanDetection && <HandControl cameraActive={true} />}
 
       {/* Background and Heading Modals */}
       <BackgroundGallery open={bgModalOpen} onClose={() => setBgModalOpen(false)} />
@@ -593,6 +608,7 @@ function BlockzieJrShell() {
           </div>
         </div>
       </footer>
+      <HandControl />
     </div>
   );
 }
