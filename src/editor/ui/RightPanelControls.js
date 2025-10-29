@@ -1,6 +1,6 @@
 import React, { useState, useEffect } from "react";
 import { useSelector, useDispatch } from "react-redux";
-import { run } from "../../utils/runScript";
+import { run,stopRunningScript } from "../../utils/runScript";
 import BackgroundGallery from "./BackgroundGallery";
 import SimulatorModal from "../../SimulatorView/SimulatorModal";
 import ObstacleGallery from "../../editor/ui/ObstacleGallery";
@@ -290,6 +290,15 @@ export default function RightPanelControls({
         <button className="rp-btn" onClick={() => run(actor, dispatch, scene?.sounds, actor.id)} title="Green Flag">
           <img src="./assets/ui/go.svg" alt="Green Flag" />
         </button>
+        <button className="rp-btn" title="Stop Script"
+          onClick={() => {
+            console.log("🛑 Stop Script clicked");
+            stopRunningScript(); // ✅ This sets shouldStop = true
+          }}
+        >
+          <img src="./assets/ui/stop1.svg" alt="Stop Script" />
+        </button>
+
         <button className="rp-btn" onClick={handleSimulatorToggle} disabled={isAnimating} title="Simulator">
           <img src="./assets/ui/simulator.png" alt="Simulator" />
         </button>

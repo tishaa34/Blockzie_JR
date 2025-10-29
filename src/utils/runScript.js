@@ -8,6 +8,13 @@ import {
 } from '../store/sceneSlice';
 import { sendCommand, isConnected } from "../utils/deviceConnectionManager";
 
+
+export let shouldStop = false;
+
+export function stopRunningScript() {
+ shouldStop = true;
+}
+
 // ✅ CRITICAL - Ensure Redux store is globally accessible
 if (typeof window !== 'undefined') {
  // Hook into React DevTools or find store from DOM
@@ -545,14 +552,21 @@ export async function run(actor, dispatch, sounds, selectedActorId) {
  break;
  }
  }
-
+ shouldStop = false;
  try {
 
  let repeatForever = actor.scripts.some(b => b?.name === "Repeat Forever");
 
+ 
+
  do{
  for (let i = 0; i < actor.scripts.length; i++) {
  const b = actor.scripts[i];
+
+ if (shouldStop) {
+ console.log("🛑 Script stopped manually by user.");
+ return;
+ }
 
  if (obstacleCollisionDetected) {
  console.log('🚧 SCRIPT EXECUTION STOPPED DUE TO OBSTACLE COLLISION');
