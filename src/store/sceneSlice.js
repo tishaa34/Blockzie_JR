@@ -60,6 +60,7 @@ const initialState = {
   videoOpacity: 100,
   // NEW: selected simulator robot id for editing scripts
   selectedSimRobotId: null,
+  selectedDevice: null,
 };
 
 
@@ -109,10 +110,10 @@ const sceneSlice = createSlice({
     // UI state - 🛤️ UPDATED: Accept 'sensors' category
     setSelectedBlockCategory(state, action) {
       const validCategories = [
-        'start', 'motion', 'looks', 'sound', 'control', 
+        'start', 'motion', 'looks', 'sound', 'control',
         'sensors', 'device', 'humandetection', 'end'
       ];
-      
+
       if (validCategories.includes(action.payload)) {
         state.selectedBlockCategory = action.payload;
       }
@@ -594,6 +595,9 @@ const sceneSlice = createSlice({
       state.globalCameraState = action.payload;
     },
 
+    setSelectedDevice(state, action) {
+      state.selectedDevice = action.payload;
+    },
 
     // Custom sounds
     addCustomSound(state, action) {
@@ -1016,6 +1020,7 @@ export const {
   updateSimulatorBlockCount,
   // NEW: selection
   setSelectedSimRobot,
+  setSelectedDevice,
 } = sceneSlice.actions;
 
 
@@ -1067,9 +1072,9 @@ export function toOpenRobertaSimConfig(sceneSliceState) {
     // obstacles: normalize coords and sizes; accept w/h or width/height
     const obstacles = (currentScene?.obstacles || []).map(obs => {
       const wCells = Number.isFinite(obs?.w) ? obs.w
-                  : (Number.isFinite(obs?.width) ? obs.width : 1);
+        : (Number.isFinite(obs?.width) ? obs.width : 1);
       const hCells = Number.isFinite(obs?.h) ? obs.h
-                  : (Number.isFinite(obs?.height) ? obs.height : 1);
+        : (Number.isFinite(obs?.height) ? obs.height : 1);
 
       return {
         x: __toUnit__(obs?.x ?? 0, __ORL_GRID_W__),
@@ -1086,9 +1091,9 @@ export function toOpenRobertaSimConfig(sceneSliceState) {
     // colorAreas -> optional; normalize best-effort; defaults if sizes are missing
     const colorAreas = (currentScene?.coloredAreas || []).map(area => {
       const wCells = Number.isFinite(area?.w) ? area.w
-                  : (Number.isFinite(area?.width) ? area.width : 1);
+        : (Number.isFinite(area?.width) ? area.width : 1);
       const hCells = Number.isFinite(area?.h) ? area.h
-                  : (Number.isFinite(area?.height) ? area.height : 1);
+        : (Number.isFinite(area?.height) ? area.height : 1);
       return {
         x: __toUnit__(area?.x ?? 0, __ORL_GRID_W__),
         y: __toUnit__(area?.y ?? 0, __ORL_GRID_H__),

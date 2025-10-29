@@ -1,0 +1,68 @@
+.device-modal-backdrop {
+  position: fixed;
+  left: 0; top: 0; right: 0; bottom: 0;
+  background: rgba(20, 23, 70, 0.85);
+  z-index: 9999;
+  display: flex; justify-content: center; align-items: center;
+}
+.device-modal {
+  background: #dfe9fb;
+  border-radius: 24px;
+  padding: 32px;
+  min-width: 650px;
+  box-shadow: 0 8px 32px rgba(0,0,0,0.15);
+  color: #20216d;
+}
+.device-modal-heading {
+  font-size: 2rem;
+  text-align: center;
+  margin-bottom: 24px;
+  color: #22227e;
+}
+.device-cards-row {
+  display: flex;
+  justify-content: space-around;
+  gap: 32px;
+}
+.device-card {
+  flex: 1;
+  background: #f5f8ff;
+  border-radius: 16px;
+  margin: 8px;
+  box-shadow: 0 2px 12px rgba(0,0,0,0.06);
+  text-align: center;
+  cursor: pointer;
+  padding: 20px;
+  transition: box-shadow 0.14s;
+}
+.device-card:hover {
+  box-shadow: 0 6px 24px rgba(0,0,0,0.18);
+  background: #e1e8fa;
+}
+.device-image {
+  width: 110px;
+  height: 110px;
+  object-fit: contain;
+  margin-bottom: 16px;
+}
+.device-name {
+  font-weight: bold;
+  font-size: 1.1rem;
+  margin-bottom: 6px;
+  color: #22227e;
+}
+.device-desc {
+  margin-bottom: 10px;
+  font-size: 0.98rem;
+  color: #4747a4;
+}
+.device-modal-close-btn {
+  margin-top: 20px;
+  background: #3378fc;
+  color: #fff;
+  border: none;
+  border-radius: 6px;
+  padding: 8px 24px;
+  font-size: 1rem;
+  cursor: pointer;
+}
