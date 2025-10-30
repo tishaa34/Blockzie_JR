@@ -4,6 +4,11 @@ import "../../css/Toolbar.css";
 import DeviceSelectModal from "./DeviceSelectModal";
 import { run } from "../../utils/runScript";
 import { setSelectedDevice } from "../../store/sceneSlice";
+import {
+  scanBluetoothDevices,
+  scanWiFiDevices,
+  scanSerialDevices
+} from "./ConnectionModal";
 
 export default function Toolbar({
   onSave,
@@ -41,6 +46,108 @@ export default function Toolbar({
 
   // Only show connection dropdown if a real device is selected (not 'none')
   const canShowDropdown = selectedDevice && selectedDevice !== "none";
+
+  // --- ADDED: Auto-scanning DropdownSection helper (placed above main return) ---
+  function DropdownSection({ title, scanFn }) {
+    const [devices, setDevices] = useState([]);
+    const [scanning, setScanning] = useState(true);
+
+    // Auto-scan immediately when section mounts
+    useEffect(() => {
+      let mounted = true;
+      (async () => {
+        setScanning(true);
+        setDevices([]);
+        await scanFn((list) => { if (mounted) setDevices(list); });
+        if (mounted) setScanning(false);
+      })();
+      return () => { mounted = false; };
+    }, [scanFn]);
+
+    return (
+      <div style={{ marginBottom: "10px" }}>
+        <strong>{title}</strong>
+        <ul style={{ margin: "6px 0 0", paddingLeft: "14px", fontSize: "13px" }}>
+          {scanning ? (
+            <li style={{ color: "#888" }}>🔍 Scanning...</li>
+          ) : devices.length === 0 ? (
+            <li style={{ color: "#888" }}>No devices found</li>
+          ) : (
+            devices.map((d, i) => <li key={i}>• {d}</li>)
+          )}
+        </ul>
+      </div>
+    );
+  }
+  // --- end added helper ---
+
+  function ConnectionItem({ label, scanFn }) {
+    const [isExpanded, setIsExpanded] = useState(false);
+    const [devices, setDevices] = useState([]);
+    const [scanning, setScanning] = useState(false);
+
+    const handleClick = async () => {
+      if (!isExpanded) {
+        setIsExpanded(true);
+        setScanning(true);
+        setDevices([]);
+        await scanFn(setDevices);
+        setScanning(false);
+      } else {
+        // Collapse if clicked again
+        setIsExpanded(false);
+      }
+    };
+
+    return (
+      <div style={{ position: "relative" }}>
+        <button
+          onClick={handleClick}
+          style={{
+            width: "100%",
+            textAlign: "left",
+            background: "none",
+            border: "none",
+            padding: "8px 12px",
+            cursor: "pointer",
+            fontSize: "14px",
+            fontWeight: "500",
+            display: "flex",
+            justifyContent: "space-between",
+            alignItems: "center"
+          }}
+          className="connection-dropdown-item"
+        >
+          {label}
+        </button>
+
+        {isExpanded && (
+          <div
+            style={{
+              background: "#f9f9f9",
+              borderTop: "1px solid #ddd",
+              padding: "6px 10px",
+              fontSize: "13px",
+              maxHeight: "120px",
+              overflowY: "auto"
+            }}
+          >
+            {scanning ? (
+              <div style={{ color: "#888" }}>🔍 Scanning...</div>
+            ) : devices.length === 0 ? (
+              <div style={{ color: "#888" }}>No devices found</div>
+            ) : (
+              <ul style={{ margin: 0, paddingLeft: "18px" }}>
+                {devices.map((d, i) => (
+                  <li key={i}>{d}</li>
+                ))}
+              </ul>
+            )}
+          </div>
+        )}
+      </div>
+    );
+  }
 
   return (
     <>
@@ -91,12 +198,27 @@ export default function Toolbar({
 
               {/* Dropdown list */}
               {showConnectionDropdown && canShowDropdown && (
-                <div className="connection-dropdown-list" onClick={e => e.stopPropagation()}>
-                  <button className="connection-dropdown-item">Bluetooth</button>
-                  <button className="connection-dropdown-item">Serial</button>
-                  <button className="connection-dropdown-item">WiFi</button>
+                <div
+                  className="connection-dropdown-list"
+                  style={{
+                    background: "#fff",
+                    border: "1px solid #ccc",
+                    borderRadius: "6px",
+                    padding: "6px 0",
+                    minWidth: "160px",
+                    boxShadow: "0 2px 8px rgba(0,0,0,0.15)",
+                    position: "absolute",
+                    zIndex: 1000
+                  }}
+                  onClick={e => e.stopPropagation()}
+                >
+                  <ConnectionItem label="Bluetooth" scanFn={scanBluetoothDevices} />
+                  <ConnectionItem label="Serial" scanFn={scanSerialDevices} />
+                  <ConnectionItem label="WiFi" scanFn={scanWiFiDevices} />
                 </div>
               )}
+
+
             </div>
           </div>
         </div>

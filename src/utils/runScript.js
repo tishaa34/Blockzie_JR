@@ -778,7 +778,7 @@ export async function run(actor, dispatch, sounds, selectedActorId) {
  }
  // Regular movement blocks with smooth movement
  const blockIdentifier = b?.name || b?.type;
-
+ console.log(blockIdentifier)
  switch (blockIdentifier) {
  case 'Move Right':
  if (actor.type === 'simulatorRobot') {
@@ -840,6 +840,36 @@ export async function run(actor, dispatch, sounds, selectedActorId) {
  }
  }
  break;
+ 
+ case 'Go Home':
+ if (actor.type === 'simulatorRobot') {
+ console.log('🤖 Robot go home not implemented');
+ } else {
+ console.log("🏠 Moving actor to home position");
+ dispatch(moveActor({ actorId: actor.id, resetPosition: true, fromScript: true }));
+ }
+ await delay(200, currentSpeedMultiplier);
+ break;
+ case 'Hop':
+ if (actor.type === 'simulatorRobot') {
+ console.log('🤖 Robot hop not implemented');
+ } else {
+ console.log("🐇 Actor is hopping!");
+
+ const hopHeight = c || 1; // how high to hop (use your step constant)
+ const hopDelay = 150; // milliseconds delay between up/down
+
+ // Move up
+ dispatch(moveActor({ actorId: actor.id, dx: 0, dy: -hopHeight, fromScript: true }));
+
+ // Wait briefly, then move down
+ await delay(hopDelay, currentSpeedMultiplier);
+ dispatch(moveActor({ actorId: actor.id, dx: 0, dy: hopHeight, fromScript: true }));
+ }
+
+ await delay(200, currentSpeedMultiplier); // small pause after hop
+ break;
+
 
  case 'Move Up':
  if (actor.type === 'simulatorRobot') {
@@ -932,16 +962,17 @@ export async function run(actor, dispatch, sounds, selectedActorId) {
  }
  break;
 
- case 'Scale Up':
+ case 'Grow Size':
  if (actor.type === 'simulatorRobot') {
  console.log('🤖 Robot scaling not implemented');
  } else {
+ console.log("scale up")
  dispatch(scaleActor({ actorId: actor.id, scale: (actor.scale || 1) * 1.2, fromScript: true }));
  }
  await delay(200, currentSpeedMultiplier);
  break;
-
- case 'Scale Down':
+ 
+ case 'Shrink Size':
  if (actor.type === 'simulatorRobot') {
  console.log('🤖 Robot scaling not implemented');
  } else {
@@ -949,6 +980,16 @@ export async function run(actor, dispatch, sounds, selectedActorId) {
  }
  await delay(200, currentSpeedMultiplier);
  break;
+ case 'Reset Size':
+ if (actor.type === 'simulatorRobot') {
+ console.log('🤖 Robot resize not implemented');
+ } else {
+ console.log("resetting to original size");
+ dispatch(scaleActor({ actorId: actor.id, reset: true, fromScript: true }));
+ }
+ await delay(200, currentSpeedMultiplier);
+ break;
+
 
  // <-- INSERTED: Set Video Transparency block
  case 'Set Video Transparency':
@@ -973,7 +1014,7 @@ export async function run(actor, dispatch, sounds, selectedActorId) {
  await delay(200, currentSpeedMultiplier);
  break;
 
- case 'Reappear':
+ case 'Appear':
  if (actor.type === 'simulatorRobot') {
  dispatch(reappearSimulatorRobot({ id: actor.id }));
  } else {
@@ -999,7 +1040,7 @@ export async function run(actor, dispatch, sounds, selectedActorId) {
  }
  break;
 
- case "moveWithHandDetection":
+ 
  case "Move With Hand Detection": {
  console.log("Move With Hand Detection block running for actor", actor.id);
  const dir = window.handDetectionData?.direction;

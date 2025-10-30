@@ -111,7 +111,8 @@ const sceneSlice = createSlice({
     setSelectedBlockCategory(state, action) {
       const validCategories = [
         'start', 'motion', 'looks', 'sound', 'control',
-        'sensors', 'device', 'humandetection', 'end'
+        'sensors', 'device', 'humandetection', 'end',
+        'otto', 'esp32'
       ];
 
       if (validCategories.includes(action.payload)) {
@@ -326,21 +327,31 @@ const sceneSlice = createSlice({
 
 
     moveActor(state, action) {
-      const { actorId, dx, dy, fromScript } = action.payload;
+      const { actorId, dx, dy, fromScript, resetPosition } = action.payload;
       const scene = state.scenes[state.currentSceneIndex];
       if (!scene) return;
 
-
       const actor = scene.actors.find(a => a.id === actorId);
       if (!actor) return;
-
 
       if (!fromScript) {
         scene.undoStack.push(deepClone(scene));
         scene.redoStack = [];
       }
 
+      // If "Go Home" requested → reset position
+      if (resetPosition) {
+        // Store original position if not already saved
+        if (!actor.originalPosition) {
+          actor.originalPosition = { x: CENTER_X, y: CENTER_Y }; // fallback default
+        }
 
+        actor.x = actor.originalPosition.x;
+        actor.y = actor.originalPosition.y;
+        return;
+      }
+
+      // Normal move
       actor.x = Math.min(Math.max(0, actor.x + dx), GRID_WIDTH - 1);
       actor.y = Math.min(Math.max(0, actor.y + dy), GRID_HEIGHT - 1);
     },
@@ -369,27 +380,30 @@ const sceneSlice = createSlice({
 
 
     scaleActor(state, action) {
-      const { actorId, scale, fromScript } = action.payload;
+      const { actorId, scale, fromScript, reset } = action.payload;
       const scene = state.scenes[state.currentSceneIndex];
       if (!scene) return;
 
-
       const actor = scene.actors.find(a => a.id === actorId);
       if (!actor) return;
-
 
       if (!fromScript) {
         scene.undoStack.push(deepClone(scene));
         scene.redoStack = [];
       }
 
-
-      const newSize = (actor.size || 1) * scale;
       const minSize = 0.5;
       const maxSize = 4.0;
-      actor.size = Math.min(Math.max(newSize, minSize), maxSize);
-    },
 
+      if (reset) {
+        // Reset to original size
+        actor.size = 1;
+      } else {
+        // Normal grow/shrink scaling
+        const newSize = (actor.size || 1) * scale;
+        actor.size = Math.min(Math.max(newSize, minSize), maxSize);
+      }
+    },
 
     resetActorSize(state, action) {
       const { actorId, fromScript } = action.payload;

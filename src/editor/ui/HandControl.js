@@ -12,7 +12,6 @@ const HandControl = ({ cameraActive = true }) => {
             const results = detectorRef.current.detectForVideo(videoRef.current, performance.now());
             const hands = results?.landmarks?.[0];
             if (hands) {
-                console.log('🟢 Detected hand landmarks:', hands);
                 const dir = getFingerDirection(hands);
                 console.log('🟢 Pointing direction:', dir);
                 window.handDetectionData = { direction: dir, landmarks: hands };

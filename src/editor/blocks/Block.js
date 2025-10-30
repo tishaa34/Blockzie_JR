@@ -6,6 +6,7 @@ import ConnectionModal from "../ui/ConnectionModal";
 import { sendCommand, isConnected } from "../../utils/deviceConnectionManager";
 
 
+
 // Puzzle backgrounds per category
 const puzzleBgByCategory = {
   start: "./assets/blocks/start.svg",
@@ -13,10 +14,11 @@ const puzzleBgByCategory = {
   looks: "./assets/blocks/looks.svg",
   sound: "./assets/blocks/sounds.svg",
   control: "./assets/blocks/flow.svg",
-  device: "./assets/blocks/blueCmd.svg",
   end: "./assets/blocks/endshort.svg",
   humandetection: "./assets/blocks/looks.svg",
   sensors: "./assets/blocks/flow.svg", // 🛤️ ADDED: Path following category
+  otto: "./assets/blocks/blueCmd.svg",
+  esp32: "./assets/blocks/blueCmd.svg",
 };
 
 // Bar color per category for seamless effect
@@ -26,7 +28,6 @@ const barColorByCategory = {
   looks: "#eb7dfa",
   sound: "#59de80",
   control: "#ffc862",
-  device: "#68acfc",
   end: "#e84141",
   humandetection: "#eb7dfa",
   sensors: "#ffc862", // 🛤️ ADDED: Path following category color
@@ -105,24 +106,6 @@ const blocksByCategory = {
   ],
   // 🛤️🎨 UPDATED: Enhanced sensors category with path following AND color detection
   sensors: [
-    // {
-    //   name: "Follow Path",
-    //   icon: "./assets/blockicons/Right.svg", // Using existing icon 
-    //   type: "followPath",
-    //   execute: () => {
-    //     // Path following logic handled in runScript.js
-    //     return true;
-    //   }
-    // },
-    // {
-    //   name: "Path Detected",
-    //   icon: "./assets/blockicons/Smile.svg", // Using existing icon
-    //   type: "pathDetected",
-    //   execute: () => {
-    //     // Path detection logic handled in runScript.js
-    //     return true;
-    //   }
-    // },
     {
       name: "Set Path Color",
       icon: "./assets/blockicons/Say.svg", // Using existing icon
@@ -167,6 +150,22 @@ const blocksByCategory = {
         return true; // Logic handled in runScript.js
       }
     },
+  ],
+  otto: [
+    { name: "Move Right", icon: "./assets/blockicons/Foward.svg" },
+    { name: "Move Left", icon: "./assets/blockicons/Back.svg" },
+    { name: "Move Up", icon: "./assets/blockicons/Up.svg" },
+    { name: "Move Down", icon: "./assets/blockicons/Down.svg" },
+    { name: "Rotate Right", icon: "./assets/blockicons/Right.svg" },
+    { name: "Rotate Left", icon: "./assets/blockicons/Left.svg" },
+  ],
+  esp32: [
+    { name: "Move Right", icon: "./assets/blockicons/Foward.svg" },
+    { name: "Move Left", icon: "./assets/blockicons/Back.svg" },
+    { name: "Move Up", icon: "./assets/blockicons/Up.svg" },
+    { name: "Move Down", icon: "./assets/blockicons/Down.svg" },
+    { name: "Rotate Right", icon: "./assets/blockicons/Right.svg" },
+    { name: "Rotate Left", icon: "./assets/blockicons/Left.svg" },
   ],
 };
 
