@@ -1,5 +1,6 @@
 import React, { useState, useEffect } from "react";
 
+console.log("🧠 ConnectionModal component loaded");
 
 
 export default function ConnectionModal({
@@ -324,33 +325,35 @@ export async function scanWiFiDevices(setList) {
   }
 }
 
-export async function scanSerialDevices(setList) {
+export async function scanSerialDevices(setDevices) {
+  console.log("⚙️ scanSerialDevices() CALLED");
+
   try {
-    if (!("serial" in navigator)) {
-      setList(["❌ Web Serial API not supported in this browser"]);
-      return;
-    }
+    // Step 1: Log previously granted ports
+    const oldPorts = await navigator.serial.getPorts();
+    console.log("🧹 Previously granted ports:", oldPorts);
 
-    setList(["🔍 Scanning for Serial devices..."]);
+    // Step 2: Actively request a port
+    console.log("🧭 Requesting a new serial device...");
+    const port = await navigator.serial.requestPort(); // opens chooser dialog
+    console.log("🆕 User selected port:", port);
 
-    // Ask the user to pick a device – this guarantees real presence
-    const port = await navigator.serial.requestPort();
-
+    // Step 3: Verify that it’s actually connectable
     try {
-      await port.open({ baudRate: 115200 });
-      await port.close();
-      setList(["✅ ESP32 (Serial) detected and responsive"]);
-    } catch {
-      setList(["⚠️ Device found but could not open"]);
+      await port.open({ baudRate: 115200 }); // 👈 try opening to confirm
+      console.log("✅ Port opened successfully!");
+      const info = port.getInfo();
+      const vendor = info.usbVendorId || "?";
+      const product = info.usbProductId || "?";
+
+      setDevices([`ESP32 Detected (Vendor: ${vendor}, Product: ${product})`]);
+      await port.close(); // close immediately after test
+    } catch (err) {
+      console.warn("⚠️ Could not open port:", err);
+      setDevices(["⚠️ No active serial devices found"]);
     }
   } catch (err) {
-    if (err.name === "NotFoundError") {
-      setList(["⚠️ No Serial devices found"]);
-    } else if (err.message?.includes("cancel")) {
-      setList(["🔹 Scan cancelled"]);
-    } else {
-      console.error("❌ Serial scan failed:", err);
-      setList(["❌ Serial scan failed"]);
-    }
+    console.error("❌ Serial scan failed:", err);
+    setDevices(["⚠️ No active serial devices found"]);
   }
 }
