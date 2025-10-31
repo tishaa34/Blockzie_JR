@@ -1,5 +1,7 @@
 import React, { useState, useEffect } from "react";
 
+
+
 export default function ConnectionModal({
   isOpen,
   onClose,
@@ -136,34 +138,79 @@ export default function ConnectionModal({
   // 🧩 Serial Port (USB)
   // ========================
   const connectToSerial = async () => {
+    console.log("⚙️ Entered connectToSerial()");
     try {
       if (!("serial" in navigator)) {
         alert("❌ Web Serial API not supported in this browser!");
         return;
       }
 
-      // 🔹 Opens the native popup like PictoBlox
-      const port = await navigator.serial.requestPort();
+      // ✅ 1️⃣ Try auto-connecting to previously granted ports
+      const grantedPorts = await navigator.serial.getPorts();
+      if (grantedPorts.length > 0) {
+        const port = grantedPorts[0];
+        const info = port.getInfo();
+        console.log("🔌 Previously granted port:", info);
 
-      // 🔹 Open port with standard baudRate
+        await port.open({ baudRate: 115200 });
+        setSerialPort(port);
+        setIsSerialConnected(true);
+        setDeviceName("ESP32 (Serial)");
+        window.serialPort = port;
+        console.log("✅ Auto-connected to ESP32!");
+
+        readFromSerial(port);
+        if (onPeripheralConnected) onPeripheralConnected("ESP32 (Serial)", port);
+        return;
+      }
+
+      // ✅ 2️⃣ Define known ESP32 USB vendor IDs
+      const filters = [
+        { usbVendorId: 0x10C4 }, // Silicon Labs CP2102
+        { usbVendorId: 0x1A86 }, // CH340/CH341
+        { usbVendorId: 0x303A }, // Native Espressif (ESP32-S3, C3)
+        { usbVendorId: 0x0403 }, // FTDI
+      ];
+
+      // ✅ 3️⃣ Ask user to choose port (Chrome chooser)
+      console.log("🔍 Searching for ESP32 serial devices...");
+      const port = await navigator.serial.requestPort({ filters });
+
+      // ✅ 4️⃣ Check if selected port really has USB info
+      const info = port.getInfo();
+      console.log("🔍 Selected port info:", info);
+
+      if (!info.usbVendorId) {
+        alert("⚠️ This port is not a USB ESP32 device (it may be a Bluetooth COM port).");
+        try {
+          await port.close();
+        } catch (err) {
+          console.warn("Error closing non-USB port:", err);
+        }
+        return;
+      }
+
+      // ✅ 5️⃣ Open and initialize the port
       await port.open({ baudRate: 115200 });
       setSerialPort(port);
       setIsSerialConnected(true);
       setDeviceName("ESP32 (Serial)");
       window.serialPort = port;
+      console.log("✅ Connected to ESP32 via Serial!");
 
-      console.log("✅ Serial connection established!");
-
-      // Notify parent
       if (onPeripheralConnected) onPeripheralConnected("ESP32 (Serial)", port);
-
-      // Start reading data
       readFromSerial(port);
+
     } catch (error) {
-      console.error("❌ Serial connection failed:", error);
+      if (error.name === "NotFoundError") {
+        console.warn("⚠️ No serial device selected.");
+      } else if (error.message.includes("cancel")) {
+        console.log("User cancelled serial selection.");
+      } else {
+        console.error("❌ Serial connection failed:", error);
+        alert("❌ Serial connection failed: " + error.message);
+      }
       setIsSerialConnected(false);
-      setDeviceName("");
-      if (onBluetoothPortDisconnected) onBluetoothPortDisconnected();
     }
   };
 
@@ -178,7 +225,7 @@ export default function ConnectionModal({
       setDeviceName("");
       window.serialPort = null;
     } catch (error) {
-      console.error("⚠ Failed to close serial port:", error);
+      console.error("⚠️ Failed to close serial port:", error);
     }
   };
 
@@ -203,14 +250,18 @@ export default function ConnectionModal({
   };
 
   const handleSerialConnection = async () => {
+    console.log("🔹 Serial Connect button clicked!");
+
     if (!isSerialConnected) {
-      await connectToSerial(); // Opens native port chooser
+      await connectToSerial();
       if (onRequestCloseConnect) onRequestCloseConnect();
     } else {
       await disconnectFromSerial();
       if (onRequestCloseConnect) onRequestCloseConnect();
     }
   };
+
+
 
   // ========================
   // 🖼️ UI Rendering
@@ -249,7 +300,6 @@ export default function ConnectionModal({
   );
 }
 
-
 // ============================
 // ✅ Exported Utility Scanners
 // ============================
@@ -281,35 +331,23 @@ export async function scanSerialDevices(setList) {
       return;
     }
 
-    // Check for previously selected port (if user already connected)
-    if (window.serialPort && window.serialPort.readable) {
-      setList(["✅ ESP32 (Serial) Connected"]);
-      return;
-    }
+    setList(["🔍 Scanning for Serial devices..."]);
 
-    // Ask user to select a port manually
+    // Ask the user to pick a device – this guarantees real presence
     const port = await navigator.serial.requestPort();
-    await port.open({ baudRate: 115200 });
 
-    // Store globally so we can reuse it
-    window.serialPort = port;
-    setList(["✅ ESP32 (Serial) Connected"]);
-
-    console.log("✅ Serial Port Connected:", port);
-
-    // Optional: test read or handshake
-    const reader = port.readable.getReader();
-    const { value } = await reader.read();
-    if (value) console.log("📩 Serial Response:", new TextDecoder().decode(value));
-    reader.releaseLock();
-
-    // Close the port after test read (optional)
-    await port.close();
+    try {
+      await port.open({ baudRate: 115200 });
+      await port.close();
+      setList(["✅ ESP32 (Serial) detected and responsive"]);
+    } catch {
+      setList(["⚠️ Device found but could not open"]);
+    }
   } catch (err) {
     if (err.name === "NotFoundError") {
-      setList(["⚠️ No Serial Device Selected"]);
-    } else if (err.message.includes("cancel")) {
-      setList(["🔹 Scan Cancelled"]);
+      setList(["⚠️ No Serial devices found"]);
+    } else if (err.message?.includes("cancel")) {
+      setList(["🔹 Scan cancelled"]);
     } else {
       console.error("❌ Serial scan failed:", err);
       setList(["❌ Serial scan failed"]);

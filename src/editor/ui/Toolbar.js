@@ -8,7 +8,7 @@ import {
   scanBluetoothDevices,
   scanWiFiDevices,
   scanSerialDevices
-} from "./ConnectionModal";
+} from "../../editor/ui/ConnectionModal";
 
 export default function Toolbar({
   onSave,
@@ -87,17 +87,30 @@ export default function Toolbar({
     const [scanning, setScanning] = useState(false);
 
     const handleClick = async () => {
+      console.log("🧠 CLICKED:", label);
+
       if (!isExpanded) {
+        console.log("🔍 Starting scan for:", label);
         setIsExpanded(true);
         setScanning(true);
         setDevices([]);
-        await scanFn(setDevices);
+
+        try {
+          await scanFn((list) => {
+            console.log("📋 Devices found from", label, ":", list);
+            setDevices(list);
+          });
+        } catch (err) {
+          console.error("❌ Error while scanning:", err);
+        }
+
         setScanning(false);
       } else {
-        // Collapse if clicked again
+        console.log("📕 Collapsing:", label);
         setIsExpanded(false);
       }
     };
+
 
     return (
       <div style={{ position: "relative" }}>
@@ -212,6 +225,7 @@ export default function Toolbar({
                   }}
                   onClick={e => e.stopPropagation()}
                 >
+                  
                   <ConnectionItem label="Bluetooth" scanFn={scanBluetoothDevices} />
                   <ConnectionItem label="Serial" scanFn={scanSerialDevices} />
                   <ConnectionItem label="WiFi" scanFn={scanWiFiDevices} />
