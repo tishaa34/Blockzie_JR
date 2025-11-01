@@ -201,9 +201,39 @@ export default function Toolbar({
                   cursor: canShowDropdown ? "pointer" : "not-allowed"
                 }}
                 disabled={!canShowDropdown}
-                onClick={e => {
+                onClick={async (e) => {
                   e.stopPropagation();
-                  if (canShowDropdown) setShowConnectionDropdown(v => !v);
+                  if (!canShowDropdown) return;
+
+                  // Check global state from window or via props
+                  const anyConnected =
+                    window.isWiFiConnected ||
+                    (window.serialPort && window.serialPort.readable) ||
+                    (window.bluetoothCharacteristic && window.bluetoothCharacteristic.service);
+
+                  if (anyConnected) {
+                    // 🔌 Disconnect instantly if something is connected
+                    if (window.isWiFiConnected) {
+                      await fetch(`http://${window.esp32IP || "192.168.4.1"}/disconnect`, { method: "POST" }).catch(() => {});
+                      window.isWiFiConnected = false;
+                    }
+                    if (window.serialPort) {
+                      await window.serialPort.close().catch(() => {});
+                      window.serialPort = null;
+                    }
+                    if (window.bluetoothCharacteristic) {
+                      try {
+                        const device = window.bluetoothCharacteristic.service.device;
+                        if (device?.gatt?.connected) device.gatt.disconnect();
+                      } catch {}
+                      window.bluetoothCharacteristic = null;
+                    }
+
+                    alert("User disconnected the active connection successfully.");
+                  } else {
+                    // 🧩 No device connected → show connection dropdown
+                    setShowConnectionDropdown(v => !v);
+                  }
                 }}
               >
                 <img src="./assets/ui/Connection.png" alt="Connection" />

@@ -2,7 +2,6 @@ import React, { useState, useEffect } from "react";
 
 console.log("🧠 ConnectionModal component loaded");
 
-
 export default function ConnectionModal({
   isOpen,
   onClose,
@@ -160,20 +159,21 @@ export default function ConnectionModal({
         window.serialPort = port;
         console.log("✅ Auto-connected to ESP32!");
 
-        readFromSerial(port);
         if (onPeripheralConnected) onPeripheralConnected("ESP32 (Serial)", port);
+        if (window.onESP32Connected) window.onESP32Connected();
+
+        readFromSerial(port);
         return;
       }
 
-      // ✅ 2️⃣ Define known ESP32 USB vendor IDs
+      // ✅ 2️⃣ Correct Web Serial filters (only USB ESP32/Arduino)
       const filters = [
-        { usbVendorId: 0x10C4 }, // Silicon Labs CP2102
-        { usbVendorId: 0x1A86 }, // CH340/CH341
-        { usbVendorId: 0x303A }, // Native Espressif (ESP32-S3, C3)
-        { usbVendorId: 0x0403 }, // FTDI
+        { usbVendorId: 0x1A86 }, // CH340 or CH9102
+        { usbVendorId: 0x10C4 }, // CP2102
+        { usbVendorId: 0x0403 }  // FTDI (optional)
       ];
 
-      // ✅ 3️⃣ Ask user to choose port (Chrome chooser)
+      // ✅ 3️⃣ Ask user to choose port (filtered)
       console.log("🔍 Searching for ESP32 serial devices...");
       const port = await navigator.serial.requestPort({ filters });
 
@@ -200,6 +200,8 @@ export default function ConnectionModal({
       console.log("✅ Connected to ESP32 via Serial!");
 
       if (onPeripheralConnected) onPeripheralConnected("ESP32 (Serial)", port);
+      if (window.onESP32Connected) window.onESP32Connected();
+
       readFromSerial(port);
 
     } catch (error) {
@@ -262,7 +264,26 @@ export default function ConnectionModal({
     }
   };
 
+  // ========================
+  // 🎛️ Main Connection Toggle
+  // ========================
+  const handleMainConnectionToggle = async () => {
+    // Check if any connection is active
+    const isAnyConnected = isBluetoothConnected || isSerialConnected || isWiFiConnected;
 
+    if (isAnyConnected) {
+      // 🔌 Disconnect whichever is active
+      if (isBluetoothConnected) await disconnectFromESP32();
+      if (isSerialConnected) await disconnectFromSerial();
+      if (isWiFiConnected) await handleWiFiDisconnect();
+
+      // ✅ Notify user
+      alert("User disconnected the active connection successfully.");
+    } else {
+      // 🧩 No connection active → open dropdown
+      if (onRequestCloseConnect) onRequestCloseConnect();
+    }
+  };
 
   // ========================
   // 🖼️ UI Rendering
@@ -300,6 +321,7 @@ export default function ConnectionModal({
     </div>
   );
 }
+
 
 // ============================
 // ✅ Exported Utility Scanners
@@ -342,6 +364,7 @@ export async function scanSerialDevices(setDevices) {
     try {
       await port.open({ baudRate: 115200 }); // 👈 try opening to confirm
       console.log("✅ Port opened successfully!");
+      if (window.onESP32Connected) window.onESP32Connected();
       const info = port.getInfo();
       const vendor = info.usbVendorId || "?";
       const product = info.usbProductId || "?";

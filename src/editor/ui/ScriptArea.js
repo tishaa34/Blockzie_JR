@@ -13,6 +13,7 @@ import {
 import NumberPicker from "./NumberPicker";
 import "../../css/ScriptArea.css";
 import { run } from "../../utils/runScript";
+import PinConfigModal from "../ui/PinConfigModal";
 
 export default function ScriptArea({ selectedActorId }) {
   const dispatch = useDispatch();
@@ -34,6 +35,18 @@ export default function ScriptArea({ selectedActorId }) {
   const [draggedBlock, setDraggedBlock] = useState(null);
   const [dragStarted, setDragStarted] = useState(false);
   const scriptAreaRef = useRef(null);
+
+  // --- PIN CONFIG MODAL STATE ---
+  const [showPinModal, setShowPinModal] = useState(false);
+  const [selectedPinBlock, setSelectedPinBlock] = useState(null);
+
+  const handlePinBlockClick = (block) => {
+    if (["setDigitalPin", "setPWM", "setDAC", "readAnalogPin", "readDigitalPin"].includes(block.type)) {
+      setSelectedPinBlock(block);
+      setShowPinModal(true);
+    }
+  };
+  // --- end pin config state & handler ---
 
   const onDrop = (e) => {
     e.preventDefault();
@@ -293,7 +306,7 @@ export default function ScriptArea({ selectedActorId }) {
             <div className="s-hint">Drop blocks here to build your script</div>
           ) : (
             scripts.map((b, i) => {
-              // Camera control block rendering
+              // Camera control block rendering (unchanged)
               if (b.type === 'camera') {
                 return (
                   <div
@@ -341,7 +354,7 @@ export default function ScriptArea({ selectedActorId }) {
                 );
               }
 
-              // Video transparency block rendering
+              // Video transparency block rendering (unchanged)
               if (b.type === 'video_transparency') {
                 return (
                   <div
@@ -360,12 +373,18 @@ export default function ScriptArea({ selectedActorId }) {
                 );
               }
 
-              // Regular block rendering (unchanged)
+              // Regular block rendering (modified to handle pin blocks)
               return (
                 <div
                   key={b.id}
                   className={`block-palette-title ${draggedBlock?.index === i ? 'dragging' : ''}`}
-                  onClick={() => clickBlock(b)}
+                  onClick={() => {
+                    if (["setDigitalPin", "setPWM", "setDAC", "readAnalogPin", "readDigitalPin"].includes(b.type)) {
+                      handlePinBlockClick(b);
+                    } else {
+                      clickBlock(b);
+                    }
+                  }}
                   title={
                     b.name === "Wait"
                       ? `Wait ${b.count || 3} seconds - Click to change duration, drag out to remove`
@@ -392,12 +411,55 @@ export default function ScriptArea({ selectedActorId }) {
           )}
         </div>
       </div>
+
       <NumberPicker
         isOpen={pickerOpen}
         onClose={() => setPickerOpen(false)}
         onSelect={setCount}
         currentValue={tapBlock?.name === "Set Video Transparency" ? tapBlock?.opacity : (tapBlock?.count || (tapBlock?.name === "Wait" ? 3 : 1))}
         blockType={tapBlock?.type}
+      />
+
+      {/* Pin configuration modal */}
+      <PinConfigModal
+        isOpen={showPinModal}
+        onClose={() => setShowPinModal(false)}
+        initialData={selectedPinBlock || {}}
+        onSave={(data) => {
+          if (selectedPinBlock) {
+            const updatedBlock = {
+              ...selectedPinBlock,
+              pin: data.pin,
+              mode: data.mode,
+              state: data.state,
+            };
+
+            if (editableTarget.type === "simulatorRobot") {
+              dispatch(
+                updateSimulatorBlockCount({
+                  robotId: editableTarget.id,
+                  blockId: selectedPinBlock.id,
+                  newCount: 0,
+                  property: "pinConfig",
+                  value: data, // we store full config here
+                })
+              );
+            } else {
+              dispatch(
+                updateBlockCount({
+                  actorId: editableTarget.id,
+                  blockId: selectedPinBlock.id,
+                  newCount: 0,
+                  property: "pinConfig",
+                  value: data,
+                })
+              );
+            }
+
+            console.log("✅ Pin configured:", data);
+          }
+          setShowPinModal(false);
+        }}
       />
     </div>
   );

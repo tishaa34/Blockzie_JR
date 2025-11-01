@@ -4,7 +4,7 @@ import { useDispatch, useSelector } from "react-redux";
 import { addBlockToScript, addCustomSound, setCameraState } from "../../store/sceneSlice";
 import ConnectionModal from "../ui/ConnectionModal";
 import { sendCommand, isConnected } from "../../utils/deviceConnectionManager";
-
+import PinConfigModal from "../ui/PinConfigModal";  
 
 
 // Puzzle backgrounds per category
@@ -159,14 +159,22 @@ const blocksByCategory = {
     { name: "Rotate Right", icon: "./assets/blockicons/Right.svg" },
     { name: "Rotate Left", icon: "./assets/blockicons/Left.svg" },
   ],
-  esp32: [
-    { name: "Move Right", icon: "./assets/blockicons/Foward.svg" },
-    { name: "Move Left", icon: "./assets/blockicons/Back.svg" },
-    { name: "Move Up", icon: "./assets/blockicons/Up.svg" },
-    { name: "Move Down", icon: "./assets/blockicons/Down.svg" },
-    { name: "Rotate Right", icon: "./assets/blockicons/Right.svg" },
-    { name: "Rotate Left", icon: "./assets/blockicons/Left.svg" },
-  ],
+esp32: [
+  { name: "Move Right", icon: "./assets/blockicons/Foward.svg" },
+  { name: "Move Left", icon: "./assets/blockicons/Back.svg" },
+  { name: "Move Up", icon: "./assets/blockicons/Up.svg" },
+  { name: "Move Down", icon: "./assets/blockicons/Down.svg" },
+  { name: "Rotate Right", icon: "./assets/blockicons/Right.svg" },
+  { name: "Rotate Left", icon: "./assets/blockicons/Left.svg" },
+
+  // ⚡ ESP32 Pins — new proper icons
+  { name: "Set Digital Pin", icon: "./assets/blockicons/SetDigital.svg", type: "setDigitalPin" },
+  { name: "Read Digital Pin", icon: "./assets/blockicons/ReadDigital.svg", type: "readDigitalPin" },
+  { name: "Read Analog Pin", icon: "./assets/blockicons/ReadAnalog.svg", type: "readAnalogPin" },
+  { name: "Set PWM Pin", icon: "./assets/blockicons/PWM.svg", type: "setPWM" },
+  { name: "Set DAC Pin", icon: "./assets/blockicons/DAC.svg", type: "setDAC" },
+],
+
 };
 
 // Camera Control Block Component - KEEP AS IS
@@ -604,7 +612,15 @@ export default function BlockPalette() {
   const dispatch = useDispatch();
   const [showVoiceModal, setShowVoiceModal] = useState(false);
   const [showConnectionModal, setShowConnectionModal] = useState(false); // Added connection modal state
-
+  // --- ADDED: Pin modal state & selected pin block ---
+  const [showPinModal, setShowPinModal] = useState(false);
+  const [selectedPinBlock, setSelectedPinBlock] = useState(null);
+  const handlePinBlockClick = (block) => {
+    if (["setDigitalPin", "setPWM", "setDAC", "readAnalogPin", "readDigitalPin"].includes(block.type)) {
+      setSelectedPinBlock(block);
+      setShowPinModal(true);
+    }
+  };
   const selectedBlockCategory = useSelector((s) => s.scene.selectedBlockCategory) || "motion";
   const customSounds = useSelector((s) => s.scene.customSounds) || [];
 
@@ -628,6 +644,59 @@ export default function BlockPalette() {
   const blocks = getBlocks();
   const puzzleBg = puzzleBgByCategory[selectedBlockCategory] || "./assets/blocks/blueCmd.svg";
   const barColor = barColorByCategory[selectedBlockCategory] || "#3291d7";
+
+  // Optional workspaceBlocks used by blockly/workspace UI when category == esp32
+  //If you have more ESP32-related blocks (like PWM, DAC, Servo, etc.), you can simply append them in the blocks array under this ESP32 section.
+  let workspaceBlocks = [];
+  if (selectedBlockCategory === "esp32") {
+    workspaceBlocks = [
+      {
+        name: "Pins",
+        blocks: [
+          {
+            type: "set_pin_mode",
+            message0: "set pin %1 mode %2",
+            args0: [
+              { type: "field_dropdown", name: "PIN", options: [["IO2", "IO2"], ["IO4", "IO4"], ["IO5", "IO5"], ["IO12", "IO12"], ["IO13", "IO13"], ["IO14", "IO14"], ["IO15", "IO15"], ["IO25", "IO25"], ["IO26", "IO26"], ["IO27", "IO27"]] },
+              { type: "field_dropdown", name: "MODE", options: [["input", "INPUT"], ["output", "OUTPUT"]] }
+            ],
+            colour: "#3399ff",
+            tooltip: "Set pin mode (input/output)"
+          },
+          {
+            type: "set_digital_pin",
+            message0: "set digital pin %1 out %2",
+            args0: [
+              { type: "field_dropdown", name: "PIN", options: [["IO2", "IO2"], ["IO4", "IO4"], ["IO5", "IO5"], ["IO12", "IO12"], ["IO13", "IO13"], ["IO14", "IO14"], ["IO15", "IO15"]] },
+              { type: "field_dropdown", name: "STATE", options: [["high", "HIGH"], ["low", "LOW"]] }
+            ],
+            colour: "#33cc33",
+            tooltip: "Set a digital pin to HIGH or LOW"
+          },
+          {
+            type: "read_digital_pin",
+            message0: "read digital pin %1",
+            args0: [
+              { type: "field_dropdown", name: "PIN", options: [["IO2", "IO2"], ["IO4", "IO4"], ["IO5", "IO5"], ["IO12", "IO12"]] }
+            ],
+            output: "Number",
+            colour: "#ff9933",
+            tooltip: "Read digital pin state"
+          },
+          {
+            type: "read_analog_pin",
+            message0: "read analog pin %1",
+            args0: [
+              { type: "field_dropdown", name: "PIN", options: [["IO32", "IO32"], ["IO33", "IO33"], ["IO34", "IO34"], ["IO35", "IO35"]] }
+            ],
+            output: "Number",
+            colour: "#ffcc00",
+            tooltip: "Read analog value from pin"
+          }
+        ]
+      }
+    ];
+  }
 
   const handleDoubleClick = (block) => {
     // FIXED: Add proper category to blocks
@@ -663,6 +732,11 @@ export default function BlockPalette() {
 
   const handleBlockClick = (block) => {
     console.log('Block clicked:', block.name); // DEBUG
+    // Open pin configuration modal for pin-related blocks
+    if (["setDigitalPin", "setPWM", "setDAC", "readAnalogPin", "readDigitalPin"].includes(block.type)) {
+      handlePinBlockClick(block);
+      return;
+    }
     if (block.name === "Record") {
       console.log('Opening voice modal'); // DEBUG
       setShowVoiceModal(true);
@@ -800,6 +874,22 @@ export default function BlockPalette() {
         isOpen={showVoiceModal}
         onClose={() => setShowVoiceModal(false)}
         onSave={handleVoiceSave}
+      />
+
+      {/* --- PIN CONFIGURATION MODAL --- */}
+      <PinConfigModal
+        isOpen={showPinModal}
+        onClose={() => setShowPinModal(false)}
+        initialData={selectedPinBlock || {}}
+        onSave={(data) => {
+          console.log("💾 Pin Config Saved:", data);
+          if (selectedPinBlock) {
+            selectedPinBlock.pin = data.pin;
+            selectedPinBlock.mode = data.mode;
+            selectedPinBlock.state = data.state;
+          }
+          setShowPinModal(false);
+        }}
       />
 
       {/* Added ConnectionModal */}
